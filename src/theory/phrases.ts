@@ -1,0 +1,356 @@
+// 見本フレーズ生成エンジン
+// フレーズは「コードルートからの半音オフセット」で定義し、
+// キー・コード進行に合わせて実音(MIDIノート)へ展開する。
+
+import { QUALITIES, type Quality } from './chords';
+import { mod12 } from './notes';
+import type { ChordEvent, Progression } from './progressions';
+
+export type Difficulty = 'beginner' | 'guide' | 'rhythm' | 'melodic' | 'advanced';
+
+export const DIFFICULTIES: { id: Difficulty; label: string; hint: string }[] = [
+  { id: 'beginner', label: '入門', hint: 'コードトーン中心・音数少なめ。まず音の場所を覚える。(Beginner)' },
+  { id: 'guide', label: 'ガイドトーン', hint: '3度と7度だけで進行をつなぐ。アドリブの背骨になるライン。(Guide Tone)' },
+  { id: 'rhythm', label: 'リズム重視', hint: '音は簡単、リズムはジャズ。シンコペーションを体に入れる。(Rhythm Focus)' },
+  { id: 'melodic', label: 'メロディック', hint: '経過音・半音アプローチ入り。歌えるラインを作る。(Melodic)' },
+  { id: 'advanced', label: '上級', hint: 'よりジャズらしい8分音符ライン。真似して丸ごと覚えよう。(Advanced)' },
+];
+
+/** 生成された1音。start/dur は進行先頭からの拍数 */
+export interface NoteEvent {
+  /** 実音(Concert)のMIDIノート番号 */
+  midi: number;
+  /** 進行先頭からの開始拍 */
+  start: number;
+  /** 拍数 */
+  duration: number;
+  velocity: number;
+  /** どのコードイベントに属するか(progression.chords のインデックス) */
+  chordIndex: number;
+}
+
+/** リックの1音: o=ルートからの半音, s=開始拍(小節内), d=拍数, v=ベロシティ */
+interface LickNote {
+  o: number;
+  s: number;
+  d: number;
+  v?: number;
+}
+
+interface LickBank {
+  /** 4拍のコード用パターン(複数バリエーション) */
+  full: LickNote[][];
+  /** 2拍のコード用パターン */
+  half: LickNote[][];
+}
+
+// ---- リック定義ヘルパー ----
+
+function n(o: number, s: number, d: number, v = 0.8): LickNote {
+  return { o, s, d, v };
+}
+
+/** Beginner: コードトーンを4分音符で上行/下行 */
+function beginnerBank(q: Quality): LickBank {
+  const t = QUALITIES[q].tones;
+  return {
+    full: [
+      [n(t[0], 0, 1), n(t[1], 1, 1), n(t[2], 2, 1), n(t[3], 3, 1)],
+      [n(t[3] - 12, 0, 1), n(t[2] - 12, 1, 1), n(t[1], 2, 1, 0.75), n(t[0], 3, 1)],
+      [n(t[0], 0, 1), n(t[2], 1, 1), n(t[1], 2, 1), n(t[3], 3, 1)],
+    ],
+    half: [
+      [n(t[0], 0, 1), n(t[1], 1, 1)],
+      [n(t[1], 0, 1), n(t[3] - 12, 1, 1)],
+    ],
+  };
+}
+
+/** Guide Tone: 3度と7度の2分音符 */
+function guideBank(q: Quality): LickBank {
+  const g = QUALITIES[q].guide;
+  return {
+    full: [
+      [n(g[0], 0, 2, 0.85), n(g[1] - 12, 2, 2, 0.75)],
+      [n(g[1] - 12, 0, 2, 0.85), n(g[0], 2, 2, 0.75)],
+    ],
+    half: [
+      [n(g[0], 0, 2, 0.8)],
+      [n(g[1] - 12, 0, 2, 0.8)],
+    ],
+  };
+}
+
+/** Rhythm Focus: 音はルート・3度・5度のみ、リズムに変化 */
+function rhythmBank(q: Quality): LickBank {
+  const t = QUALITIES[q].tones;
+  return {
+    full: [
+      // チャールストン(1拍目+2拍目ウラ)
+      [n(t[0], 0, 1.5, 0.9), n(t[1], 1.5, 1.5, 0.8), n(t[0], 3, 1, 0.7)],
+      // ウラ拍スタート
+      [n(t[1], 0.5, 1, 0.85), n(t[2], 2, 0.5, 0.8), n(t[1], 2.5, 1, 0.9), n(t[0], 3.5, 0.5, 0.75)],
+      // 8分の駆け上がり+休符
+      [n(t[0], 0, 0.5, 0.85), n(t[1], 0.5, 0.5, 0.75), n(t[2], 1, 1, 0.9), n(t[1], 2.5, 0.5, 0.8), n(t[0], 3, 1, 0.85)],
+      // 4拍目アンティシペーション
+      [n(t[2], 0, 1, 0.85), n(t[1], 1.5, 0.5, 0.75), n(t[0], 2, 1.5, 0.9), n(t[1], 3.5, 0.5, 0.8)],
+    ],
+    half: [
+      [n(t[0], 0, 1, 0.85), n(t[1], 1.5, 0.5, 0.8)],
+      [n(t[1], 0.5, 0.5, 0.8), n(t[0], 1, 1, 0.85)],
+    ],
+  };
+}
+
+/** Melodic: 半音アプローチ・経過音入り(コード品質ごとに手書き) */
+function melodicBank(q: Quality): LickBank {
+  switch (q) {
+    case 'm7':
+      return {
+        full: [
+          // ♭3へ全音下から: 例 Dm7: E F A C → D
+          [n(2, 0, 0.5, 0.75), n(3, 0.5, 0.5, 0.85), n(7, 1, 1, 0.8), n(10, 2, 1, 0.85), n(12, 3, 1, 0.8)],
+          // 5度から下行して♭3に半音アプローチ
+          [n(7, 0, 1, 0.85), n(5, 1, 0.5, 0.75), n(4, 1.5, 0.5, 0.7), n(3, 2, 2, 0.9)],
+        ],
+        half: [[n(2, 0, 0.5, 0.75), n(3, 0.5, 0.5, 0.85), n(10, 1, 1, 0.8)]],
+      };
+    case '7':
+      return {
+        full: [
+          // 3度を半音下から: 例 G7: A# B D F → E
+          [n(3, 0, 0.5, 0.75), n(4, 0.5, 0.5, 0.85), n(7, 1, 1, 0.8), n(10, 2, 1.5, 0.9), n(9, 3.5, 0.5, 0.75)],
+          // ♭7から3度へ下行(トライトーンの解決を感じる)
+          [n(10, 0, 1, 0.85), n(9, 1, 0.5, 0.75), n(7, 1.5, 0.5, 0.75), n(5, 2, 0.5, 0.7), n(4, 2.5, 1.5, 0.9)],
+        ],
+        half: [[n(3, 0, 0.5, 0.75), n(4, 0.5, 0.5, 0.85), n(10, 1, 1, 0.85)]],
+      };
+    case 'maj7':
+      return {
+        full: [
+          // ♭3経過音で3度へ: 例 Cmaj7: D# E G B
+          [n(3, 0, 0.5, 0.75), n(4, 0.5, 0.5, 0.85), n(7, 1, 1, 0.8), n(11, 2, 2, 0.85)],
+          // 9度から3度へ着地
+          [n(14, 0, 1, 0.8), n(12, 1, 0.5, 0.75), n(11, 1.5, 0.5, 0.75), n(9, 2, 0.5, 0.7), n(7, 2.5, 0.5, 0.7), n(4, 3, 1, 0.85)],
+        ],
+        half: [[n(2, 0, 0.5, 0.75), n(4, 0.5, 0.5, 0.85), n(7, 1, 1, 0.8)]],
+      };
+    case 'm7b5':
+      return {
+        full: [
+          // ♭5を強調: 例 Dm7♭5: F A♭ C → 半音下から♭3
+          [n(2, 0, 0.5, 0.75), n(3, 0.5, 0.5, 0.85), n(6, 1, 1, 0.85), n(10, 2, 1.5, 0.9), n(8, 3.5, 0.5, 0.7)],
+          [n(10, 0, 1, 0.85), n(8, 1, 0.5, 0.75), n(6, 1.5, 0.5, 0.8), n(3, 2, 2, 0.9)],
+        ],
+        half: [[n(3, 0, 0.5, 0.8), n(6, 0.5, 0.5, 0.85), n(10, 1, 1, 0.85)]],
+      };
+    case '7b9':
+      return {
+        full: [
+          // ♭9の響き: 例 G7(♭9): B D F A♭ → 下行して3度
+          [n(4, 0, 0.5, 0.85), n(7, 0.5, 0.5, 0.75), n(10, 1, 1, 0.85), n(13, 2, 1, 0.9), n(10, 3, 1, 0.75)],
+          [n(13, 0, 1, 0.85), n(10, 1, 0.5, 0.75), n(7, 1.5, 0.5, 0.7), n(4, 2, 2, 0.9)],
+        ],
+        half: [[n(4, 0, 0.5, 0.8), n(10, 0.5, 0.5, 0.85), n(13, 1, 1, 0.85)]],
+      };
+  }
+}
+
+/** Advanced: 8分音符主体のビバップ風ライン */
+function advancedBank(q: Quality): LickBank {
+  switch (q) {
+    case 'm7':
+      return {
+        full: [
+          // 例 Dm7: F G A C E D C A(1-2-♭3-4...風の上行→下行)
+          [n(3, 0, 0.5, 0.85), n(5, 0.5, 0.5, 0.7), n(7, 1, 0.5, 0.8), n(10, 1.5, 0.5, 0.75), n(14, 2, 0.5, 0.9), n(12, 2.5, 0.5, 0.7), n(10, 3, 0.5, 0.8), n(7, 3.5, 0.5, 0.7)],
+          // 半音経過音入りの下行
+          [n(12, 0, 0.5, 0.85), n(10, 0.5, 0.5, 0.7), n(9, 1, 0.5, 0.75), n(7, 1.5, 0.5, 0.7), n(5, 2, 0.5, 0.8), n(4, 2.5, 0.5, 0.7), n(3, 3, 1, 0.9)],
+        ],
+        half: [[n(3, 0, 0.5, 0.85), n(7, 0.5, 0.5, 0.7), n(10, 1, 0.5, 0.8), n(12, 1.5, 0.5, 0.75)]],
+      };
+    case '7':
+      return {
+        full: [
+          // 例 G7: F E D B(♭7→3のエンクロージャー)→ ♭9経由
+          [n(10, 0, 0.5, 0.85), n(9, 0.5, 0.5, 0.7), n(7, 1, 0.5, 0.8), n(4, 1.5, 0.5, 0.85), n(5, 2, 0.5, 0.7), n(4, 2.5, 0.5, 0.75), n(2, 3, 0.5, 0.8), n(0, 3.5, 0.5, 0.7)],
+          // 1-2-3-5 → ♭7からの下行
+          [n(0, 0, 0.5, 0.85), n(2, 0.5, 0.5, 0.7), n(4, 1, 0.5, 0.8), n(7, 1.5, 0.5, 0.75), n(10, 2, 0.5, 0.9), n(9, 2.5, 0.5, 0.7), n(7, 3, 0.5, 0.75), n(4, 3.5, 0.5, 0.85)],
+        ],
+        half: [[n(4, 0, 0.5, 0.85), n(7, 0.5, 0.5, 0.7), n(10, 1, 0.5, 0.85), n(9, 1.5, 0.5, 0.7)]],
+      };
+    case 'maj7':
+      return {
+        full: [
+          // 例 Cmaj7: 3度着地→9度で歌う
+          [n(4, 0, 1, 0.9), n(2, 1.5, 0.5, 0.7), n(4, 2, 0.5, 0.75), n(7, 2.5, 0.5, 0.7), n(9, 3, 1, 0.8)],
+          [n(11, 0, 0.5, 0.85), n(9, 0.5, 0.5, 0.7), n(7, 1, 0.5, 0.75), n(4, 1.5, 0.5, 0.8), n(2, 2, 0.5, 0.7), n(4, 2.5, 1.5, 0.9)],
+        ],
+        half: [[n(4, 0, 0.5, 0.85), n(7, 0.5, 0.5, 0.7), n(11, 1, 1, 0.85)]],
+      };
+    case 'm7b5':
+      return {
+        full: [
+          [n(3, 0, 0.5, 0.85), n(6, 0.5, 0.5, 0.75), n(10, 1, 0.5, 0.8), n(13, 1.5, 0.5, 0.75), n(12, 2, 0.5, 0.8), n(10, 2.5, 0.5, 0.7), n(8, 3, 0.5, 0.75), n(6, 3.5, 0.5, 0.7)],
+          [n(10, 0, 0.5, 0.85), n(8, 0.5, 0.5, 0.7), n(6, 1, 0.5, 0.8), n(5, 1.5, 0.5, 0.7), n(3, 2, 1, 0.9), n(0, 3, 1, 0.75)],
+        ],
+        half: [[n(3, 0, 0.5, 0.85), n(6, 0.5, 0.5, 0.75), n(10, 1, 1, 0.85)]],
+      };
+    case '7b9':
+      return {
+        full: [
+          // ディミニッシュ的アルペジオ(3-5-♭7-♭9)下行解決
+          [n(4, 0, 0.5, 0.85), n(7, 0.5, 0.5, 0.75), n(10, 1, 0.5, 0.8), n(13, 1.5, 0.5, 0.85), n(12, 2, 0.5, 0.7), n(10, 2.5, 0.5, 0.75), n(8, 3, 0.5, 0.7), n(7, 3.5, 0.5, 0.75)],
+          [n(13, 0, 0.5, 0.9), n(10, 0.5, 0.5, 0.75), n(7, 1, 0.5, 0.7), n(4, 1.5, 0.5, 0.8), n(5, 2, 0.5, 0.7), n(4, 2.5, 0.5, 0.75), n(1, 3, 1, 0.85)],
+        ],
+        half: [[n(13, 0, 0.5, 0.85), n(10, 0.5, 0.5, 0.75), n(4, 1, 1, 0.85)]],
+      };
+  }
+}
+
+function getBank(diff: Difficulty, q: Quality): LickBank {
+  switch (diff) {
+    case 'beginner': return beginnerBank(q);
+    case 'guide': return guideBank(q);
+    case 'rhythm': return rhythmBank(q);
+    case 'melodic': return melodicBank(q);
+    case 'advanced': return advancedBank(q);
+  }
+}
+
+/** 「同じリズムで別メロディー」: タイミングを保ったままコードトーン内で音を差し替える */
+function remapMelody(lick: LickNote[], q: Quality, melodyVariant: number): LickNote[] {
+  if (melodyVariant === 0) return lick;
+  const tones = QUALITIES[q].tones;
+  return lick.map((note) => {
+    const pc = mod12(note.o);
+    const idx = tones.indexOf(pc);
+    if (idx < 0) return note; // 経過音などはそのまま
+    const octaveBase = note.o - pc;
+    const newIdx = (idx + melodyVariant) % tones.length;
+    return { ...note, o: octaveBase + tones[newIdx] };
+  });
+}
+
+export interface PhraseOptions {
+  /** リズムパターンのバリエーション番号(Rhythm Focus等で切替) */
+  rhythmVariant?: number;
+  /** 同じリズムで別メロディーのバリエーション番号 */
+  melodyVariant?: number;
+}
+
+/**
+ * コード進行 × 難易度 → 見本フレーズ(Concert MIDI)
+ * オクターブはボイスリーディング(前の音に最も近い高さ)で自動調整する。
+ */
+export function generatePhrase(
+  prog: Progression,
+  keyPc: number,
+  difficulty: Difficulty,
+  opts: PhraseOptions = {},
+): NoteEvent[] {
+  const { rhythmVariant = 0, melodyVariant = 0 } = opts;
+  const events: NoteEvent[] = [];
+  let prevPitch: number | null = null;
+
+  prog.chords.forEach((chord: ChordEvent, chordIndex: number) => {
+    const bank = getBank(difficulty, chord.quality);
+    const patterns = chord.beats >= 4 ? bank.full : bank.half;
+    let lick = patterns[(chordIndex + rhythmVariant) % patterns.length];
+    lick = remapMelody(lick, chord.quality, melodyVariant);
+    if (lick.length === 0) return;
+
+    // ルートを C4(60) 近辺に配置: キー+コードで54〜65の範囲
+    const rootPc = mod12(keyPc + chord.rootOffset);
+    let rootMidi = 60 + rootPc;
+    if (rootMidi > 65) rootMidi -= 12;
+
+    // ボイスリーディング: フレーズ先頭音が直前の音に近くなるようオクターブ調整
+    let shift = 0;
+    if (prevPitch !== null) {
+      const first = rootMidi + lick[0].o;
+      const candidates = [-12, 0, 12];
+      let best = 0;
+      let bestDist = Infinity;
+      for (const c of candidates) {
+        const p = first + c;
+        const dist = Math.abs(p - prevPitch);
+        if (p >= 52 && p <= 84 && dist < bestDist) {
+          bestDist = dist;
+          best = c;
+        }
+      }
+      shift = best;
+    }
+
+    const measureStart = chord.measure * 4 + chord.beat;
+    for (const note of lick) {
+      let midi = rootMidi + note.o + shift;
+      // 極端な音域は補正
+      while (midi < 52) midi += 12;
+      while (midi > 86) midi -= 12;
+      events.push({
+        midi,
+        start: measureStart + note.s,
+        duration: note.d,
+        velocity: note.v ?? 0.8,
+        chordIndex,
+      });
+      prevPitch = midi;
+    }
+  });
+
+  return events.sort((a, b) => a.start - b.start);
+}
+
+/** コードトーン表示用: 各コードの構成音(1-3-5-7)を4分音符で上行 */
+export function chordTonesAsNotes(prog: Progression, keyPc: number): NoteEvent[] {
+  const events: NoteEvent[] = [];
+  prog.chords.forEach((chord, chordIndex) => {
+    const tones = QUALITIES[chord.quality].tones;
+    const rootPc = mod12(keyPc + chord.rootOffset);
+    let rootMidi = 60 + rootPc;
+    if (rootMidi > 65) rootMidi -= 12;
+    const measureStart = chord.measure * 4 + chord.beat;
+    const count = chord.beats >= 4 ? 4 : 2;
+    for (let i = 0; i < count; i++) {
+      events.push({
+        midi: rootMidi + tones[i],
+        start: measureStart + i,
+        duration: 1,
+        velocity: 0.8,
+        chordIndex,
+      });
+    }
+  });
+  return events;
+}
+
+/** ガイドトーン表示用 */
+export function guideTonesAsNotes(prog: Progression, keyPc: number): NoteEvent[] {
+  return generatePhrase(prog, keyPc, 'guide', { rhythmVariant: 0 });
+}
+
+/** 「使える音」表示用: 各コードのおすすめスケールを8分音符で上行(1小節=スケール7音+オクターブ上のルート) */
+export function scaleAsNotes(prog: Progression, keyPc: number): NoteEvent[] {
+  const events: NoteEvent[] = [];
+  prog.chords.forEach((chord, chordIndex) => {
+    const def = QUALITIES[chord.quality];
+    const rootPc = mod12(keyPc + chord.rootOffset);
+    let rootMidi = 60 + rootPc;
+    if (rootMidi > 65) rootMidi -= 12;
+    const measureStart = chord.measure * 4 + chord.beat;
+    // 4拍コードはスケール全音+オクターブ、2拍コードはコードトーンのみ
+    const seq = chord.beats >= 4 ? [...def.scale, 12] : def.tones;
+    seq.forEach((o, i) => {
+      events.push({
+        midi: rootMidi + o,
+        start: measureStart + i * 0.5,
+        duration: 0.5,
+        velocity: 0.75,
+        chordIndex,
+      });
+    });
+  });
+  return events;
+}

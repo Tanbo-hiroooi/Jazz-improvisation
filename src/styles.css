@@ -1,0 +1,351 @@
+/* Jazz Phrase Lab — モバイルファースト・レスポンシブ */
+
+:root {
+  --bg: #141824;
+  --bg-panel: #1e2433;
+  --bg-panel-2: #262e42;
+  --text: #e8e9ee;
+  --text-dim: #9aa1b5;
+  --accent: #f59e0b;
+  --accent-soft: rgba(245, 158, 11, 0.16);
+  --green: #34d399;
+  --red: #f87171;
+  --blue: #60a5fa;
+  --border: #333c55;
+  --paper: #faf8f1;
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', 'Segoe UI', sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+.app {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 12px 12px calc(24px + env(safe-area-inset-bottom));
+}
+
+.app-header {
+  padding: 8px 4px 4px;
+}
+.app-header h1 {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+}
+.tagline {
+  margin: 4px 0 0;
+  color: var(--text-dim);
+  font-size: 12.5px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+@media (min-width: 960px) {
+  .layout {
+    grid-template-columns: 320px minmax(0, 1fr);
+    align-items: start;
+  }
+  .settings-panel { position: sticky; top: 12px; }
+}
+.panel, .main-col { min-width: 0; }
+
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+.main-col { display: flex; flex-direction: column; gap: 12px; }
+
+.panel h2 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.key-badge {
+  font-size: 12px;
+  font-weight: normal;
+  background: var(--accent-soft);
+  color: var(--accent);
+  padding: 2px 10px;
+  border-radius: 99px;
+}
+
+/* ---- フォーム ---- */
+.field { margin-bottom: 12px; min-width: 0; }
+.field-row { display: flex; gap: 10px; }
+.field-row .field { flex: 1; }
+.field label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 5px;
+}
+select, input[type='number'], textarea {
+  width: 100%;
+  background: var(--bg-panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 15px; /* iOSのズーム防止に16px近く */
+}
+textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
+
+.bpm-row { display: flex; gap: 10px; align-items: center; }
+.bpm-row input[type='range'] { flex: 1; accent-color: var(--accent); height: 32px; }
+.bpm-row input[type='number'] { width: 76px; text-align: center; }
+
+/* ---- セグメントボタン ---- */
+.seg-group { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.seg-group.wrap { display: flex; }
+.seg {
+  background: var(--bg-panel-2);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  min-height: 38px;
+}
+.seg.on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+.seg:active { transform: scale(0.97); }
+
+/* ---- ボタン ---- */
+.btn {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-panel-2);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 10px 14px;
+}
+.btn:active { transform: scale(0.97); }
+.btn.big { font-size: 15px; padding: 14px 18px; font-weight: 600; min-height: 50px; }
+.btn.start { background: var(--green); border-color: var(--green); color: #06281c; }
+.btn.stop { background: var(--red); border-color: var(--red); color: #3d0505; }
+.btn.example { background: var(--accent); border-color: var(--accent); color: #332300; }
+.btn.rhythm { background: var(--blue); border-color: var(--blue); color: #0a2245; }
+.btn.active { outline: 3px solid rgba(255, 255, 255, 0.4); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #332300; font-weight: 600; }
+.btn.tiny { padding: 2px 10px; font-size: 13px; min-height: 28px; }
+.btn.danger { color: var(--red); }
+
+.transport { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.transport-main { display: flex; gap: 8px; flex-wrap: wrap; }
+.transport-main .btn { flex: 1; min-width: 130px; }
+.transport-opts {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 13px;
+}
+.toggle { display: inline-flex; align-items: center; gap: 6px; color: var(--text-dim); cursor: pointer; min-height: 32px; }
+.toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
+.opt-label { color: var(--text-dim); font-size: 12px; }
+
+/* ---- コード進行グリッド ---- */
+.chord-grid { display: grid; gap: 6px; grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 480px) {
+  .chord-grid { grid-template-columns: repeat(2, 1fr); }
+  .chord-grid.measures-12 { grid-template-columns: repeat(4, 1fr); }
+}
+.chord-cell {
+  position: relative;
+  background: var(--bg-panel-2);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 6px 6px;
+  min-height: 64px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  color: var(--text);
+}
+.chord-cell.current {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
+}
+.chord-cell.selected { border-color: var(--blue); }
+.chord-cell-num {
+  position: absolute;
+  top: 3px;
+  left: 7px;
+  font-size: 9px;
+  color: var(--text-dim);
+}
+.chord-cell-symbols { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+.chord-symbol { font-size: 15px; font-weight: 700; font-family: Georgia, serif; }
+.chord-symbol.active { color: var(--accent); }
+.chord-cell-beats { display: flex; gap: 4px; }
+.beat-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--border);
+}
+.beat-dot.on { background: var(--accent); }
+.count-in-banner {
+  background: var(--accent-soft);
+  color: var(--accent);
+  text-align: center;
+  border-radius: 8px;
+  padding: 6px;
+  margin-bottom: 8px;
+  font-weight: 700;
+  animation: pulse 0.5s infinite alternate;
+}
+@keyframes pulse { from { opacity: 0.7; } to { opacity: 1; } }
+
+.hint-text { color: var(--text-dim); font-size: 12px; margin: 6px 0 0; line-height: 1.6; }
+
+/* ---- 五線譜 ---- */
+.staff-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.staff-head h2 { margin: 0; }
+.staff-card {
+  background: var(--paper);
+  border-radius: 10px;
+  padding: 8px 6px;
+  overflow-x: hidden;
+}
+.staff-container { width: 100%; }
+.staff-container svg { display: block; }
+/* 再生中の音のハイライト */
+.vf-current * {
+  fill: #e11d48 !important;
+  stroke: #e11d48 !important;
+}
+
+/* ---- コード情報 ---- */
+.chord-info { display: flex; flex-direction: column; gap: 12px; }
+.chord-info-head { display: flex; align-items: baseline; gap: 12px; }
+.chord-info-symbol {
+  font-size: 30px;
+  font-weight: 700;
+  font-family: Georgia, serif;
+  color: var(--accent);
+}
+.chord-info-concert { color: var(--text-dim); font-size: 13px; }
+.chord-info-row { display: flex; flex-direction: column; gap: 6px; }
+.chord-info-label { font-size: 12px; color: var(--text-dim); }
+.tone-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.tone-chip {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 10px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 48px;
+}
+.tone-chip strong { font-size: 16px; }
+.tone-chip small { font-size: 10px; color: var(--text-dim); }
+.tone-chip.guide { border-color: var(--accent); background: var(--accent-soft); }
+.tone-chip.guide strong { color: var(--accent); }
+.tone-chip.big strong { font-size: 20px; }
+.guide-note-hint { font-size: 11.5px; color: var(--text-dim); }
+.scale-name { font-weight: 600; display: block; margin-bottom: 6px; }
+.scale-notes { display: flex; gap: 4px; flex-wrap: wrap; }
+.scale-note {
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 13px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--text-dim);
+}
+.scale-note.chord-tone { color: var(--text); border-style: solid; border-color: var(--blue); }
+.scale-note small { font-size: 9px; }
+
+/* ---- 実践モードエディタ ---- */
+.custom-editor {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+.custom-editor-pitch {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.custom-editor-pitch strong { color: var(--accent); }
+.custom-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+}
+.custom-chord-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.custom-chord-row select { padding: 8px 4px; font-size: 14px; min-width: 0; }
+.custom-chord-num {
+  font-size: 11px;
+  color: var(--text-dim);
+  min-width: 18px;
+  text-align: right;
+}
+
+/* ---- 練習ポイント ---- */
+.tips-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.7; }
+
+/* ---- 練習ログ ---- */
+.log-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.log-form-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.log-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.log-item {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.log-item-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.log-item-head strong { font-size: 13px; }
+.log-item-meta { font-size: 11.5px; color: var(--text-dim); flex: 1; }
+.log-item-memo { margin: 6px 0 0; font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; }
+
+.app-footer { margin-top: 20px; text-align: center; color: var(--text-dim); font-size: 11.5px; }
