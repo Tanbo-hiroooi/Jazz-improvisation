@@ -268,6 +268,67 @@ export interface PhraseOptions {
   melodyVariant?: number;
 }
 
+// ---- 進行全体を通して手書きしたフレーズ(キーCのMIDIノートで記述) ----
+// 小節ごとの断片ではなく1本のラインとして書くことで、ピックアップ・山なりの
+// 起伏・ブレス(休符)を含む「フレーズ感」を出す。バリエーションボタン使用時は
+// 従来のコード単位生成にフォールバックする。
+
+interface OverrideNote {
+  /** キーC(実音)でのMIDIノート */
+  m: number;
+  s: number;
+  d: number;
+  v?: number;
+}
+
+const PHRASE_OVERRIDES: Partial<Record<string, OverrideNote[]>> = {
+  // Dm7 | G7 | Cmaj7 | Cmaj7 — 歌えるライン。ウラ拍ピックアップ→B(G7の3度)へ受け渡し
+  'ii-V-I:melodic': [
+    { m: 65, s: 0.5, d: 0.5, v: 0.75 }, { m: 67, s: 1, d: 0.5, v: 0.7 }, { m: 69, s: 1.5, d: 0.5, v: 0.75 },
+    { m: 72, s: 2, d: 1, v: 0.9 }, { m: 69, s: 3, d: 0.5, v: 0.7 }, { m: 71, s: 3.5, d: 0.5, v: 0.8 },
+    { m: 71, s: 4, d: 1.5, v: 0.85 }, { m: 69, s: 5.5, d: 0.5, v: 0.7 },
+    { m: 65, s: 6, d: 0.5, v: 0.75 }, { m: 64, s: 6.5, d: 0.5, v: 0.7 }, { m: 62, s: 7, d: 1, v: 0.8 },
+    { m: 64, s: 8, d: 1.5, v: 0.9 }, { m: 67, s: 9.5, d: 0.5, v: 0.7 }, { m: 71, s: 10, d: 2, v: 0.8 },
+    { m: 69, s: 12, d: 0.5, v: 0.75 }, { m: 67, s: 12.5, d: 0.5, v: 0.7 }, { m: 64, s: 13, d: 2, v: 0.85 },
+  ],
+  // Dm9アルペジオ→G7♭9の下行→16分の装飾→5度に置いて余韻
+  'ii-V-I:advanced': [
+    { m: 62, s: 0, d: 0.5, v: 0.8 }, { m: 65, s: 0.5, d: 0.5, v: 0.7 }, { m: 69, s: 1, d: 0.5, v: 0.75 },
+    { m: 72, s: 1.5, d: 0.5, v: 0.7 }, { m: 76, s: 2, d: 0.5, v: 0.9 }, { m: 74, s: 2.5, d: 0.5, v: 0.7 },
+    { m: 72, s: 3, d: 0.5, v: 0.75 }, { m: 69, s: 3.5, d: 0.5, v: 0.7 },
+    { m: 77, s: 4, d: 0.5, v: 0.9 }, { m: 76, s: 4.5, d: 0.5, v: 0.7 }, { m: 74, s: 5, d: 0.5, v: 0.75 },
+    { m: 71, s: 5.5, d: 0.5, v: 0.7 }, { m: 68, s: 6, d: 0.5, v: 0.85 }, { m: 67, s: 6.5, d: 0.5, v: 0.7 },
+    { m: 65, s: 7, d: 0.5, v: 0.75 }, { m: 62, s: 7.5, d: 0.5, v: 0.7 },
+    { m: 64, s: 8, d: 1, v: 0.9 },
+    { m: 67, s: 9, d: 0.25, v: 0.7 }, { m: 69, s: 9.25, d: 0.25, v: 0.7 }, { m: 71, s: 9.5, d: 0.5, v: 0.8 },
+    { m: 72, s: 10, d: 0.5, v: 0.75 }, { m: 74, s: 10.5, d: 0.5, v: 0.7 }, { m: 76, s: 11, d: 1, v: 0.85 },
+    { m: 74, s: 12.5, d: 0.5, v: 0.75 }, { m: 72, s: 13, d: 0.5, v: 0.7 }, { m: 69, s: 13.5, d: 0.5, v: 0.7 },
+    { m: 67, s: 14, d: 2, v: 0.8 },
+  ],
+  // Dm7♭5 | G7(♭9) | Cm7 | Cm7 — 静かに置いていくマイナーライン
+  'minor-ii-V-I:melodic': [
+    { m: 65, s: 0, d: 1, v: 0.8 }, { m: 68, s: 1, d: 1, v: 0.8 }, { m: 72, s: 2, d: 2, v: 0.85 },
+    { m: 71, s: 4, d: 1, v: 0.85 }, { m: 68, s: 5, d: 0.5, v: 0.7 }, { m: 67, s: 5.5, d: 0.5, v: 0.7 },
+    { m: 65, s: 6, d: 1, v: 0.75 }, { m: 62, s: 7, d: 1, v: 0.8 },
+    { m: 63, s: 8, d: 1.5, v: 0.9 }, { m: 65, s: 9.5, d: 0.5, v: 0.7 }, { m: 67, s: 10, d: 2, v: 0.8 },
+    { m: 65, s: 12.5, d: 0.5, v: 0.7 }, { m: 63, s: 13, d: 0.5, v: 0.75 }, { m: 62, s: 13.5, d: 0.5, v: 0.7 },
+    { m: 60, s: 14, d: 2, v: 0.85 },
+  ],
+  // ハーフディミニッシュの波→G7♭9のディミニッシュ渦→♭3で解決
+  'minor-ii-V-I:advanced': [
+    { m: 65, s: 0, d: 0.5, v: 0.8 }, { m: 68, s: 0.5, d: 0.5, v: 0.7 }, { m: 72, s: 1, d: 0.5, v: 0.8 },
+    { m: 74, s: 1.5, d: 0.5, v: 0.75 }, { m: 72, s: 2, d: 0.5, v: 0.8 }, { m: 68, s: 2.5, d: 0.5, v: 0.7 },
+    { m: 65, s: 3, d: 0.5, v: 0.75 }, { m: 62, s: 3.5, d: 0.5, v: 0.7 },
+    { m: 68, s: 4, d: 0.5, v: 0.85 }, { m: 67, s: 4.5, d: 0.5, v: 0.7 }, { m: 65, s: 5, d: 0.5, v: 0.75 },
+    { m: 62, s: 5.5, d: 0.5, v: 0.7 }, { m: 59, s: 6, d: 0.5, v: 0.8 }, { m: 62, s: 6.5, d: 0.5, v: 0.7 },
+    { m: 65, s: 7, d: 0.5, v: 0.75 }, { m: 68, s: 7.5, d: 0.5, v: 0.7 },
+    { m: 67, s: 8, d: 1.5, v: 0.9 }, { m: 63, s: 9.5, d: 0.5, v: 0.75 },
+    { m: 60, s: 10, d: 0.5, v: 0.7 }, { m: 62, s: 10.5, d: 0.5, v: 0.7 }, { m: 63, s: 11, d: 1, v: 0.85 },
+    { m: 65, s: 12.5, d: 0.5, v: 0.75 }, { m: 63, s: 13, d: 0.5, v: 0.7 }, { m: 60, s: 13.5, d: 0.5, v: 0.7 },
+    { m: 63, s: 14, d: 2, v: 0.85 },
+  ],
+};
+
 /**
  * コード進行 × 難易度 → 見本フレーズ(Concert MIDI)
  * オクターブはボイスリーディング(前の音に最も近い高さ)で自動調整する。
@@ -279,6 +340,23 @@ export function generatePhrase(
   opts: PhraseOptions = {},
 ): NoteEvent[] {
   const { rhythmVariant = 0, melodyVariant = 0 } = opts;
+
+  // 進行全体を通した手書きフレーズがあれば優先(バリエーションボタン使用時は除く)
+  if (rhythmVariant === 0 && melodyVariant === 0) {
+    const override = PHRASE_OVERRIDES[`${prog.id}:${difficulty}`];
+    if (override) {
+      // キーが高い場合はオクターブ下げて楽な音域を保つ
+      const shift = keyPc >= 6 ? keyPc - 12 : keyPc;
+      return override.map((o) => {
+        let chordIndex = 0;
+        prog.chords.forEach((c, i) => {
+          if (c.measure * 4 + c.beat <= o.s + 0.01) chordIndex = i;
+        });
+        return { midi: o.m + shift, start: o.s, duration: o.d, velocity: o.v ?? 0.8, chordIndex };
+      });
+    }
+  }
+
   const events: NoteEvent[] = [];
   let prevPitch: number | null = null;
 
@@ -332,22 +410,137 @@ export function generatePhrase(
   return events.sort((a, b) => a.start - b.start);
 }
 
-/** コードトーン表示用: 各コードの構成音(1-3-5-7)を4分音符で上行 */
-export function chordTonesAsNotes(prog: Progression, keyPc: number): NoteEvent[] {
+// ---- コードトーン/ガイドトーン練習のリズムパターン ----
+
+export type ToneRhythmId = 'basic' | 'swing8' | 'offbeat' | 'sixteenth' | 'triplet' | 'charleston';
+
+export const TONE_RHYTHMS: { id: ToneRhythmId; label: string; hint: string }[] = [
+  { id: 'basic', label: '基本', hint: 'コードトーンは4分音符、ガイドトーンは2分音符。まずはここから。' },
+  { id: 'swing8', label: 'スウィング8分', hint: '8分音符で上下する。スウィング設定と合わせて「タータ」の跳ねを体に入れる。' },
+  { id: 'offbeat', label: '裏拍', hint: 'オモテは休符、ウラ拍だけで音をとる。メトロノームを聴きながら裏に乗る練習。' },
+  { id: 'sixteenth', label: '16分', hint: '16分音符のダブルタイム感。速い指の動きと正確なタイムを鍛える。' },
+  { id: 'triplet', label: '3連符', hint: '1拍3連のうねり。スウィングの土台になるリズム感覚。' },
+  { id: 'charleston', label: 'チャールストン', hint: '付点4分のシンコペーション。コンピングの定番リズムで音をとる。' },
+];
+
+const TP = 1 / 3; // 3連符の1音分
+
+/** コードトーン(4音)用のリズムパターン */
+function chordToneLick(t: number[], beats: number, rhythm: ToneRhythmId): LickNote[] {
+  const oct = 12 + t[0];
+  if (beats >= 4) {
+    switch (rhythm) {
+      case 'basic':
+        return [n(t[0], 0, 1), n(t[1], 1, 1), n(t[2], 2, 1), n(t[3], 3, 1)];
+      case 'swing8':
+        return [t[0], t[1], t[2], t[3], oct, t[3], t[2], t[1]].map((o, i) => n(o, i * 0.5, 0.5, i % 2 ? 0.65 : 0.85));
+      case 'offbeat':
+        return [n(t[0], 0.5, 0.5, 0.85), n(t[1], 1.5, 0.5, 0.85), n(t[2], 2.5, 0.5, 0.85), n(t[3], 3.5, 0.5, 0.85)];
+      case 'sixteenth':
+        return [
+          n(t[0], 0, 0.25, 0.85), n(t[1], 0.25, 0.25, 0.7), n(t[2], 0.5, 0.25, 0.75), n(t[3], 0.75, 0.25, 0.7),
+          n(oct, 1, 1, 0.9),
+          n(t[3], 2, 0.25, 0.85), n(t[2], 2.25, 0.25, 0.7), n(t[1], 2.5, 0.25, 0.75), n(t[0], 2.75, 0.25, 0.7),
+          n(t[0], 3, 1, 0.85),
+        ];
+      case 'triplet':
+        return [
+          n(t[0], 0, TP, 0.85), n(t[1], TP, TP, 0.7), n(t[2], 2 * TP, TP, 0.7),
+          n(t[1], 1, TP, 0.85), n(t[2], 1 + TP, TP, 0.7), n(t[3], 1 + 2 * TP, TP, 0.7),
+          n(t[2], 2, TP, 0.85), n(t[3], 2 + TP, TP, 0.7), n(oct, 2 + 2 * TP, TP, 0.7),
+          n(t[3], 3, 1, 0.85),
+        ];
+      case 'charleston':
+        return [n(t[0], 0, 1.5, 0.9), n(t[1], 1.5, 1.5, 0.8), n(t[2], 3, 1, 0.8)];
+    }
+  }
+  switch (rhythm) {
+    case 'basic':
+      return [n(t[0], 0, 1), n(t[1], 1, 1)];
+    case 'swing8':
+      return [n(t[0], 0, 0.5, 0.85), n(t[1], 0.5, 0.5, 0.65), n(t[2], 1, 0.5, 0.85), n(t[3], 1.5, 0.5, 0.65)];
+    case 'offbeat':
+      return [n(t[0], 0.5, 0.5, 0.85), n(t[2], 1.5, 0.5, 0.85)];
+    case 'sixteenth':
+      return [n(t[0], 0, 0.25, 0.85), n(t[1], 0.25, 0.25, 0.7), n(t[2], 0.5, 0.25, 0.75), n(t[3], 0.75, 0.25, 0.7), n(oct, 1, 1, 0.9)];
+    case 'triplet':
+      return [
+        n(t[0], 0, TP, 0.85), n(t[1], TP, TP, 0.7), n(t[2], 2 * TP, TP, 0.7),
+        n(t[3], 1, TP, 0.85), n(t[2], 1 + TP, TP, 0.7), n(t[1], 1 + 2 * TP, TP, 0.7),
+      ];
+    case 'charleston':
+      return [n(t[0], 0, 1, 0.9), n(t[1], 1.5, 0.5, 0.8)];
+  }
+}
+
+/** ガイドトーン(2音)用のリズムパターン */
+function guideToneLick(g: number[], beats: number, rhythm: ToneRhythmId): LickNote[] {
+  const [a, b] = g;
+  if (beats >= 4) {
+    switch (rhythm) {
+      case 'basic':
+        return [n(a, 0, 2, 0.85), n(b, 2, 2, 0.75)];
+      case 'swing8':
+        return [a, b, a, b, a, b, a, b].map((o, i) => n(o, i * 0.5, 0.5, i % 2 ? 0.6 : 0.85));
+      case 'offbeat':
+        return [n(a, 0.5, 0.5, 0.85), n(b, 1.5, 0.5, 0.85), n(a, 2.5, 0.5, 0.85), n(b, 3.5, 0.5, 0.85)];
+      case 'sixteenth':
+        // 各拍で「タタ・タ」の16分フィギュア
+        return [a, b, a, b].flatMap((o, beat) => [
+          n(o, beat, 0.25, 0.85), n(o, beat + 0.25, 0.25, 0.6), n(o, beat + 0.75, 0.25, 0.7),
+        ]);
+      case 'triplet':
+        return [
+          n(a, 0, TP, 0.85), n(b, TP, TP, 0.65), n(a, 2 * TP, TP, 0.65),
+          n(b, 1, TP, 0.85), n(a, 1 + TP, TP, 0.65), n(b, 1 + 2 * TP, TP, 0.65),
+          n(a, 2, TP, 0.85), n(b, 2 + TP, TP, 0.65), n(a, 2 + 2 * TP, TP, 0.65),
+          n(b, 3, 1, 0.85),
+        ];
+      case 'charleston':
+        return [n(a, 0, 1.5, 0.9), n(b, 1.5, 1.5, 0.8), n(a, 3, 1, 0.8)];
+    }
+  }
+  switch (rhythm) {
+    case 'basic':
+      return [n(a, 0, 2, 0.8)];
+    case 'swing8':
+      return [n(a, 0, 0.5, 0.85), n(b, 0.5, 0.5, 0.6), n(a, 1, 0.5, 0.85), n(b, 1.5, 0.5, 0.6)];
+    case 'offbeat':
+      return [n(a, 0.5, 0.5, 0.85), n(b, 1.5, 0.5, 0.85)];
+    case 'sixteenth':
+      return [
+        n(a, 0, 0.25, 0.85), n(a, 0.25, 0.25, 0.6), n(a, 0.75, 0.25, 0.7),
+        n(b, 1, 0.25, 0.85), n(b, 1.25, 0.25, 0.6), n(b, 1.75, 0.25, 0.7),
+      ];
+    case 'triplet':
+      return [n(a, 0, TP, 0.85), n(b, TP, TP, 0.65), n(a, 2 * TP, TP, 0.65), n(b, 1, 1, 0.85)];
+    case 'charleston':
+      return [n(a, 0, 1, 0.9), n(b, 1.5, 0.5, 0.8)];
+  }
+}
+
+function tonesAsNotes(prog: Progression, keyPc: number, kind: 'chord' | 'guide', rhythm: ToneRhythmId): NoteEvent[] {
   const events: NoteEvent[] = [];
   prog.chords.forEach((chord, chordIndex) => {
-    const tones = QUALITIES[chord.quality].tones;
+    const def = QUALITIES[chord.quality];
     const rootPc = mod12(keyPc + chord.rootOffset);
     let rootMidi = 60 + rootPc;
     if (rootMidi > 65) rootMidi -= 12;
     const measureStart = chord.measure * 4 + chord.beat;
-    const count = chord.beats >= 4 ? 4 : 2;
-    for (let i = 0; i < count; i++) {
+    let lick: LickNote[];
+    if (kind === 'chord') {
+      lick = chordToneLick(def.tones, chord.beats, rhythm);
+    } else {
+      // ガイドトーンは小節ごとに3度/7度の順を入れ替えてボイスリーディングを感じさせる
+      const g = chordIndex % 2 === 0 ? def.guide : [def.guide[1] - 12, def.guide[0]];
+      lick = guideToneLick(g, chord.beats, rhythm);
+    }
+    for (const note of lick) {
       events.push({
-        midi: rootMidi + tones[i],
-        start: measureStart + i,
-        duration: 1,
-        velocity: 0.8,
+        midi: rootMidi + note.o,
+        start: measureStart + note.s,
+        duration: note.d,
+        velocity: note.v ?? 0.8,
         chordIndex,
       });
     }
@@ -355,9 +548,14 @@ export function chordTonesAsNotes(prog: Progression, keyPc: number): NoteEvent[]
   return events;
 }
 
+/** コードトーン表示用 */
+export function chordTonesAsNotes(prog: Progression, keyPc: number, rhythm: ToneRhythmId = 'basic'): NoteEvent[] {
+  return tonesAsNotes(prog, keyPc, 'chord', rhythm);
+}
+
 /** ガイドトーン表示用 */
-export function guideTonesAsNotes(prog: Progression, keyPc: number): NoteEvent[] {
-  return generatePhrase(prog, keyPc, 'guide', { rhythmVariant: 0 });
+export function guideTonesAsNotes(prog: Progression, keyPc: number, rhythm: ToneRhythmId = 'basic'): NoteEvent[] {
+  return tonesAsNotes(prog, keyPc, 'guide', rhythm);
 }
 
 /** 「使える音」表示用: 各コードのおすすめスケールを8分音符で上行(1小節=スケール7音+オクターブ上のルート) */

@@ -13,6 +13,7 @@ import {
   Stave,
   StaveConnector,
   StaveNote,
+  Tuplet,
 } from 'vexflow';
 import { degreeLabel, type Quality } from '../theory/chords';
 import { midiToParts, midiToName, midiToSolfege, mod12 } from '../theory/notes';
@@ -126,6 +127,7 @@ export function StaffView({ notes, measures, clef, shift, flats, labelMode, chor
         acc: '' | '#' | 'b';
         globalIndex: number; // notes配列のインデックス(-1: 休符)
         label: string;
+        triplet?: boolean; // 1拍3連の一員
       }
       const measureItems: Item[][] = [];
       for (let m = 0; m < measures; m++) {
@@ -143,7 +145,9 @@ export function StaffView({ notes, measures, clef, shift, flats, labelMode, chor
             }
           }
           const dur = Math.min(n.duration, 4 - pos);
-          const { dur: d, dots } = nearestDur(dur);
+          // 1/3拍 = 3連符の一員として8分音符+連符記号で表記
+          const isTriplet = Math.abs(dur - 1 / 3) < 0.04;
+          const { dur: d, dots } = isTriplet ? { dur: '8', dots: 0 } : nearestDur(dur);
           const p = midiToParts(n.displayMidi, flats);
           const chord = chords[Math.min(n.chordIndex, chords.length - 1)];
           let label = '';
@@ -158,6 +162,7 @@ export function StaffView({ notes, measures, clef, shift, flats, labelMode, chor
             acc: p.accidental,
             globalIndex: gi,
             label,
+            triplet: isTriplet,
           });
           t = pos + dur;
         }
@@ -244,9 +249,25 @@ export function StaffView({ notes, measures, clef, shift, flats, labelMode, chor
           return sn;
         });
 
+        // 3連符: 連続する3つの1/3拍ノートを連符としてまとめる(フォーマット前に作成)
+        const tuplets: Tuplet[] = [];
+        let run: StaveNote[] = [];
+        items.forEach((item, i) => {
+          if (item.triplet) {
+            run.push(staveNotes[i]);
+            if (run.length === 3) {
+              tuplets.push(new Tuplet(run, { num_notes: 3, notes_occupied: 2 }));
+              run = [];
+            }
+          } else {
+            run = [];
+          }
+        });
+
         const beams = Beam.generateBeams(staveNotes);
         Formatter.FormatAndDraw(ctx, stave, staveNotes);
         beams.forEach((b) => b.setContext(ctx).draw());
+        tuplets.forEach((tp) => tp.setContext(ctx).draw());
 
         // ハイライト用に SVG 要素を記録(VexFlowは各ノートを g#vf-{id} に描画する)
         items.forEach((item, i) => {

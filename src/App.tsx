@@ -12,12 +12,14 @@ import { getPracticeGuide, type StaffTab } from './theory/modes';
 import { KEYS, mod12, useFlatsForKey } from './theory/notes';
 import {
   DIFFICULTIES,
+  TONE_RHYTHMS,
   chordTonesAsNotes,
   generatePhrase,
   guideTonesAsNotes,
   scaleAsNotes,
   type Difficulty,
   type NoteEvent,
+  type ToneRhythmId,
 } from './theory/phrases';
 import { PROGRESSIONS, chordAt, getProgression, type Progression, type ProgressionId } from './theory/progressions';
 import { JAZZ_RHYTHMS, SWING_OPTIONS } from './theory/rhythms';
@@ -37,6 +39,9 @@ export default function App() {
   const [pitchMode, setPitchMode] = useState<PitchMode>('concert');
   const [difficulty, setDifficulty] = useState<Difficulty>('beginner');
   const [tab, setTab] = useState<StaffTab>('phrase');
+  const [toneRhythm, setToneRhythm] = useState<ToneRhythmId>('basic');
+  // BPMの直接入力用テキスト(入力途中の値をクランプしないための分離)
+  const [bpmText, setBpmText] = useState('100');
   const [labelMode, setLabelMode] = useState<LabelMode>('none');
 
   // ---- 再生オプション ----
@@ -90,11 +95,11 @@ export default function App() {
   );
 
   const displayedNotes: NoteEvent[] = useMemo(() => {
-    if (tab === 'chordtones') return chordTonesAsNotes(progression, effKeyPc);
-    if (tab === 'guidetones') return guideTonesAsNotes(progression, effKeyPc);
+    if (tab === 'chordtones') return chordTonesAsNotes(progression, effKeyPc, toneRhythm);
+    if (tab === 'guidetones') return guideTonesAsNotes(progression, effKeyPc, toneRhythm);
     if (tab === 'scale') return scaleAsNotes(progression, effKeyPc);
     return phrase;
-  }, [tab, progression, effKeyPc, phrase]);
+  }, [tab, progression, effKeyPc, phrase, toneRhythm]);
 
   // 譜面上のコード表記(移調適用)
   const chordDisplays: ChordDisplay[] = useMemo(
@@ -225,7 +230,7 @@ export default function App() {
   // 設定変更時は停止
   useEffect(() => {
     stopAll();
-  }, [progression, keyPc, instrumentId, difficulty, tab, stopAll]);
+  }, [progression, keyPc, instrumentId, difficulty, tab, toneRhythm, stopAll]);
 
   useEffect(() => () => engine.stop(), []);
 
@@ -335,11 +340,21 @@ export default function App() {
               <input
                 id="bpm-slider"
                 type="range" min={40} max={220} value={bpm}
-                onChange={(e) => setBpm(Number(e.target.value))}
+                onChange={(e) => { setBpm(Number(e.target.value)); setBpmText(e.target.value); }}
               />
               <input
-                type="number" min={40} max={220} value={bpm}
-                onChange={(e) => setBpm(Math.max(40, Math.min(220, Number(e.target.value) || 40)))}
+                type="number" min={40} max={220} value={bpmText}
+                onChange={(e) => {
+                  // 入力途中はクランプせず、有効範囲の値だけライブ反映する
+                  setBpmText(e.target.value);
+                  const v = Number(e.target.value);
+                  if (Number.isFinite(v) && v >= 40 && v <= 220) setBpm(v);
+                }}
+                onBlur={() => {
+                  const v = Math.max(40, Math.min(220, Number(bpmText) || bpm));
+                  setBpm(v);
+                  setBpmText(String(v));
+                }}
               />
             </div>
           </div>
@@ -356,7 +371,7 @@ export default function App() {
 
           {tab === 'phrase' && (
             <div className="field">
-              <label>見本フレーズの難易度</label>
+              <label>見本フレーズの種類</label>
               <div className="seg-group wrap">
                 {DIFFICULTIES.map((d) => (
                   <button key={d.id} className={`seg${difficulty === d.id ? ' on' : ''}`} onClick={() => setDifficulty(d.id)}>
@@ -365,6 +380,20 @@ export default function App() {
                 ))}
               </div>
               <p className="hint-text">{DIFFICULTIES.find((d) => d.id === difficulty)?.hint}</p>
+            </div>
+          )}
+
+          {(tab === 'chordtones' || tab === 'guidetones') && (
+            <div className="field">
+              <label>リズムパターン</label>
+              <div className="seg-group wrap">
+                {TONE_RHYTHMS.map((r) => (
+                  <button key={r.id} className={`seg${toneRhythm === r.id ? ' on' : ''}`} onClick={() => setToneRhythm(r.id)}>
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+              <p className="hint-text">{TONE_RHYTHMS.find((r) => r.id === toneRhythm)?.hint}</p>
             </div>
           )}
         </section>
