@@ -8,7 +8,7 @@ import { RhythmDojoPanel, rhythmToNotes } from './components/RhythmDojoPanel';
 import { StaffView, type ChordDisplay, type LabelMode } from './components/StaffView';
 import { QUALITIES, chordSymbol } from './theory/chords';
 import { INSTRUMENTS, getInstrument, displayShift, type Clef, type PitchMode } from './theory/instruments';
-import { PRACTICE_MODES, type StaffTab } from './theory/modes';
+import { getPracticeGuide, type StaffTab } from './theory/modes';
 import { KEYS, mod12, useFlatsForKey } from './theory/notes';
 import {
   DIFFICULTIES,
@@ -36,7 +36,6 @@ export default function App() {
   const [clefOverride, setClefOverride] = useState<Clef | null>(null);
   const [pitchMode, setPitchMode] = useState<PitchMode>('concert');
   const [difficulty, setDifficulty] = useState<Difficulty>('beginner');
-  const [modeId, setModeId] = useState('chord-tone-phrase');
   const [tab, setTab] = useState<StaffTab>('phrase');
   const [labelMode, setLabelMode] = useState<LabelMode>('none');
 
@@ -81,7 +80,7 @@ export default function App() {
   const displayKeyPc = mod12(effKeyPc + shift);
   const flats = useFlatsForKey(displayKeyPc);
   const concertFlats = useFlatsForKey(keyPc);
-  const mode = PRACTICE_MODES.find((m) => m.id === modeId)!;
+  const guide = getPracticeGuide(tab, difficulty);
   const swingOffset = SWING_OPTIONS.find((s) => s.id === swingId)!.offset;
 
   // 見本フレーズ(Concert)
@@ -230,15 +229,6 @@ export default function App() {
 
   useEffect(() => () => engine.stop(), []);
 
-  // 練習モード選択 → 推奨タブ・難易度・ループを適用
-  const applyMode = (id: string) => {
-    setModeId(id);
-    const m = PRACTICE_MODES.find((x) => x.id === id)!;
-    setTab(m.tab);
-    setDifficulty(m.difficulty);
-    if (id === 'call-response') setLoopRange('2');
-  };
-
   // ---- 現在のコード(情報パネル用) ----
   const infoMeasure = position && position.measure >= 0 ? position.measure : selectedMeasure;
   const infoBeat = position && position.measure >= 0 ? position.beat : 0;
@@ -352,15 +342,6 @@ export default function App() {
                 onChange={(e) => setBpm(Math.max(40, Math.min(220, Number(e.target.value) || 40)))}
               />
             </div>
-          </div>
-
-          <div className="field">
-            <label htmlFor="mode-select">練習モード</label>
-            <select id="mode-select" value={modeId} onChange={(e) => applyMode(e.target.value)}>
-              {PRACTICE_MODES.map((m) => (
-                <option key={m.id} value={m.id}>{m.label}</option>
-              ))}
-            </select>
           </div>
 
           <div className="field">
@@ -504,9 +485,9 @@ export default function App() {
           </section>
 
           <section className="panel">
-            <h2>練習ポイント — {mode.label}</h2>
+            <h2>練習ポイント — {guide.title}</h2>
             <ol className="tips-list">
-              {mode.tips.map((t, i) => (
+              {guide.tips.map((t, i) => (
                 <li key={i}>{t}</li>
               ))}
             </ol>
@@ -518,7 +499,7 @@ export default function App() {
               key: isCustom ? '自由進行' : keyName,
               bpm,
               instrument: instrument.label,
-              mode: mode.label,
+              mode: guide.title,
               difficulty: DIFFICULTIES.find((d) => d.id === difficulty)!.label,
             }}
           />
