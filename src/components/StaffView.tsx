@@ -109,16 +109,6 @@ export function StaffView({ notes, measures, clef, shift, flats, labelMode, chor
       prevHighlight.current = null;
 
       const width = container.clientWidth || 600;
-      const perLine = Math.min(measures, width < 620 ? 2 : 4);
-      const lines = Math.ceil(measures / perLine);
-      const isGrand = clef === 'grand';
-      const lineHeight = isGrand ? 210 : 130;
-      const topPad = 24;
-      const height = lines * lineHeight + topPad;
-
-      const renderer = new Renderer(container, Renderer.Backends.SVG);
-      renderer.resize(width, height);
-      const ctx = renderer.getContext();
       const noteClef = clef === 'bass' ? 'bass' : 'treble';
 
       // 小節ごとの表示ノート(休符詰め)を構築
@@ -174,6 +164,26 @@ export function StaffView({ notes, measures, clef, shift, flats, labelMode, chor
         }
         measureItems.push(items);
       }
+
+      // 内容の密度(音数+臨時記号数)から1小節に必要な幅を見積もり、
+      // 1行あたりの小節数を決める。幅が足りないと音符が重なって描画されるため。
+      let maxRequired = 120;
+      for (const items of measureItems) {
+        const accCount = items.filter((i) => i.acc && !i.isRest).length;
+        const required = 50 + items.length * 32 + accCount * 12;
+        if (required > maxRequired) maxRequired = required;
+      }
+      const hardCap = width < 620 ? 2 : 4;
+      const perLine = Math.max(1, Math.min(measures, hardCap, Math.floor(width / maxRequired)));
+      const lines = Math.ceil(measures / perLine);
+      const isGrand = clef === 'grand';
+      const lineHeight = isGrand ? 210 : 130;
+      const topPad = 24;
+      const height = lines * lineHeight + topPad;
+
+      const renderer = new Renderer(container, Renderer.Backends.SVG);
+      renderer.resize(width, height);
+      const ctx = renderer.getContext();
 
       for (let m = 0; m < measures; m++) {
         const line = Math.floor(m / perLine);
