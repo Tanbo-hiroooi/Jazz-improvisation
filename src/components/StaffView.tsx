@@ -87,15 +87,21 @@ export function StaffView({ notes, measures, clef, shift, flats, labelMode, chor
   const currentIndexRef = useRef(currentIndex);
   currentIndexRef.current = currentIndex;
 
-  // 表示用MIDI: 移調 + クレフに収まるオクターブへ全体シフト
+  // 表示用MIDI: 原則「鳴っている音 + 記譜シフト」をそのまま描画し、
+  // 譜表から大きく外れる場合のみオクターブ単位で寄せる。
+  // (常に譜表中央へスナップすると、実際の音より1オクターブ高く/低く見えてしまうため)
   const displayNotes = useMemo(() => {
     if (notes.length === 0) return [] as (NoteEvent & { displayMidi: number })[];
     const noteClef = clef === 'bass' ? 'bass' : 'treble';
-    const target = noteClef === 'bass' ? 50 : 71;
     const shifted = notes.map((n) => n.midi + shift);
     const sorted = [...shifted].sort((a, b) => a - b);
     const median = sorted[Math.floor(sorted.length / 2)];
-    const k = Math.round((target - median) / 12) * 12;
+    // 中央値がこの範囲に収まっていればそのまま表示(treble: C4〜A5 / bass: G2〜D4)
+    const lo = noteClef === 'bass' ? 43 : 60;
+    const hi = noteClef === 'bass' ? 62 : 81;
+    let k = 0;
+    while (median + k < lo) k += 12;
+    while (median + k > hi) k -= 12;
     return notes.map((n, i) => ({ ...n, displayMidi: shifted[i] + k }));
   }, [notes, shift, clef]);
 
