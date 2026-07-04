@@ -83,6 +83,9 @@ export function StaffView({ notes, measures, clef, shift, flats, labelMode, chor
   const containerRef = useRef<HTMLDivElement>(null);
   const noteElsRef = useRef<(SVGElement | null)[]>([]);
   const prevHighlight = useRef<SVGElement | null>(null);
+  // 再描画でSVGが作り直されてもハイライトを復元できるよう、現在位置をrefにも保持
+  const currentIndexRef = useRef(currentIndex);
+  currentIndexRef.current = currentIndex;
 
   // 表示用MIDI: 移調 + クレフに収まるオクターブへ全体シフト
   const displayNotes = useMemo(() => {
@@ -106,7 +109,7 @@ export function StaffView({ notes, measures, clef, shift, flats, labelMode, chor
       prevHighlight.current = null;
 
       const width = container.clientWidth || 600;
-      const perLine = width < 620 ? 2 : 4;
+      const perLine = Math.min(measures, width < 620 ? 2 : 4);
       const lines = Math.ceil(measures / perLine);
       const isGrand = clef === 'grand';
       const lineHeight = isGrand ? 210 : 130;
@@ -237,6 +240,16 @@ export function StaffView({ notes, measures, clef, shift, flats, labelMode, chor
             noteElsRef.current[item.globalIndex] = el;
           }
         });
+      }
+
+      // 再描画後にハイライトを復元
+      const ci = currentIndexRef.current;
+      if (ci >= 0) {
+        const el = noteElsRef.current[ci];
+        if (el) {
+          el.classList.add('vf-current');
+          prevHighlight.current = el;
+        }
       }
     };
 

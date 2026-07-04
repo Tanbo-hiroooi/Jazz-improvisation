@@ -2,7 +2,7 @@
   "name": "Jazz Phrase Lab",
   "short_name": "JazzLab",
   "description": "楽譜は読めるけれどアドリブが苦手な演奏者のためのジャズ・フレーズ練習アプリ",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#141824",
   "theme_color": "#141824",

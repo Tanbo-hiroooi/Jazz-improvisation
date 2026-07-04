@@ -1,9 +1,10 @@
 // ジャズリズム練習: 定番リズムパターンを選んで、リズム音+メトロノームでループ練習する
 
+import { useMemo } from 'react';
 import { JAZZ_RHYTHMS, type JazzRhythm } from '../theory/rhythms';
 import type { NoteEvent } from '../theory/phrases';
 import type { Clef } from '../theory/instruments';
-import { StaffView } from './StaffView';
+import { StaffView, type ChordDisplay } from './StaffView';
 
 /** パターンを譜面・再生用の NoteEvent に変換(音程は1音に固定) */
 export function rhythmToNotes(pattern: JazzRhythm): NoteEvent[] {
@@ -26,9 +27,12 @@ interface Props {
   currentIndex: number;
 }
 
+// 再レンダリングのたびに配列を作り直すと譜面が再描画されてハイライトが消えるため、identityを安定させる
+const NO_CHORDS: ChordDisplay[] = [];
+
 export function RhythmDojoPanel({ patternId, onSelect, playing, onPlay, onStop, clef, currentIndex }: Props) {
   const pattern = JAZZ_RHYTHMS.find((r) => r.id === patternId) ?? JAZZ_RHYTHMS[0];
-  const notes = rhythmToNotes(pattern);
+  const notes = useMemo(() => rhythmToNotes(pattern), [pattern]);
 
   return (
     <section className="panel">
@@ -53,7 +57,7 @@ export function RhythmDojoPanel({ patternId, onSelect, playing, onPlay, onStop, 
           shift={0}
           flats={true}
           labelMode="none"
-          chords={[]}
+          chords={NO_CHORDS}
           currentIndex={currentIndex}
         />
       </div>
