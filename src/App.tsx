@@ -132,10 +132,11 @@ export default function App() {
       const endBeat = (regionStart + regionBars) * 4;
 
       // リージョン内の見本ノート(開始拍を0に正規化)
+      // Rhythm Only も表示中のタブの内容を使う: 譜面のハイライトと音を常に一致させるため
       let regionNotes: NoteEvent[] | undefined;
       regionMapRef.current = [];
       if (kind !== 'backing') {
-        const src = kind === 'example' ? displayedNotes : phrase;
+        const src = displayedNotes;
         regionNotes = [];
         src.forEach((n, gi) => {
           if (n.start >= startBeat - 0.01 && n.start < endBeat - 0.01) {
@@ -189,7 +190,7 @@ export default function App() {
       });
       setPlaying(kind);
     },
-    [progression, loopRange, selectedMeasure, displayedNotes, phrase, compOn, effKeyPc, bpm, countIn, loopEnabled, metronomeOn, swingOffset],
+    [progression, loopRange, selectedMeasure, displayedNotes, compOn, effKeyPc, bpm, countIn, loopEnabled, metronomeOn, swingOffset],
   );
 
   // ジャズリズム練習の再生

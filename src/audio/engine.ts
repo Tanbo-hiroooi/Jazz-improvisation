@@ -120,6 +120,27 @@ export class AudioEngine {
     }, '4n', 0);
     this.repeats.push(clickId);
 
+    // スウィング: ウラ拍(x.5拍)の音を遅らせ、その分ウラ拍の音価を詰める。
+    // オモテ拍の8分はウラ拍まで伸ばして「タータ」のシャッフル感を出す。
+    // 実際に鳴らすタイミング(スウィング適用後)を先に計算し、
+    // 再生スケジュールとハイライト判定の両方で同じものを使う。
+    const sw = opts.swing ?? 0;
+    const isOffbeat = (b: number) => Math.abs((b % 1) - 0.5) < 0.02;
+    const isOnbeat = (b: number) => b % 1 < 0.02 || b % 1 > 0.98;
+    const timedNotes = (opts.notes ?? []).map((nt) => {
+      let start = nt.start;
+      let duration = nt.duration;
+      if (sw > 0) {
+        if (isOffbeat(start)) {
+          start += sw;
+          if (Math.abs(duration - 0.5) < 0.02) duration = Math.max(0.2, duration - sw);
+        } else if (isOnbeat(start) && Math.abs(duration - 0.5) < 0.02) {
+          duration += sw;
+        }
+      }
+      return { midi: nt.midi, velocity: nt.velocity, start, duration };
+    });
+
     // 再生位置の通知(16分音符ごと)
     const posId = transport.scheduleRepeat((time) => {
       const ticks = transport.getTicksAtTime(time);
@@ -129,10 +150,10 @@ export class AudioEngine {
       const regionBeats = beats - offsetBars * 4;
       Tone.getDraw().schedule(() => {
         opts.onPosition?.(bar, beat);
-        if (opts.notes && bar >= 0) {
+        if (timedNotes.length > 0 && bar >= 0) {
           let idx = -1;
-          for (let i = 0; i < opts.notes.length; i++) {
-            const nt = opts.notes[i];
+          for (let i = 0; i < timedNotes.length; i++) {
+            const nt = timedNotes[i];
             if (nt.start <= regionBeats + 0.01 && regionBeats < nt.start + nt.duration) idx = i;
           }
           opts.onNoteIndex?.(idx);
@@ -142,30 +163,13 @@ export class AudioEngine {
     this.repeats.push(posId);
 
     // 見本フレーズ / リズムのみ
-    // スウィング: ウラ拍(x.5拍)の音を遅らせ、その分ウラ拍の音価を詰める。
-    // オモテ拍の8分はウラ拍まで伸ばして「タータ」のシャッフル感を出す。
-    const sw = opts.swing ?? 0;
-    const isOffbeat = (b: number) => Math.abs((b % 1) - 0.5) < 0.02;
-    const isOnbeat = (b: number) => b % 1 < 0.02 || b % 1 > 0.98;
-    if (opts.notes && opts.notes.length > 0) {
-      const events = opts.notes.map((nt) => {
-        let start = nt.start;
-        let duration = nt.duration;
-        if (sw > 0) {
-          if (isOffbeat(start)) {
-            start += sw;
-            if (Math.abs(duration - 0.5) < 0.02) duration = Math.max(0.2, duration - sw);
-          } else if (isOnbeat(start) && Math.abs(duration - 0.5) < 0.02) {
-            duration += sw;
-          }
-        }
-        return {
-          time: beatsToTime(start + offsetBars * 4),
-          midi: nt.midi,
-          duration,
-          velocity: nt.velocity,
-        };
-      });
+    if (timedNotes.length > 0) {
+      const events = timedNotes.map((nt) => ({
+        time: beatsToTime(nt.start + offsetBars * 4),
+        midi: nt.midi,
+        duration: nt.duration,
+        velocity: nt.velocity,
+      }));
       // 注意: Part.loop はPart開始時点からループ領域を鳴らすため、カウントイン中に
       // フレーズが鳴ってしまう。繰り返しは Transport.loop に任せる。
       const part = new Tone.Part((time, ev) => {
