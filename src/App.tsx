@@ -345,16 +345,28 @@ export default function App() {
           </div>
 
           <div className="field">
-            <label>見本フレーズの難易度</label>
+            <label>練習する内容(五線譜に表示)</label>
             <div className="seg-group wrap">
-              {DIFFICULTIES.map((d) => (
-                <button key={d.id} className={`seg${difficulty === d.id ? ' on' : ''}`} onClick={() => setDifficulty(d.id)}>
-                  {d.label}
-                </button>
-              ))}
+              <button className={`seg${tab === 'phrase' ? ' on' : ''}`} onClick={() => setTab('phrase')}>見本フレーズ</button>
+              <button className={`seg${tab === 'chordtones' ? ' on' : ''}`} onClick={() => setTab('chordtones')}>コードトーン</button>
+              <button className={`seg${tab === 'guidetones' ? ' on' : ''}`} onClick={() => setTab('guidetones')}>ガイドトーン</button>
+              <button className={`seg${tab === 'scale' ? ' on' : ''}`} onClick={() => setTab('scale')}>使える音</button>
             </div>
-            <p className="hint-text">{DIFFICULTIES.find((d) => d.id === difficulty)!.hint}</p>
           </div>
+
+          {tab === 'phrase' && (
+            <div className="field">
+              <label>見本フレーズの難易度</label>
+              <div className="seg-group wrap">
+                {DIFFICULTIES.map((d) => (
+                  <button key={d.id} className={`seg${difficulty === d.id ? ' on' : ''}`} onClick={() => setDifficulty(d.id)}>
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+              <p className="hint-text">{DIFFICULTIES.find((d) => d.id === difficulty)?.hint}</p>
+            </div>
+          )}
         </section>
 
         {/* ===== メイン(進行・譜面・再生) ===== */}
@@ -431,12 +443,7 @@ export default function App() {
           <section className="panel">
             <div className="staff-head">
               <h2>五線譜</h2>
-              <div className="seg-group">
-                <button className={`seg${tab === 'phrase' ? ' on' : ''}`} onClick={() => setTab('phrase')}>見本フレーズ</button>
-                <button className={`seg${tab === 'chordtones' ? ' on' : ''}`} onClick={() => setTab('chordtones')}>コードトーン</button>
-                <button className={`seg${tab === 'guidetones' ? ' on' : ''}`} onClick={() => setTab('guidetones')}>ガイドトーン</button>
-                <button className={`seg${tab === 'scale' ? ' on' : ''}`} onClick={() => setTab('scale')}>使える音</button>
-              </div>
+              <span className="key-badge">{tab === 'phrase' ? `見本フレーズ(${DIFFICULTIES.find((d) => d.id === difficulty)?.label ?? ''})` : tab === 'chordtones' ? 'コードトーン' : tab === 'guidetones' ? 'ガイドトーン' : '使える音'}</span>
               <div className="seg-group">
                 <button className={`seg${labelMode === 'none' ? ' on' : ''}`} onClick={() => setLabelMode('none')}>音名なし</button>
                 <button className={`seg${labelMode === 'name' ? ' on' : ''}`} onClick={() => setLabelMode('name')}>C D E</button>

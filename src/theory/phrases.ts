@@ -8,9 +8,10 @@ import type { ChordEvent, Progression } from './progressions';
 
 export type Difficulty = 'beginner' | 'guide' | 'rhythm' | 'melodic' | 'advanced';
 
+// ※「ガイドトーン」難易度は五線譜のガイドトーン表示と重複するためUIからは除外
+//   ('guide' 自体はガイドトーン表示の生成に内部で使用)
 export const DIFFICULTIES: { id: Difficulty; label: string; hint: string }[] = [
   { id: 'beginner', label: '入門', hint: 'コードトーン中心・音数少なめ。まず音の場所を覚える。(Beginner)' },
-  { id: 'guide', label: 'ガイドトーン', hint: '3度と7度だけで進行をつなぐ。アドリブの背骨になるライン。(Guide Tone)' },
   { id: 'rhythm', label: 'リズム重視', hint: '音は簡単、リズムはジャズ。シンコペーションを体に入れる。(Rhythm Focus)' },
   { id: 'melodic', label: 'メロディック', hint: '経過音・半音アプローチ入り。歌えるラインを作る。(Melodic)' },
   { id: 'advanced', label: '上級', hint: 'よりジャズらしい8分音符ライン。真似して丸ごと覚えよう。(Advanced)' },
