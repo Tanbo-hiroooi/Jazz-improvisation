@@ -10,10 +10,15 @@ import { INSTRUMENTS, getInstrument, displayShift, type Clef, type PitchMode } f
 import { getPracticeGuide, type StaffTab } from './theory/modes';
 import { KEYS, mod12, useFlatsForKey } from './theory/notes';
 import {
+  ARP_PATTERNS,
   TONE_RHYTHMS,
+  approachAsNotes,
   chordTonesAsNotes,
   guideTonesAsNotes,
   scaleAsNotes,
+  targetAsNotes,
+  tensionsAsNotes,
+  type ArpPatternId,
   type NoteEvent,
   type ToneRhythmId,
 } from './theory/phrases';
@@ -44,6 +49,8 @@ export default function App() {
   const [pitchMode, setPitchMode] = useState<PitchMode>('concert');
   const [tab, setTab] = useState<StaffTab>('chordtones');
   const [toneRhythm, setToneRhythm] = useState<ToneRhythmId>('basic');
+  const [arpPattern, setArpPattern] = useState<ArpPatternId>('up');
+  const [scaleView, setScaleView] = useState<'scale' | 'tension'>('scale');
   // BPMの直接入力用テキスト(入力途中の値をクランプしないための分離)
   const [bpmText, setBpmText] = useState('100');
   const [labelMode, setLabelMode] = useState<LabelMode>('none');
@@ -93,9 +100,11 @@ export default function App() {
 
   const displayedNotes: NoteEvent[] = useMemo(() => {
     if (tab === 'guidetones') return guideTonesAsNotes(progression, effKeyPc, toneRhythm);
-    if (tab === 'scale') return scaleAsNotes(progression, effKeyPc);
-    return chordTonesAsNotes(progression, effKeyPc, toneRhythm);
-  }, [tab, progression, effKeyPc, toneRhythm]);
+    if (tab === 'approach') return approachAsNotes(progression, effKeyPc);
+    if (tab === 'target') return targetAsNotes(progression, effKeyPc);
+    if (tab === 'scale') return scaleView === 'tension' ? tensionsAsNotes(progression, effKeyPc) : scaleAsNotes(progression, effKeyPc);
+    return chordTonesAsNotes(progression, effKeyPc, toneRhythm, arpPattern);
+  }, [tab, progression, effKeyPc, toneRhythm, arpPattern, scaleView]);
 
   // 譜面上のコード表記(移調適用)
   const chordDisplays: ChordDisplay[] = useMemo(
@@ -200,7 +209,7 @@ export default function App() {
   // 設定変更時は停止
   useEffect(() => {
     stopAll();
-  }, [progression, keyPc, instrumentId, tab, toneRhythm, stopAll]);
+  }, [progression, keyPc, instrumentId, tab, toneRhythm, arpPattern, scaleView, stopAll]);
 
   useEffect(() => () => engine.stop(), []);
 
@@ -341,9 +350,34 @@ export default function App() {
             <div className="seg-group wrap">
               <button className={`seg${tab === 'chordtones' ? ' on' : ''}`} onClick={() => setTab('chordtones')}>{t('chordTones')}</button>
               <button className={`seg${tab === 'guidetones' ? ' on' : ''}`} onClick={() => setTab('guidetones')}>{t('guideTones')}</button>
+              <button className={`seg${tab === 'approach' ? ' on' : ''}`} onClick={() => setTab('approach')}>{t('approachTab')}</button>
+              <button className={`seg${tab === 'target' ? ' on' : ''}`} onClick={() => setTab('target')}>{t('targetTab')}</button>
               <button className={`seg${tab === 'scale' ? ' on' : ''}`} onClick={() => setTab('scale')}>{t('scaleTab')}</button>
             </div>
           </div>
+
+          {tab === 'chordtones' && (
+            <div className="field">
+              <label>{t('arpLabel')}</label>
+              <div className="seg-group wrap">
+                {ARP_PATTERNS.map((a) => (
+                  <button key={a.id} className={`seg${arpPattern === a.id ? ' on' : ''}`} onClick={() => setArpPattern(a.id)}>
+                    {pick(lang, a.label, a.labelEn)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {tab === 'scale' && (
+            <div className="field">
+              <label>{t('scaleViewLabel')}</label>
+              <div className="seg-group">
+                <button className={`seg${scaleView === 'scale' ? ' on' : ''}`} onClick={() => setScaleView('scale')}>{t('viewScale')}</button>
+                <button className={`seg${scaleView === 'tension' ? ' on' : ''}`} onClick={() => setScaleView('tension')}>{t('viewTension')}</button>
+              </div>
+            </div>
+          )}
 
           {(tab === 'chordtones' || tab === 'guidetones') && (
             <div className="field">
@@ -434,8 +468,16 @@ export default function App() {
             <div className="staff-head">
               <h2>{t('staffTitle')}</h2>
               <span className="key-badge">
-                {tab === 'chordtones' ? t('chordTones') : tab === 'guidetones' ? t('guideTones') : t('scaleTab')}
-                {tab !== 'scale' ? ` / ${(() => { const r = TONE_RHYTHMS.find((x) => x.id === toneRhythm); return r ? pick(lang, r.label, r.labelEn) : ''; })()}` : ''}
+                {(() => {
+                  const rhythmLabel = (() => { const r = TONE_RHYTHMS.find((x) => x.id === toneRhythm); return r ? pick(lang, r.label, r.labelEn) : ''; })();
+                  switch (tab) {
+                    case 'chordtones': return `${t('chordTones')} / ${rhythmLabel}`;
+                    case 'guidetones': return `${t('guideTones')} / ${rhythmLabel}`;
+                    case 'approach': return t('approachBadge');
+                    case 'target': return t('targetBadge');
+                    case 'scale': return scaleView === 'tension' ? `${t('scaleTab')} / ${t('tensionBadge')}` : t('scaleTab');
+                  }
+                })()}
               </span>
               <div className="seg-group">
                 <button className={`seg${labelMode === 'none' ? ' on' : ''}`} onClick={() => setLabelMode('none')}>{t('labelNone')}</button>
@@ -489,9 +531,13 @@ export default function App() {
               bpm,
               instrument: instrument.label,
               mode: guide.title,
-              difficulty: tab === 'scale'
-                ? t('scaleLogLabel')
-                : (() => { const r = TONE_RHYTHMS.find((x) => x.id === toneRhythm); return r ? pick(lang, r.label, r.labelEn) : ''; })(),
+              difficulty: (() => {
+                if (tab === 'scale') return scaleView === 'tension' ? t('tensionBadge') : t('scaleLogLabel');
+                if (tab === 'approach') return t('approachBadge');
+                if (tab === 'target') return t('targetBadge');
+                const r = TONE_RHYTHMS.find((x) => x.id === toneRhythm);
+                return r ? pick(lang, r.label, r.labelEn) : '';
+              })(),
             }}
           />
         </div>

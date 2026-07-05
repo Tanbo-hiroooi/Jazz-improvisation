@@ -69,7 +69,15 @@ html, body {
     grid-template-columns: 320px minmax(0, 1fr);
     align-items: start;
   }
-  .settings-panel { position: sticky; top: 12px; }
+  /* パネルが画面より高いときにページスクロールが固まらないよう、
+     パネル自体を画面内に収めて内部スクロールさせる */
+  .settings-panel {
+    position: sticky;
+    top: 12px;
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 .panel, .main-col { min-width: 0; }
 

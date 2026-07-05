@@ -15,6 +15,8 @@ export interface QualityDef {
   scaleLabelEn: string;
   /** おすすめスケールの構成(ルートからの半音数) */
   scale: number[];
+  /** 代表的なテンション(ルートからの半音数、オクターブ上表記) */
+  tensions: number[];
 }
 
 export const QUALITIES: Record<Quality, QualityDef> = {
@@ -26,6 +28,7 @@ export const QUALITIES: Record<Quality, QualityDef> = {
     scaleLabel: 'Ionian(メジャースケール)',
     scaleLabelEn: 'Ionian (major scale)',
     scale: [0, 2, 4, 5, 7, 9, 11],
+    tensions: [14, 21], // 9th, 13th
   },
   m7: {
     suffix: 'm7',
@@ -35,6 +38,7 @@ export const QUALITIES: Record<Quality, QualityDef> = {
     scaleLabel: 'Dorian(ドリアン)',
     scaleLabelEn: 'Dorian',
     scale: [0, 2, 3, 5, 7, 9, 10],
+    tensions: [14, 17], // 9th, 11th
   },
   '7': {
     suffix: '7',
@@ -44,6 +48,7 @@ export const QUALITIES: Record<Quality, QualityDef> = {
     scaleLabel: 'Mixolydian(ミクソリディアン)',
     scaleLabelEn: 'Mixolydian',
     scale: [0, 2, 4, 5, 7, 9, 10],
+    tensions: [14, 21], // 9th, 13th
   },
   m7b5: {
     suffix: 'm7♭5',
@@ -53,6 +58,7 @@ export const QUALITIES: Record<Quality, QualityDef> = {
     scaleLabel: 'Locrian(ロクリアン)',
     scaleLabelEn: 'Locrian',
     scale: [0, 1, 3, 5, 6, 8, 10],
+    tensions: [17, 20], // 11th, ♭13th
   },
   '7b9': {
     suffix: '7(♭9)',
@@ -62,6 +68,7 @@ export const QUALITIES: Record<Quality, QualityDef> = {
     scaleLabel: 'Mixolydian ♭9 ♭13(Hmp5↓)',
     scaleLabelEn: 'Mixolydian ♭9 ♭13 (HmP5↓)',
     scale: [0, 1, 4, 5, 7, 8, 10],
+    tensions: [13, 20], // ♭9th, ♭13th
   },
 };
 

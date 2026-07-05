@@ -2,7 +2,7 @@
 
 import type { Lang } from '../i18n';
 
-export type StaffTab = 'chordtones' | 'guidetones' | 'scale';
+export type StaffTab = 'chordtones' | 'guidetones' | 'approach' | 'target' | 'scale';
 
 export interface PracticeGuide {
   title: string;
@@ -26,12 +26,28 @@ const GUIDES_JA: Record<StaffTab, PracticeGuide> = {
       '迷ったらここに帰るのがアドリブの背骨です。裏拍やチャールストンのリズムで弾ければ、もうジャズの音になっています。',
     ],
   },
+  approach: {
+    title: 'アプローチノート練習',
+    tips: [
+      '半音下や上下から「挟んで」コードトーンに入る動きです。装飾の音は軽く、ターゲットをはっきり。',
+      '度数表示にすると、どれが飾り(半音)でどれが着地(3度・5度・7度)か一目で分かります。',
+      'このエンクロージャーこそ、音階なぞりを「ジャズの線」に変える核心技術。全キーで体に入れましょう。',
+    ],
+  },
+  target: {
+    title: 'ターゲット(着地)練習',
+    tips: [
+      '4拍目の音は「次のコードの3度への半音アプローチ」。小節線を越えて着地する瞬間を意識します。',
+      'コードが変わる瞬間に正しい音に居ること — これがコード感のあるアドリブの正体です。',
+      '慣れたら前半を自由に弾き、4拍目のアプローチ→次の頭の着地だけ守ってみましょう。',
+    ],
+  },
   scale: {
-    title: '使える音(スケール)練習',
+    title: 'スケール(音階)練習',
     tips: [
       '各コードで使えるおすすめスケールです。まず上下に往復して、指と耳に馴染ませましょう。',
       'コードトーン(1-3-5-7)は「着地する音」、それ以外は「通り道の音」。度数表示で確認を。',
-      'スケールをなぞるだけではフレーズになりません。リズムを変えたり途中で止まったり、歌うように。',
+      '「テンション」表示に切り替えると、9th・11th・13thなどの彩りの音を確認できます。着地に混ぜると一気に大人の響きに。',
     ],
   },
 };
@@ -53,12 +69,28 @@ const GUIDES_EN: Record<StaffTab, PracticeGuide> = {
       'This is the backbone of improvising — return here whenever you get lost. Play them on offbeats or a Charleston rhythm and you already sound like jazz.',
     ],
   },
+  approach: {
+    title: 'Approach-Note Practice',
+    tips: [
+      'Slide into chord tones from a half step below, or enclose them from above and below. Keep the ornaments light; make the target clear.',
+      'Turn on the degree display to see which notes are decorations (half steps) and which are landings (3rd, 5th, 7th).',
+      'Enclosures are the core technique that turns scale-running into jazz lines. Learn them in every key.',
+    ],
+  },
+  target: {
+    title: 'Target-Note (Landing) Practice',
+    tips: [
+      'The note on beat 4 is a half-step approach to the NEXT chord’s 3rd. Feel the landing across the barline.',
+      'Being on the right note at the moment the chord changes — that is what “playing the changes” means.',
+      'Once comfortable, improvise freely for the first half of the bar and keep only the beat-4 approach and downbeat landing.',
+    ],
+  },
   scale: {
-    title: 'Available Notes (Scale) Practice',
+    title: 'Scale Practice',
     tips: [
       'These are the recommended scales for each chord. Run them up and down until your fingers and ears know them.',
       'Chord tones (1-3-5-7) are landing notes; the rest are passing notes. Check with the degree display.',
-      'Running scales isn’t a phrase yet — vary the rhythm, pause, and make it sing.',
+      'Switch to the Tensions view to see the color notes (9th, 11th, 13th). Mixing them into your landings instantly sounds more sophisticated.',
     ],
   },
 };
