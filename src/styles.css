@@ -112,6 +112,22 @@ select, input[type='number'], textarea {
 }
 textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
 
+/* リズムパターン配下のスウィング設定などの入れ子項目 */
+.sub-field {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--border);
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 0 8px 8px 0;
+}
+.sub-field label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 5px;
+}
+.seg:disabled { opacity: 0.4; cursor: not-allowed; }
+
 .bpm-row { display: flex; gap: 10px; align-items: center; }
 .bpm-row input[type='range'] { flex: 1; accent-color: var(--accent); height: 32px; }
 .bpm-row input[type='number'] { width: 76px; text-align: center; }

@@ -4,29 +4,25 @@ import { ChordInfoPanel } from './components/ChordInfoPanel';
 import { ChordProgressionView } from './components/ChordProgressionView';
 import { CustomProgressionEditor, DEFAULT_CUSTOM, type CustomChord } from './components/CustomProgressionEditor';
 import { PracticeLogPanel } from './components/PracticeLogPanel';
-import { RhythmDojoPanel, rhythmToNotes } from './components/RhythmDojoPanel';
 import { StaffView, type ChordDisplay, type LabelMode } from './components/StaffView';
 import { QUALITIES, chordSymbol } from './theory/chords';
 import { INSTRUMENTS, getInstrument, displayShift, type Clef, type PitchMode } from './theory/instruments';
 import { getPracticeGuide, type StaffTab } from './theory/modes';
 import { KEYS, mod12, useFlatsForKey } from './theory/notes';
 import {
-  DIFFICULTIES,
   TONE_RHYTHMS,
   chordTonesAsNotes,
-  generatePhrase,
   guideTonesAsNotes,
   scaleAsNotes,
-  type Difficulty,
   type NoteEvent,
   type ToneRhythmId,
 } from './theory/phrases';
 import { PROGRESSIONS, chordAt, getProgression, type Progression, type ProgressionId } from './theory/progressions';
-import { JAZZ_RHYTHMS, SWING_OPTIONS } from './theory/rhythms';
+import { SWING_OPTIONS } from './theory/rhythms';
 import './styles.css';
 
 type LoopRange = 'full' | '2' | '1';
-type PlayKind = 'backing' | 'example' | 'rhythm' | 'dojo';
+type PlayKind = 'backing' | 'example' | 'rhythm';
 
 export default function App() {
   // ---- 設定 ----
@@ -37,8 +33,7 @@ export default function App() {
   const [instrumentId, setInstrumentId] = useState('piano');
   const [clefOverride, setClefOverride] = useState<Clef | null>(null);
   const [pitchMode, setPitchMode] = useState<PitchMode>('concert');
-  const [difficulty, setDifficulty] = useState<Difficulty>('beginner');
-  const [tab, setTab] = useState<StaffTab>('phrase');
+  const [tab, setTab] = useState<StaffTab>('chordtones');
   const [toneRhythm, setToneRhythm] = useState<ToneRhythmId>('basic');
   // BPMの直接入力用テキスト(入力途中の値をクランプしないための分離)
   const [bpmText, setBpmText] = useState('100');
@@ -51,13 +46,7 @@ export default function App() {
   const [compOn, setCompOn] = useState(true);
   const [loopRange, setLoopRange] = useState<LoopRange>('full');
   const [selectedMeasure, setSelectedMeasure] = useState(0);
-  const [rhythmVariant, setRhythmVariant] = useState(0);
-  const [melodyVariant, setMelodyVariant] = useState(0);
   const [swingId, setSwingId] = useState('standard');
-
-  // ---- ジャズリズム練習 ----
-  const [dojoPatternId, setDojoPatternId] = useState('charleston');
-  const [dojoNoteIndex, setDojoNoteIndex] = useState(-1);
 
   // ---- 再生状態 ----
   const [playing, setPlaying] = useState<PlayKind | null>(null);
@@ -85,21 +74,17 @@ export default function App() {
   const displayKeyPc = mod12(effKeyPc + shift);
   const flats = useFlatsForKey(displayKeyPc);
   const concertFlats = useFlatsForKey(keyPc);
-  const guide = getPracticeGuide(tab, difficulty);
+  const guide = getPracticeGuide(tab);
   const swingOffset = SWING_OPTIONS.find((s) => s.id === swingId)!.offset;
-
-  // 見本フレーズ(Concert)
-  const phrase = useMemo(
-    () => generatePhrase(progression, effKeyPc, difficulty, { rhythmVariant, melodyVariant }),
-    [progression, effKeyPc, difficulty, rhythmVariant, melodyVariant],
-  );
+  // 16分パターンはスウィングせずイーブンで再生する
+  const rhythmNoSwing = (tab === 'chordtones' || tab === 'guidetones') && !!TONE_RHYTHMS.find((r) => r.id === toneRhythm)?.noSwing;
+  const effectiveSwing = rhythmNoSwing ? 0 : swingOffset;
 
   const displayedNotes: NoteEvent[] = useMemo(() => {
-    if (tab === 'chordtones') return chordTonesAsNotes(progression, effKeyPc, toneRhythm);
     if (tab === 'guidetones') return guideTonesAsNotes(progression, effKeyPc, toneRhythm);
     if (tab === 'scale') return scaleAsNotes(progression, effKeyPc);
-    return phrase;
-  }, [tab, progression, effKeyPc, phrase, toneRhythm]);
+    return chordTonesAsNotes(progression, effKeyPc, toneRhythm);
+  }, [tab, progression, effKeyPc, toneRhythm]);
 
   // 譜面上のコード表記(移調適用)
   const chordDisplays: ChordDisplay[] = useMemo(
@@ -117,7 +102,6 @@ export default function App() {
     setPlaying(null);
     setPosition(null);
     setCurrentNoteIndex(-1);
-    setDojoNoteIndex(-1);
   }, []);
 
   const startPlayback = useCallback(
@@ -178,7 +162,7 @@ export default function App() {
         notes: regionNotes,
         rhythmOnly: kind === 'rhythm',
         comp,
-        swing: swingOffset,
+        swing: effectiveSwing,
         onPosition: (bar, beat) => {
           if (bar < 0) setPosition({ measure: -1, beat });
           else setPosition({ measure: regionStartRef.current + (bar % regionBars), beat });
@@ -194,32 +178,7 @@ export default function App() {
       });
       setPlaying(kind);
     },
-    [progression, loopRange, selectedMeasure, displayedNotes, compOn, effKeyPc, bpm, countIn, loopEnabled, metronomeOn, swingOffset],
-  );
-
-  // ジャズリズム練習の再生
-  const startDojo = useCallback(
-    async (patternId: string) => {
-      engine.stop();
-      const pattern = JAZZ_RHYTHMS.find((r) => r.id === patternId) ?? JAZZ_RHYTHMS[0];
-      await engine.start({
-        bpm,
-        countIn,
-        loop: true,
-        regionBars: pattern.bars,
-        metronome: metronomeOn,
-        notes: rhythmToNotes(pattern),
-        rhythmOnly: true,
-        swing: swingOffset,
-        onNoteIndex: (idx) => setDojoNoteIndex(idx),
-        onEnded: () => {
-          setPlaying(null);
-          setDojoNoteIndex(-1);
-        },
-      });
-      setPlaying('dojo');
-    },
-    [bpm, countIn, metronomeOn, swingOffset],
+    [progression, loopRange, selectedMeasure, displayedNotes, compOn, effKeyPc, bpm, countIn, loopEnabled, metronomeOn, effectiveSwing],
   );
 
   // BPMは再生中もライブ反映
@@ -230,7 +189,7 @@ export default function App() {
   // 設定変更時は停止
   useEffect(() => {
     stopAll();
-  }, [progression, keyPc, instrumentId, difficulty, tab, toneRhythm, stopAll]);
+  }, [progression, keyPc, instrumentId, tab, toneRhythm, stopAll]);
 
   useEffect(() => () => engine.stop(), []);
 
@@ -250,7 +209,7 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <h1>Jazz Phrase Lab</h1>
-        <p className="tagline">楽譜は読める。次はアドリブ。— コード進行×ガイドトーン×見本フレーズで練習</p>
+        <p className="tagline">楽譜は読める。次はアドリブ。— コード進行×ガイドトーン×リズムパターンで練習</p>
       </header>
 
       <main className="layout">
@@ -362,26 +321,11 @@ export default function App() {
           <div className="field">
             <label>練習する内容(五線譜に表示)</label>
             <div className="seg-group wrap">
-              <button className={`seg${tab === 'phrase' ? ' on' : ''}`} onClick={() => setTab('phrase')}>見本フレーズ</button>
               <button className={`seg${tab === 'chordtones' ? ' on' : ''}`} onClick={() => setTab('chordtones')}>コードトーン</button>
               <button className={`seg${tab === 'guidetones' ? ' on' : ''}`} onClick={() => setTab('guidetones')}>ガイドトーン</button>
               <button className={`seg${tab === 'scale' ? ' on' : ''}`} onClick={() => setTab('scale')}>使える音</button>
             </div>
           </div>
-
-          {tab === 'phrase' && (
-            <div className="field">
-              <label>見本フレーズの種類</label>
-              <div className="seg-group wrap">
-                {DIFFICULTIES.map((d) => (
-                  <button key={d.id} className={`seg${difficulty === d.id ? ' on' : ''}`} onClick={() => setDifficulty(d.id)}>
-                    {d.label}
-                  </button>
-                ))}
-              </div>
-              <p className="hint-text">{DIFFICULTIES.find((d) => d.id === difficulty)?.hint}</p>
-            </div>
-          )}
 
           {(tab === 'chordtones' || tab === 'guidetones') && (
             <div className="field">
@@ -394,6 +338,22 @@ export default function App() {
                 ))}
               </div>
               <p className="hint-text">{TONE_RHYTHMS.find((r) => r.id === toneRhythm)?.hint}</p>
+              <div className="sub-field">
+                <label>スウィング</label>
+                <div className="seg-group">
+                  {SWING_OPTIONS.map((s) => (
+                    <button
+                      key={s.id}
+                      className={`seg${swingId === s.id ? ' on' : ''}`}
+                      onClick={() => setSwingId(s.id)}
+                      disabled={rhythmNoSwing}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+                {rhythmNoSwing && <p className="hint-text">16分はスウィングせず、イーブンで再生されます</p>}
+              </div>
             </div>
           )}
         </section>
@@ -441,29 +401,11 @@ export default function App() {
                 <label className="toggle"><input type="checkbox" checked={compOn} onChange={(e) => setCompOn(e.target.checked)} /> コード音</label>
               </div>
               <div className="transport-opts">
-                <span className="opt-label">スウィング:</span>
-                <div className="seg-group">
-                  {SWING_OPTIONS.map((s) => (
-                    <button key={s.id} className={`seg${swingId === s.id ? ' on' : ''}`} onClick={() => setSwingId(s.id)}>
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="transport-opts">
                 <span className="opt-label">ループ範囲:</span>
                 <div className="seg-group">
                   <button className={`seg${loopRange === 'full' ? ' on' : ''}`} onClick={() => setLoopRange('full')}>進行全体</button>
                   <button className={`seg${loopRange === '2' ? ' on' : ''}`} onClick={() => setLoopRange('2')}>2小節</button>
                   <button className={`seg${loopRange === '1' ? ' on' : ''}`} onClick={() => setLoopRange('1')}>1小節</button>
-                </div>
-                <span className="opt-label">バリエーション:</span>
-                <div className="seg-group">
-                  <button className="seg" onClick={() => { setRhythmVariant((v) => v + 1); setTab('phrase'); }}>リズム違い</button>
-                  <button className="seg" onClick={() => { setMelodyVariant((v) => v + 1); setTab('phrase'); }}>別メロディー</button>
-                  {(rhythmVariant > 0 || melodyVariant > 0) && (
-                    <button className="seg" onClick={() => { setRhythmVariant(0); setMelodyVariant(0); }}>リセット</button>
-                  )}
                 </div>
               </div>
             </div>
@@ -472,7 +414,10 @@ export default function App() {
           <section className="panel">
             <div className="staff-head">
               <h2>五線譜</h2>
-              <span className="key-badge">{tab === 'phrase' ? `見本フレーズ(${DIFFICULTIES.find((d) => d.id === difficulty)?.label ?? ''})` : tab === 'chordtones' ? 'コードトーン' : tab === 'guidetones' ? 'ガイドトーン' : '使える音'}</span>
+              <span className="key-badge">
+                {tab === 'chordtones' ? 'コードトーン' : tab === 'guidetones' ? 'ガイドトーン' : '使える音'}
+                {tab !== 'scale' ? ` / ${TONE_RHYTHMS.find((r) => r.id === toneRhythm)?.label ?? ''}` : ''}
+              </span>
               <div className="seg-group">
                 <button className={`seg${labelMode === 'none' ? ' on' : ''}`} onClick={() => setLabelMode('none')}>音名なし</button>
                 <button className={`seg${labelMode === 'name' ? ' on' : ''}`} onClick={() => setLabelMode('name')}>C D E</button>
@@ -496,19 +441,6 @@ export default function App() {
               <p className="hint-text">Written Pitch 表示中: あなたの楽器で読む譜面です。鳴る音(実音)とは異なります。</p>
             )}
           </section>
-
-          <RhythmDojoPanel
-            patternId={dojoPatternId}
-            onSelect={(id) => {
-              setDojoPatternId(id);
-              if (playing === 'dojo') startDojo(id);
-            }}
-            playing={playing === 'dojo'}
-            onPlay={() => startDojo(dojoPatternId)}
-            onStop={stopAll}
-            clef={clef}
-            currentIndex={playing === 'dojo' ? dojoNoteIndex : -1}
-          />
 
           <section className="panel">
             <h2>いまのコード</h2>
@@ -536,7 +468,7 @@ export default function App() {
               bpm,
               instrument: instrument.label,
               mode: guide.title,
-              difficulty: DIFFICULTIES.find((d) => d.id === difficulty)!.label,
+              difficulty: tab === 'scale' ? 'スケール' : TONE_RHYTHMS.find((r) => r.id === toneRhythm)?.label ?? '',
             }}
           />
         </div>
