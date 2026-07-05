@@ -36,6 +36,14 @@ html, body {
 .app-header {
   padding: 8px 4px 4px;
 }
+.app-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.lang-toggle .seg { padding: 5px 10px; min-height: 30px; font-size: 12px; }
 .app-header h1 {
   margin: 0;
   font-size: 24px;

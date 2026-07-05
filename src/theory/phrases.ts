@@ -43,18 +43,18 @@ export type ToneRhythmId =
   | 'dotted'
   | 'comping';
 
-export const TONE_RHYTHMS: { id: ToneRhythmId; label: string; hint: string; noSwing?: boolean }[] = [
-  { id: 'basic', label: '基本', hint: 'コードトーンは4分音符、ガイドトーンは2分音符。まずはここから。' },
-  { id: 'swing8', label: 'スウィング8分', hint: '8分音符で上下する。スウィング設定と合わせて「タータ」の跳ねを体に入れる。' },
-  { id: 'offbeat', label: '裏拍', hint: 'オモテは休符、ウラ拍だけで音をとる。メトロノームを聴きながら裏に乗る練習。' },
-  { id: 'sixteenth', label: '16分', hint: '16分音符のダブルタイム感。16分はスウィングせず、イーブンで演奏します。', noSwing: true },
-  { id: 'triplet', label: '3連符', hint: '1拍3連のうねり。スウィングの土台になるリズム感覚。' },
-  { id: 'charleston', label: 'チャールストン', hint: '「ドン・(ウ)タッ」— 1拍目と2拍目のウラ。コンピングで最も使われるリズム。' },
-  { id: 'reverse-charleston', label: '逆チャールストン', hint: 'ウラ拍から入って3拍目へ。「(ウ)タッ・ドン」。ウラ拍から始まる感覚に慣れる。' },
-  { id: 'ride', label: 'ライドシンバル', hint: 'ドラマーの「チーン・チッキ」パターン。1・2・2ウラ・3・4・4ウラ。ジャズのタイム感そのもの。' },
-  { id: 'anticipation', label: 'アンティシペーション(食い)', hint: '次の小節の頭を4拍目のウラで「食う」。ジャズのフレーズはよく小節線をまたぐ。' },
-  { id: 'dotted', label: '付点4分(3拍またぎ)', hint: '1.5拍ごとのアクセント。4/4の中に3拍子のうねりが生まれる定番リズム。' },
-  { id: 'comping', label: 'コンピング・ミックス', hint: 'ピアニストの伴奏風に表と裏が混ざる。休符(音を出さない時間)もリズムのうち。' },
+export const TONE_RHYTHMS: { id: ToneRhythmId; label: string; labelEn: string; hint: string; hintEn: string; noSwing?: boolean }[] = [
+  { id: 'basic', label: '基本', labelEn: 'Basic', hint: 'コードトーンは4分音符、ガイドトーンは2分音符。まずはここから。', hintEn: 'Quarter notes for chord tones, half notes for guide tones. Start here.' },
+  { id: 'swing8', label: 'スウィング8分', labelEn: 'Swing 8ths', hint: '8分音符で上下する。スウィング設定と合わせて「タータ」の跳ねを体に入れる。', hintEn: 'Up and down in 8th notes. Combine with the swing setting to internalize the bounce.' },
+  { id: 'offbeat', label: '裏拍', labelEn: 'Offbeats', hint: 'オモテは休符、ウラ拍だけで音をとる。メトロノームを聴きながら裏に乗る練習。', hintEn: 'Rests on the beat, notes only on the offbeats. Ride the upbeats against the metronome.' },
+  { id: 'sixteenth', label: '16分', labelEn: '16ths', hint: '16分音符のダブルタイム感。16分はスウィングせず、イーブンで演奏します。', hintEn: 'Double-time feel in 16th notes. 16ths are played even, not swung.', noSwing: true },
+  { id: 'triplet', label: '3連符', labelEn: 'Triplets', hint: '1拍3連のうねり。スウィングの土台になるリズム感覚。', hintEn: 'Quarter-note triplet flow — the foundation of the swing feel.' },
+  { id: 'charleston', label: 'チャールストン', labelEn: 'Charleston', hint: '「ドン・(ウ)タッ」— 1拍目と2拍目のウラ。コンピングで最も使われるリズム。', hintEn: 'Beat 1 plus the “and” of 2 — the most common comping rhythm in jazz.' },
+  { id: 'reverse-charleston', label: '逆チャールストン', labelEn: 'Reverse Charleston', hint: 'ウラ拍から入って3拍目へ。「(ウ)タッ・ドン」。ウラ拍から始まる感覚に慣れる。', hintEn: 'Enter on the “and” of 1, land on beat 3. Get used to starting off the beat.' },
+  { id: 'ride', label: 'ライドシンバル', labelEn: 'Ride Cymbal', hint: 'ドラマーの「チーン・チッキ」パターン。1・2・2ウラ・3・4・4ウラ。ジャズのタイム感そのもの。', hintEn: 'The drummer’s “ding ding-ga” pattern: 1, 2, and-of-2, 3, 4, and-of-4. Jazz time itself.' },
+  { id: 'anticipation', label: 'アンティシペーション(食い)', labelEn: 'Anticipation', hint: '次の小節の頭を4拍目のウラで「食う」。ジャズのフレーズはよく小節線をまたぐ。', hintEn: 'Anticipate the next bar on the “and” of 4. Jazz phrases love crossing the barline.' },
+  { id: 'dotted', label: '付点4分(3拍またぎ)', labelEn: 'Dotted Quarters', hint: '1.5拍ごとのアクセント。4/4の中に3拍子のうねりが生まれる定番リズム。', hintEn: 'Accents every 1.5 beats — a three-against-four wave inside 4/4.' },
+  { id: 'comping', label: 'コンピング・ミックス', labelEn: 'Comping Mix', hint: 'ピアニストの伴奏風に表と裏が混ざる。休符(音を出さない時間)もリズムのうち。', hintEn: 'Pianist-style comping mixing on- and off-beats. The rests are part of the rhythm too.' },
 ];
 
 const TP = 1 / 3; // 3連符の1音分

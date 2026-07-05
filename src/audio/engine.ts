@@ -44,7 +44,6 @@ function beatsToTime(beats: number): string {
 
 export class AudioEngine {
   private melody: Tone.Synth | null = null;
-  private rhythm: Tone.MembraneSynth | null = null;
   private clickHi: Tone.Synth | null = null;
   private clickLo: Tone.Synth | null = null;
   private comp: Tone.PolySynth | null = null;
@@ -61,12 +60,6 @@ export class AudioEngine {
         oscillator: { type: 'triangle8' },
         envelope: { attack: 0.02, decay: 0.15, sustain: 0.5, release: 0.15 },
         volume: -4,
-      }).connect(master);
-      this.rhythm = new Tone.MembraneSynth({
-        pitchDecay: 0.008,
-        octaves: 2,
-        envelope: { attack: 0.001, decay: 0.18, sustain: 0, release: 0.05 },
-        volume: -6,
       }).connect(master);
       this.clickHi = new Tone.Synth({
         oscillator: { type: 'sine' },
@@ -162,8 +155,9 @@ export class AudioEngine {
     }, '16n', 0);
     this.repeats.push(posId);
 
-    // 見本フレーズ / リズムのみ
-    if (timedNotes.length > 0) {
+    // お手本の音。Rhythm Only では音を鳴らさず、譜面上の赤いガイド(onNoteIndex)だけを
+    // リズムに合わせて動かす(打音は鳴らさない)。
+    if (timedNotes.length > 0 && !opts.rhythmOnly) {
       const events = timedNotes.map((nt) => ({
         time: beatsToTime(nt.start + offsetBars * 4),
         midi: nt.midi,
@@ -174,11 +168,7 @@ export class AudioEngine {
       // フレーズが鳴ってしまう。繰り返しは Transport.loop に任せる。
       const part = new Tone.Part((time, ev) => {
         const durSec = (ev.duration * 60) / transport.bpm.value * 0.9;
-        if (opts.rhythmOnly) {
-          this.rhythm!.triggerAttackRelease('G4', Math.min(durSec, 0.15), time, ev.velocity);
-        } else {
-          this.melody!.triggerAttackRelease(Tone.Frequency(ev.midi, 'midi').toFrequency(), durSec, time, ev.velocity);
-        }
+        this.melody!.triggerAttackRelease(Tone.Frequency(ev.midi, 'midi').toFrequency(), durSec, time, ev.velocity);
       }, events);
       part.start(0);
       this.parts.push(part);

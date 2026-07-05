@@ -19,12 +19,21 @@ import {
 } from './theory/phrases';
 import { PROGRESSIONS, chordAt, getProgression, type Progression, type ProgressionId } from './theory/progressions';
 import { SWING_OPTIONS } from './theory/rhythms';
+import { loadLang, saveLang, pick, t as tr, type Lang } from './i18n';
 import './styles.css';
 
 type LoopRange = 'full' | '2' | '1';
 type PlayKind = 'backing' | 'example' | 'rhythm';
 
 export default function App() {
+  // ---- 表示言語 ----
+  const [lang, setLang] = useState<Lang>(loadLang);
+  const t = useCallback((key: Parameters<typeof tr>[1]) => tr(lang, key), [lang]);
+  const changeLang = (l: Lang) => {
+    setLang(l);
+    saveLang(l);
+  };
+
   // ---- 設定 ----
   const [menuId, setMenuId] = useState<ProgressionId>('ii-V-I');
   const [customChords, setCustomChords] = useState<CustomChord[]>(DEFAULT_CUSTOM);
@@ -62,9 +71,11 @@ export default function App() {
     if (!isCustom) return getProgression(menuId);
     return {
       id: 'custom',
-      label: '実践モード(自由進行)',
+      label: tr('ja', 'customLabel'),
+      labelEn: tr('en', 'customLabel'),
       measures: customChords.length,
-      description: 'コード進行と小節数を自由に決めて、コード音をバックに練習できます。',
+      description: tr('ja', 'customDescription'),
+      descriptionEn: tr('en', 'customDescription'),
       chords: customChords.map((c, i) => ({ measure: i, beat: 0, beats: 4, rootOffset: c.pc, quality: c.q })),
     };
   }, [isCustom, menuId, customChords]);
@@ -74,7 +85,7 @@ export default function App() {
   const displayKeyPc = mod12(effKeyPc + shift);
   const flats = useFlatsForKey(displayKeyPc);
   const concertFlats = useFlatsForKey(keyPc);
-  const guide = getPracticeGuide(tab);
+  const guide = getPracticeGuide(tab, lang);
   const swingOffset = SWING_OPTIONS.find((s) => s.id === swingId)!.offset;
   // 16分パターンはスウィングせずイーブンで再生する
   const rhythmNoSwing = (tab === 'chordtones' || tab === 'guidetones') && !!TONE_RHYTHMS.find((r) => r.id === toneRhythm)?.noSwing;
@@ -208,17 +219,23 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Jazz Phrase Lab</h1>
-        <p className="tagline">楽譜は読める。次はアドリブ。— コード進行×ガイドトーン×リズムパターンで練習</p>
+        <div className="app-header-row">
+          <h1>Jazz Phrase Lab</h1>
+          <div className="seg-group lang-toggle">
+            <button className={`seg${lang === 'ja' ? ' on' : ''}`} onClick={() => changeLang('ja')}>日本語</button>
+            <button className={`seg${lang === 'en' ? ' on' : ''}`} onClick={() => changeLang('en')}>English</button>
+          </div>
+        </div>
+        <p className="tagline">{t('tagline')}</p>
       </header>
 
       <main className="layout">
         {/* ===== 設定パネル ===== */}
         <section className="panel settings-panel">
-          <h2>練習セットアップ</h2>
+          <h2>{t('setupTitle')}</h2>
 
           <div className="field">
-            <label htmlFor="menu-select">練習メニュー</label>
+            <label htmlFor="menu-select">{t('menuLabel')}</label>
             <select
               id="menu-select"
               value={menuId}
@@ -230,11 +247,11 @@ export default function App() {
               }}
             >
               {PROGRESSIONS.map((p) => (
-                <option key={p.id} value={p.id}>{p.label}</option>
+                <option key={p.id} value={p.id}>{pick(lang, p.label, p.labelEn)}</option>
               ))}
-              <option value="custom">実践モード(自由進行)</option>
+              <option value="custom">{t('customMenuOption')}</option>
             </select>
-            <p className="hint-text">{progression.description}</p>
+            <p className="hint-text">{pick(lang, progression.description, progression.descriptionEn)}</p>
           </div>
 
           {isCustom && (
@@ -242,26 +259,27 @@ export default function App() {
               chords={customChords}
               onChange={setCustomChords}
               shift={shift}
+              lang={lang}
               pitchLabel={
                 pitchMode === 'written' && shift % 12 !== 0
-                  ? `記譜(Written)— ${instrument.label} / ${instrument.transposeLabel}`
-                  : '実音(Concert)'
+                  ? `${t('written')} — ${instrument.label} / ${pick(lang, instrument.transposeLabel, instrument.transposeLabelEn)}`
+                  : t('concert')
               }
             />
           )}
 
           <div className="field-row">
             <div className="field">
-              <label htmlFor="key-select">キー(実音)</label>
+              <label htmlFor="key-select">{t('keyLabel')}</label>
               <select id="key-select" value={keyPc} onChange={(e) => setKeyPc(Number(e.target.value))} disabled={isCustom}>
                 {KEYS.map((k) => (
                   <option key={k.pc} value={k.pc}>{k.name}</option>
                 ))}
               </select>
-              {isCustom && <p className="hint-text">実践モードではコードを直接指定します</p>}
+              {isCustom && <p className="hint-text">{t('customKeyHint')}</p>}
             </div>
             <div className="field">
-              <label htmlFor="instrument-select">楽器</label>
+              <label htmlFor="instrument-select">{t('instrumentLabel')}</label>
               <select id="instrument-select" value={instrumentId} onChange={(e) => { setInstrumentId(e.target.value); setClefOverride(null); }}>
                 {INSTRUMENTS.map((i) => (
                   <option key={i.id} value={i.id}>{i.label}</option>
@@ -272,16 +290,16 @@ export default function App() {
 
           <div className="field-row">
             <div className="field">
-              <label>表示ピッチ</label>
+              <label>{t('pitchLabel')}</label>
               <div className="seg-group">
-                <button className={`seg${pitchMode === 'concert' ? ' on' : ''}`} onClick={() => setPitchMode('concert')}>実音(Concert)</button>
-                <button className={`seg${pitchMode === 'written' ? ' on' : ''}`} onClick={() => setPitchMode('written')}>記譜(Written)</button>
+                <button className={`seg${pitchMode === 'concert' ? ' on' : ''}`} onClick={() => setPitchMode('concert')}>{t('concert')}</button>
+                <button className={`seg${pitchMode === 'written' ? ' on' : ''}`} onClick={() => setPitchMode('written')}>{t('written')}</button>
               </div>
-              <p className="hint-text">{instrument.transposeLabel}</p>
+              <p className="hint-text">{pick(lang, instrument.transposeLabel, instrument.transposeLabelEn)}</p>
             </div>
             {instrument.clefs.length > 1 && (
               <div className="field">
-                <label>譜表</label>
+                <label>{t('clefLabel')}</label>
                 <div className="seg-group">
                   {instrument.clefs.map((c) => (
                     <button key={c} className={`seg${clef === c ? ' on' : ''}`} onClick={() => setClefOverride(c)}>
@@ -294,7 +312,7 @@ export default function App() {
           </div>
 
           <div className="field">
-            <label htmlFor="bpm-slider">テンポ: <strong>{bpm} BPM</strong></label>
+            <label htmlFor="bpm-slider">{t('tempoLabel')}: <strong>{bpm} BPM</strong></label>
             <div className="bpm-row">
               <input
                 id="bpm-slider"
@@ -319,27 +337,27 @@ export default function App() {
           </div>
 
           <div className="field">
-            <label>練習する内容(五線譜に表示)</label>
+            <label>{t('contentLabel')}</label>
             <div className="seg-group wrap">
-              <button className={`seg${tab === 'chordtones' ? ' on' : ''}`} onClick={() => setTab('chordtones')}>コードトーン</button>
-              <button className={`seg${tab === 'guidetones' ? ' on' : ''}`} onClick={() => setTab('guidetones')}>ガイドトーン</button>
-              <button className={`seg${tab === 'scale' ? ' on' : ''}`} onClick={() => setTab('scale')}>使える音</button>
+              <button className={`seg${tab === 'chordtones' ? ' on' : ''}`} onClick={() => setTab('chordtones')}>{t('chordTones')}</button>
+              <button className={`seg${tab === 'guidetones' ? ' on' : ''}`} onClick={() => setTab('guidetones')}>{t('guideTones')}</button>
+              <button className={`seg${tab === 'scale' ? ' on' : ''}`} onClick={() => setTab('scale')}>{t('scaleTab')}</button>
             </div>
           </div>
 
           {(tab === 'chordtones' || tab === 'guidetones') && (
             <div className="field">
-              <label>リズムパターン</label>
+              <label>{t('rhythmPatternLabel')}</label>
               <div className="seg-group wrap">
                 {TONE_RHYTHMS.map((r) => (
                   <button key={r.id} className={`seg${toneRhythm === r.id ? ' on' : ''}`} onClick={() => setToneRhythm(r.id)}>
-                    {r.label}
+                    {pick(lang, r.label, r.labelEn)}
                   </button>
                 ))}
               </div>
-              <p className="hint-text">{TONE_RHYTHMS.find((r) => r.id === toneRhythm)?.hint}</p>
+              <p className="hint-text">{(() => { const r = TONE_RHYTHMS.find((x) => x.id === toneRhythm); return r ? pick(lang, r.hint, r.hintEn) : ''; })()}</p>
               <div className="sub-field">
-                <label>スウィング</label>
+                <label>{t('swingLabel')}</label>
                 <div className="seg-group">
                   {SWING_OPTIONS.map((s) => (
                     <button
@@ -348,11 +366,11 @@ export default function App() {
                       onClick={() => setSwingId(s.id)}
                       disabled={rhythmNoSwing}
                     >
-                      {s.label}
+                      {pick(lang, s.label, s.labelEn)}
                     </button>
                   ))}
                 </div>
-                {rhythmNoSwing && <p className="hint-text">16分はスウィングせず、イーブンで再生されます</p>}
+                {rhythmNoSwing && <p className="hint-text">{t('noSwing16')}</p>}
               </div>
             </div>
           )}
@@ -361,7 +379,7 @@ export default function App() {
         {/* ===== メイン(進行・譜面・再生) ===== */}
         <div className="main-col">
           <section className="panel">
-            <h2>コード進行 <span className="key-badge">{isCustom ? '自由進行' : `Key: ${keyName}${pitchMode === 'written' && shift % 12 !== 0 ? `(記譜: ${KEYS.find((k) => k.pc === displayKeyPc)!.name})` : ''}`}</span></h2>
+            <h2>{t('progressionTitle')} <span className="key-badge">{isCustom ? t('customBadge') : `Key: ${keyName}${pitchMode === 'written' && shift % 12 !== 0 ? `(${t('writtenBadge')}: ${KEYS.find((k) => k.pc === displayKeyPc)!.name})` : ''}`}</span></h2>
             <ChordProgressionView
               progression={progression}
               keyPc={effKeyPc}
@@ -371,6 +389,7 @@ export default function App() {
               currentBeat={position?.beat ?? 0}
               selectedMeasure={selectedMeasure}
               onSelectMeasure={setSelectedMeasure}
+              lang={lang}
             />
 
             {/* 再生コントロール */}
@@ -397,15 +416,15 @@ export default function App() {
               <div className="transport-opts">
                 <label className="toggle"><input type="checkbox" checked={loopEnabled} onChange={(e) => setLoopEnabled(e.target.checked)} /> Loop</label>
                 <label className="toggle"><input type="checkbox" checked={countIn} onChange={(e) => setCountIn(e.target.checked)} /> 4 Count In</label>
-                <label className="toggle"><input type="checkbox" checked={metronomeOn} onChange={(e) => setMetronomeOn(e.target.checked)} /> メトロノーム</label>
-                <label className="toggle"><input type="checkbox" checked={compOn} onChange={(e) => setCompOn(e.target.checked)} /> コード音</label>
+                <label className="toggle"><input type="checkbox" checked={metronomeOn} onChange={(e) => setMetronomeOn(e.target.checked)} /> {t('metronome')}</label>
+                <label className="toggle"><input type="checkbox" checked={compOn} onChange={(e) => setCompOn(e.target.checked)} /> {t('compSound')}</label>
               </div>
               <div className="transport-opts">
-                <span className="opt-label">ループ範囲:</span>
+                <span className="opt-label">{t('loopRangeLabel')}</span>
                 <div className="seg-group">
-                  <button className={`seg${loopRange === 'full' ? ' on' : ''}`} onClick={() => setLoopRange('full')}>進行全体</button>
-                  <button className={`seg${loopRange === '2' ? ' on' : ''}`} onClick={() => setLoopRange('2')}>2小節</button>
-                  <button className={`seg${loopRange === '1' ? ' on' : ''}`} onClick={() => setLoopRange('1')}>1小節</button>
+                  <button className={`seg${loopRange === 'full' ? ' on' : ''}`} onClick={() => setLoopRange('full')}>{t('loopFull')}</button>
+                  <button className={`seg${loopRange === '2' ? ' on' : ''}`} onClick={() => setLoopRange('2')}>{t('loop2')}</button>
+                  <button className={`seg${loopRange === '1' ? ' on' : ''}`} onClick={() => setLoopRange('1')}>{t('loop1')}</button>
                 </div>
               </div>
             </div>
@@ -413,16 +432,16 @@ export default function App() {
 
           <section className="panel">
             <div className="staff-head">
-              <h2>五線譜</h2>
+              <h2>{t('staffTitle')}</h2>
               <span className="key-badge">
-                {tab === 'chordtones' ? 'コードトーン' : tab === 'guidetones' ? 'ガイドトーン' : '使える音'}
-                {tab !== 'scale' ? ` / ${TONE_RHYTHMS.find((r) => r.id === toneRhythm)?.label ?? ''}` : ''}
+                {tab === 'chordtones' ? t('chordTones') : tab === 'guidetones' ? t('guideTones') : t('scaleTab')}
+                {tab !== 'scale' ? ` / ${(() => { const r = TONE_RHYTHMS.find((x) => x.id === toneRhythm); return r ? pick(lang, r.label, r.labelEn) : ''; })()}` : ''}
               </span>
               <div className="seg-group">
-                <button className={`seg${labelMode === 'none' ? ' on' : ''}`} onClick={() => setLabelMode('none')}>音名なし</button>
+                <button className={`seg${labelMode === 'none' ? ' on' : ''}`} onClick={() => setLabelMode('none')}>{t('labelNone')}</button>
                 <button className={`seg${labelMode === 'name' ? ' on' : ''}`} onClick={() => setLabelMode('name')}>C D E</button>
-                <button className={`seg${labelMode === 'solfege' ? ' on' : ''}`} onClick={() => setLabelMode('solfege')}>ドレミ</button>
-                <button className={`seg${labelMode === 'degree' ? ' on' : ''}`} onClick={() => setLabelMode('degree')}>度数</button>
+                <button className={`seg${labelMode === 'solfege' ? ' on' : ''}`} onClick={() => setLabelMode('solfege')}>{t('labelSolfege')}</button>
+                <button className={`seg${labelMode === 'degree' ? ' on' : ''}`} onClick={() => setLabelMode('degree')}>{t('labelDegree')}</button>
               </div>
             </div>
             <div className="staff-card">
@@ -438,22 +457,23 @@ export default function App() {
               />
             </div>
             {pitchMode === 'written' && shift !== 0 && (
-              <p className="hint-text">Written Pitch 表示中: あなたの楽器で読む譜面です。鳴る音(実音)とは異なります。</p>
+              <p className="hint-text">{t('writtenNotice')}</p>
             )}
           </section>
 
           <section className="panel">
-            <h2>いまのコード</h2>
+            <h2>{t('nowChordTitle')}</h2>
             <ChordInfoPanel
               rootPc={currentChordDisplayRoot}
               quality={currentChord.quality}
               flats={flats}
               concertLabel={concertChordLabel}
+              lang={lang}
             />
           </section>
 
           <section className="panel">
-            <h2>練習ポイント — {guide.title}</h2>
+            <h2>{t('practicePointTitle')} — {guide.title}</h2>
             <ol className="tips-list">
               {guide.tips.map((t, i) => (
                 <li key={i}>{t}</li>
@@ -462,20 +482,23 @@ export default function App() {
           </section>
 
           <PracticeLogPanel
+            lang={lang}
             currentSettings={{
-              menu: progression.label,
-              key: isCustom ? '自由進行' : keyName,
+              menu: pick(lang, progression.label, progression.labelEn),
+              key: isCustom ? t('customBadge') : keyName,
               bpm,
               instrument: instrument.label,
               mode: guide.title,
-              difficulty: tab === 'scale' ? 'スケール' : TONE_RHYTHMS.find((r) => r.id === toneRhythm)?.label ?? '',
+              difficulty: tab === 'scale'
+                ? t('scaleLogLabel')
+                : (() => { const r = TONE_RHYTHMS.find((x) => x.id === toneRhythm); return r ? pick(lang, r.label, r.labelEn) : ''; })(),
             }}
           />
         </div>
       </main>
 
       <footer className="app-footer">
-        <p>Jazz Phrase Lab — 譜面演奏からアドリブへの橋渡し。ヘッドホン推奨。iPhoneはマナーモード解除で音が出ます。</p>
+        <p>{t('footer')}</p>
       </footer>
     </div>
   );

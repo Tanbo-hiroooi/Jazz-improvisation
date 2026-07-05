@@ -31,6 +31,7 @@ npm run preview  # 本番ビルドの確認
 - **コード情報**: コードトーン・ガイドトーン(3度と7度を強調)・おすすめスケール・度数
 - **練習モード**: Guide Tone Line / Chord Tone Phrase / Rhythm Variation / Motif Development / Approach Notes / Call & Response / Free Improvisation(それぞれ練習ポイント付き)
 - **練習ログ**: 日付・メニュー・キー・BPM・楽器・モード・メモを localStorage に保存
+- **表示言語**: 日本語 / English をヘッダーで切替(localStorage に保存)
 
 ## アーキテクチャ
 

@@ -3,6 +3,7 @@
 import { chordSymbol } from '../theory/chords';
 import { mod12 } from '../theory/notes';
 import type { Progression } from '../theory/progressions';
+import { t, type Lang } from '../i18n';
 
 interface Props {
   progression: Progression;
@@ -15,10 +16,11 @@ interface Props {
   currentBeat: number;
   selectedMeasure: number;
   onSelectMeasure: (m: number) => void;
+  lang: Lang;
 }
 
 export function ChordProgressionView({
-  progression, keyPc, shift, flats, currentMeasure, currentBeat, selectedMeasure, onSelectMeasure,
+  progression, keyPc, shift, flats, currentMeasure, currentBeat, selectedMeasure, onSelectMeasure, lang,
 }: Props) {
   const cells = [];
   for (let m = 0; m < progression.measures; m++) {
@@ -30,7 +32,7 @@ export function ChordProgressionView({
         key={m}
         className={`chord-cell${isCurrent ? ' current' : ''}${isSelected ? ' selected' : ''}`}
         onClick={() => onSelectMeasure(m)}
-        aria-label={`${m + 1}小節目`}
+        aria-label={`${m + 1} ${t(lang, 'measureAria')}`}
       >
         <span className="chord-cell-num">{m + 1}</span>
         <span className="chord-cell-symbols">
@@ -54,9 +56,9 @@ export function ChordProgressionView({
 
   return (
     <div className="chord-grid-wrap">
-      {currentMeasure === -1 && <div className="count-in-banner">カウントイン中… 1 2 3 4</div>}
+      {currentMeasure === -1 && <div className="count-in-banner">{t(lang, 'countInBanner')}</div>}
       <div className={`chord-grid measures-${progression.measures}`}>{cells}</div>
-      <p className="hint-text">小節をタップするとループ開始位置を選べます(1小節/2小節ループ時)</p>
+      <p className="hint-text">{t(lang, 'measureTapHint')}</p>
     </div>
   );
 }

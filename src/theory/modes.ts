@@ -1,4 +1,6 @@
-// 練習ポイント: 表示中のタブから、いま何を練習すべきかのガイドを返す
+// 練習ポイント: 表示中のタブから、いま何を練習すべきかのガイドを返す(日英対応)
+
+import type { Lang } from '../i18n';
 
 export type StaffTab = 'chordtones' | 'guidetones' | 'scale';
 
@@ -7,7 +9,7 @@ export interface PracticeGuide {
   tips: string[];
 }
 
-const GUIDES: Record<StaffTab, PracticeGuide> = {
+const GUIDES_JA: Record<StaffTab, PracticeGuide> = {
   chordtones: {
     title: 'コードトーン練習',
     tips: [
@@ -34,6 +36,33 @@ const GUIDES: Record<StaffTab, PracticeGuide> = {
   },
 };
 
-export function getPracticeGuide(tab: StaffTab): PracticeGuide {
-  return GUIDES[tab];
+const GUIDES_EN: Record<StaffTab, PracticeGuide> = {
+  chordtones: {
+    title: 'Chord-Tone Practice',
+    tips: [
+      'Play the 1-3-5-7 of each chord with the selected rhythm pattern. First, learn where the notes live.',
+      'Then start each measure on a chord tone and rearrange the order freely.',
+      'With the metronome, staying in time matters more than avoiding wrong notes. Changing the rhythm pattern turns the same notes into a new exercise.',
+    ],
+  },
+  guidetones: {
+    title: 'Guide-Tone Practice',
+    tips: [
+      'Play only the 3rd and 7th of each chord with the selected rhythm pattern.',
+      'When the chord changes, guide tones move only by a half or whole step. Listen for that smoothness.',
+      'This is the backbone of improvising — return here whenever you get lost. Play them on offbeats or a Charleston rhythm and you already sound like jazz.',
+    ],
+  },
+  scale: {
+    title: 'Available Notes (Scale) Practice',
+    tips: [
+      'These are the recommended scales for each chord. Run them up and down until your fingers and ears know them.',
+      'Chord tones (1-3-5-7) are landing notes; the rest are passing notes. Check with the degree display.',
+      'Running scales isn’t a phrase yet — vary the rhythm, pause, and make it sing.',
+    ],
+  },
+};
+
+export function getPracticeGuide(tab: StaffTab, lang: Lang): PracticeGuide {
+  return (lang === 'ja' ? GUIDES_JA : GUIDES_EN)[tab];
 }
