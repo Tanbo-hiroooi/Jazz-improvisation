@@ -1,23 +1,27 @@
-// 練習コース: コース概要とレッスン一覧、進捗管理
+// 練習コース: 章ごとにレッスンを一覧表示し、進捗を管理
 
 import { useState } from 'react';
-import { COURSES, LESSONS, getLesson } from '../data/courses';
+import { CHAPTERS, COURSES, courseLessonIds, getLesson, lessonsOfChapter } from '../data/courses';
 import { loadCourseProgress, saveCourseProgress } from '../state/storage';
 import type { Clef, PitchMode } from '../theory/instruments';
 import { pick, t as tr, type Lang } from '../i18n';
 import { LessonScreen } from './LessonScreen';
+import type { FreePracticeInit } from './FreePracticeScreen';
 
 interface Props {
   lang: Lang;
   instrumentId: string;
   clefOverride: Clef | null;
   pitchMode: PitchMode;
+  /** 選択中レッスン(自由練習からの復帰に備えてApp側で保持) */
+  selectedLessonId: string | null;
+  onSelectLesson: (id: string | null) => void;
+  onReview: (init: FreePracticeInit) => void;
 }
 
-export function CourseScreen({ lang, instrumentId, clefOverride, pitchMode }: Props) {
+export function CourseScreen({ lang, instrumentId, clefOverride, pitchMode, selectedLessonId, onSelectLesson, onReview }: Props) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
   const [progress, setProgress] = useState(loadCourseProgress);
-  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
 
   const markDone = (lessonId: string) => {
     if (!progress.completedLessonIds.includes(lessonId)) {
@@ -30,21 +34,26 @@ export function CourseScreen({ lang, instrumentId, clefOverride, pitchMode }: Pr
   if (selectedLessonId) {
     const lesson = getLesson(selectedLessonId);
     const course = COURSES.find((c) => c.id === lesson?.courseId);
-    if (lesson && course) {
-      const idx = course.lessonIds.indexOf(lesson.id);
-      const nextId = course.lessonIds[idx + 1];
+    const chapter = CHAPTERS.find((c) => c.id === lesson?.chapterId);
+    if (lesson && course && chapter) {
+      const allIds = courseLessonIds(course);
+      const idx = allIds.indexOf(lesson.id);
+      const nextId = allIds[idx + 1];
       return (
         <LessonScreen
+          key={lesson.id}
           lang={lang}
           lesson={lesson}
-          courseTitle={pick(lang, course.title, course.titleEn)}
+          courseTitle={pick(lang, course.title.ja, course.title.en)}
+          chapterTitle={pick(lang, chapter.title.ja, chapter.title.en)}
           lessonNumber={idx + 1}
-          totalLessons={course.lessonIds.length}
+          totalLessons={allIds.length}
           alreadyDone={progress.completedLessonIds.includes(lesson.id)}
           hasNext={!!nextId}
           onComplete={markDone}
-          onNext={() => setSelectedLessonId(nextId ?? null)}
-          onBack={() => setSelectedLessonId(null)}
+          onNext={() => onSelectLesson(nextId ?? null)}
+          onBack={() => onSelectLesson(null)}
+          onReview={onReview}
           instrumentId={instrumentId}
           clefOverride={clefOverride}
           pitchMode={pitchMode}
@@ -56,40 +65,59 @@ export function CourseScreen({ lang, instrumentId, clefOverride, pitchMode }: Pr
   return (
     <main className="course-main">
       {COURSES.map((course) => {
-        const done = course.lessonIds.filter((id) => progress.completedLessonIds.includes(id)).length;
-        // 次に取り組むレッスン(最初の未完了)
-        const nextLessonId = course.lessonIds.find((id) => !progress.completedLessonIds.includes(id));
+        const allIds = courseLessonIds(course);
+        const done = allIds.filter((id) => progress.completedLessonIds.includes(id)).length;
+        const nextLessonId = allIds.find((id) => !progress.completedLessonIds.includes(id));
         return (
-          <section key={course.id} className="panel">
-            <h2>{pick(lang, course.title, course.titleEn)} <span className="key-badge">{t('progressLabel')}: {done} / {course.lessonIds.length}</span></h2>
-            <p className="hint-text">{pick(lang, course.description, course.descriptionEn)}</p>
-            <div className="progress-bar">
-              <div className="progress-bar-fill" style={{ width: `${(done / course.lessonIds.length) * 100}%` }} />
-            </div>
-            <ul className="lesson-list">
-              {course.lessonIds.map((id, i) => {
-                const lesson = LESSONS.find((l) => l.id === id);
-                if (!lesson) return null;
-                const isDone = progress.completedLessonIds.includes(id);
-                const isNext = id === nextLessonId;
-                return (
-                  <li key={id}>
-                    <button
-                      className={`lesson-item${isDone ? ' done' : ''}${isNext ? ' next' : ''}`}
-                      onClick={() => setSelectedLessonId(id)}
-                    >
-                      <span className="lesson-item-num">{isDone ? '✓' : i + 1}</span>
-                      <span className="lesson-item-body">
-                        <span className="lesson-item-title">{pick(lang, lesson.title, lesson.titleEn)}</span>
-                        <span className="lesson-item-theme">{pick(lang, lesson.theme, lesson.themeEn)}</span>
-                      </span>
-                      {isNext && <span className="lesson-item-next">▶</span>}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
+          <div key={course.id} className="course-wrap">
+            <section className="panel">
+              <h2>{pick(lang, course.title.ja, course.title.en)} <span className="key-badge">{t('progressLabel')}: {done} / {allIds.length}</span></h2>
+              <p className="hint-text">{pick(lang, course.description.ja, course.description.en)}</p>
+              <div className="progress-bar">
+                <div className="progress-bar-fill" style={{ width: `${(done / allIds.length) * 100}%` }} />
+              </div>
+            </section>
+
+            {course.chapterIds.map((cid) => {
+              const chapter = CHAPTERS.find((c) => c.id === cid);
+              if (!chapter) return null;
+              const lessons = lessonsOfChapter(cid);
+              const chapterDone = lessons.filter((l) => progress.completedLessonIds.includes(l.id)).length;
+              return (
+                <section key={cid} className="panel chapter-panel">
+                  <h2>
+                    {pick(lang, chapter.title.ja, chapter.title.en)}
+                    <span className="key-badge">{chapterDone} / {lessons.length}</span>
+                  </h2>
+                  <p className="hint-text chapter-purpose">{pick(lang, chapter.purpose.ja, chapter.purpose.en)}</p>
+                  <ul className="lesson-list">
+                    {lessons.map((lesson, i) => {
+                      const isDone = progress.completedLessonIds.includes(lesson.id);
+                      const isNext = lesson.id === nextLessonId;
+                      return (
+                        <li key={lesson.id}>
+                          <button
+                            className={`lesson-item${isDone ? ' done' : ''}${isNext ? ' next' : ''}`}
+                            onClick={() => onSelectLesson(lesson.id)}
+                          >
+                            <span className="lesson-item-num">{isDone ? '✓' : i + 1}</span>
+                            <span className="lesson-item-body">
+                              <span className="lesson-item-title">{pick(lang, lesson.title.ja, lesson.title.en)}</span>
+                              <span className="lesson-item-theme">
+                                {lesson.technicalName ? `${lesson.technicalName} — ` : ''}
+                                {pick(lang, lesson.outcome.ja, lesson.outcome.en)}
+                              </span>
+                            </span>
+                            {isNext && <span className="lesson-item-next">▶</span>}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              );
+            })}
+          </div>
         );
       })}
     </main>

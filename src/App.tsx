@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { CourseScreen } from './screens/CourseScreen';
-import { FreePracticeScreen } from './screens/FreePracticeScreen';
+import { FreePracticeScreen, type FreePracticeInit } from './screens/FreePracticeScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { SongPracticeScreen } from './screens/SongPracticeScreen';
 import { loadJSON, saveJSON, STORAGE_KEYS } from './state/storage';
@@ -30,12 +30,27 @@ export default function App() {
   // ---- 画面切替 ----
   const [screen, setScreen] = useState<Screen>('home');
   const [lastScreen, setLastScreen] = useState<Screen | null>(() => loadJSON<Screen | null>(STORAGE_KEYS.lastScreen, null));
+  // コースで選択中のレッスン(自由練習で復習→戻る、のために App が保持)
+  const [courseLessonId, setCourseLessonId] = useState<string | null>(null);
+  // レッスンから自由練習へ引き継ぐ設定(nullなら通常の自由練習)
+  const [freeInit, setFreeInit] = useState<FreePracticeInit | null>(null);
   const navigate = (s: Screen) => {
     setScreen(s);
+    if (s === 'free') setFreeInit(null); // 通常導線ではまっさらな自由練習
     if (s !== 'home') {
       setLastScreen(s);
       saveJSON(STORAGE_KEYS.lastScreen, s);
     }
+  };
+
+  // レッスン→自由練習(設定引き継ぎ・復帰導線あり)
+  const startReview = (init: FreePracticeInit) => {
+    setFreeInit(init);
+    setScreen('free');
+  };
+  const returnToLesson = () => {
+    setFreeInit(null);
+    setScreen('course'); // courseLessonId が保持されているので同じレッスンに戻る
   };
 
   // ---- 楽器などの共通設定(全画面で共有) ----
@@ -75,6 +90,7 @@ export default function App() {
       )}
       {screen === 'free' && (
         <FreePracticeScreen
+          key={freeInit ? `review-${courseLessonId}` : 'free'}
           lang={lang}
           instrumentId={instrumentId}
           setInstrumentId={setInstrumentId}
@@ -82,10 +98,20 @@ export default function App() {
           setClefOverride={setClefOverride}
           pitchMode={pitchMode}
           setPitchMode={setPitchMode}
+          initial={freeInit}
+          onReturnToLesson={freeInit ? returnToLesson : undefined}
         />
       )}
       {screen === 'course' && (
-        <CourseScreen lang={lang} instrumentId={instrumentId} clefOverride={clefOverride} pitchMode={pitchMode} />
+        <CourseScreen
+          lang={lang}
+          instrumentId={instrumentId}
+          clefOverride={clefOverride}
+          pitchMode={pitchMode}
+          selectedLessonId={courseLessonId}
+          onSelectLesson={setCourseLessonId}
+          onReview={startReview}
+        />
       )}
       {screen === 'song' && (
         <SongPracticeScreen lang={lang} instrumentId={instrumentId} clefOverride={clefOverride} pitchMode={pitchMode} />

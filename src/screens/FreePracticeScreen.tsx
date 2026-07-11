@@ -29,6 +29,17 @@ import { PROGRESSIONS, chordAt, getProgression, type Progression, type Progressi
 import { SWING_OPTIONS } from '../theory/rhythms';
 import { pick, t as tr, type Lang } from '../i18n';
 
+/** レッスンから復習に来るときに引き継ぐ設定 */
+export interface FreePracticeInit {
+  progressionId: ProgressionId;
+  keyPc: number;
+  bpm: number;
+  tab: StaffTab;
+  toneRhythm?: ToneRhythmId;
+  arpPattern?: ArpPatternId;
+  scaleView?: 'scale' | 'tension';
+}
+
 interface Props {
   lang: Lang;
   instrumentId: string;
@@ -37,23 +48,27 @@ interface Props {
   setClefOverride: (c: Clef | null) => void;
   pitchMode: PitchMode;
   setPitchMode: (m: PitchMode) => void;
+  /** レッスンから引き継いだ初期設定 */
+  initial?: FreePracticeInit | null;
+  /** 復習元のレッスンへ戻る導線(引き継ぎ時のみ) */
+  onReturnToLesson?: () => void;
 }
 
-export function FreePracticeScreen({ lang, instrumentId, setInstrumentId, clefOverride, setClefOverride, pitchMode, setPitchMode }: Props) {
+export function FreePracticeScreen({ lang, instrumentId, setInstrumentId, clefOverride, setClefOverride, pitchMode, setPitchMode, initial, onReturnToLesson }: Props) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
 
   // ---- 設定 ----
-  const [menuId, setMenuId] = useState<ProgressionId>('ii-V-I');
+  const [menuId, setMenuId] = useState<ProgressionId>(initial?.progressionId ?? 'ii-V-I');
   const [customChords, setCustomChords] = useState<CustomChord[]>(DEFAULT_CUSTOM);
-  const [keyPc, setKeyPc] = useState(0);
-  const [bpm, setBpm] = useState(100);
-  const [tab, setTab] = useState<StaffTab>('chordtones');
-  const [toneRhythm, setToneRhythm] = useState<ToneRhythmId>('basic');
-  const [arpPattern, setArpPattern] = useState<ArpPatternId>('up');
-  const [scaleView, setScaleView] = useState<'scale' | 'tension'>('scale');
+  const [keyPc, setKeyPc] = useState(initial?.keyPc ?? 0);
+  const [bpm, setBpm] = useState(initial?.bpm ?? 100);
+  const [tab, setTab] = useState<StaffTab>(initial?.tab ?? 'chordtones');
+  const [toneRhythm, setToneRhythm] = useState<ToneRhythmId>(initial?.toneRhythm ?? 'basic');
+  const [arpPattern, setArpPattern] = useState<ArpPatternId>(initial?.arpPattern ?? 'up');
+  const [scaleView, setScaleView] = useState<'scale' | 'tension'>(initial?.scaleView ?? 'scale');
   const [exerciseId, setExerciseId] = useState('');
   // BPMの直接入力用テキスト(入力途中の値をクランプしないための分離)
-  const [bpmText, setBpmText] = useState('100');
+  const [bpmText, setBpmText] = useState(String(initial?.bpm ?? 100));
   const [labelMode, setLabelMode] = useState<LabelMode>('none');
 
   // ---- 再生オプション ----
@@ -133,6 +148,12 @@ export function FreePracticeScreen({ lang, instrumentId, setInstrumentId, clefOv
 
   return (
     <main className="layout">
+      {onReturnToLesson && (
+        <div className="review-banner">
+          <span>📖 {t('reviewBanner')}</span>
+          <button className="btn" onClick={onReturnToLesson}>← {t('backToLesson')}</button>
+        </div>
+      )}
       {/* ===== 設定パネル ===== */}
       <section className="panel settings-panel">
         <h2>{t('setupTitle')}</h2>
