@@ -381,3 +381,115 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
 .log-item-memo { margin: 6px 0 0; font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; }
 
 .app-footer { margin-top: 20px; text-align: center; color: var(--text-dim); font-size: 11.5px; }
+
+/* ---- ホーム画面 ---- */
+.home { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; }
+.home-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 720px) {
+  .home-cards { grid-template-columns: repeat(3, 1fr); }
+}
+.home-card {
+  background: var(--bg-panel);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 18px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+  color: var(--text);
+  transition: border-color 0.15s;
+}
+.home-card:hover { border-color: var(--accent); }
+.home-card:active { transform: scale(0.98); }
+.home-card-icon { font-size: 30px; }
+.home-card-title { font-size: 18px; font-weight: 700; color: var(--accent); }
+.home-card-desc { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+.continue-btn { align-self: flex-start; }
+
+/* ---- ナビゲーション ---- */
+.app-title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.back-btn { padding: 6px 12px; font-size: 13px; min-height: 32px; }
+.screen-badge { font-size: 12px; }
+
+/* ---- 課題カード / ルール ---- */
+.exercise-card .exercise-desc { margin: 0 0 8px; font-size: 14.5px; line-height: 1.7; }
+.rule-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.rule-chip {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 99px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+}
+.mission-card { margin-top: 10px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+
+/* ---- コース / レッスン ---- */
+.course-main, .lesson-main, .song-main { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; max-width: 860px; margin-left: auto; margin-right: auto; }
+.progress-bar {
+  height: 8px;
+  background: var(--bg-panel-2);
+  border-radius: 99px;
+  overflow: hidden;
+  margin: 10px 0;
+}
+.progress-bar-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.3s; }
+.lesson-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.lesson-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-panel-2);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  color: var(--text);
+  text-align: left;
+}
+.lesson-item:hover { border-color: var(--accent); }
+.lesson-item.done { opacity: 0.75; }
+.lesson-item.done .lesson-item-num { background: var(--green); color: #06281c; }
+.lesson-item.next { border-color: var(--accent); }
+.lesson-item-num {
+  flex-shrink: 0;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700;
+}
+.lesson-item-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lesson-item-title { font-weight: 600; font-size: 14px; }
+.lesson-item-theme { font-size: 12px; color: var(--text-dim); }
+.lesson-item-next { margin-left: auto; color: var(--accent); }
+.lesson-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.lesson-step-label {
+  display: inline-block;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11.5px;
+  margin-bottom: 4px;
+}
+.lesson-theme-text { margin: 2px 0 0; font-size: 17px; font-weight: 700; }
+.lesson-block { margin-top: 10px; }
+.lesson-block p { margin: 2px 0 0; font-size: 14px; }
+.lesson-explanation { margin: 12px 0 0; font-size: 14px; line-height: 1.8; color: var(--text); }
+.relax-hint { margin-top: 10px; }
+.check-list { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.check-item { font-size: 14px; color: var(--text); }
+.lesson-complete-row { display: flex; align-items: center; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+.complete-btn { min-width: 220px; }
+.saved-note { color: var(--green); font-weight: 600; }
+.chorus-badge { background: rgba(52, 211, 153, 0.15); color: var(--green); }

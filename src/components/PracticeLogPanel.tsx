@@ -30,8 +30,15 @@ function saveLogs(logs: LogEntry[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
 }
 
+/** 画面から直接ログを追記する(レッスン完了・実践結果の保存用) */
+export function appendLog(entry: Omit<LogEntry, 'id' | 'date'>): void {
+  const logs = loadLogs();
+  saveLogs([{ id: `${Date.now()}`, date: new Date().toISOString(), ...entry }, ...logs]);
+}
+
 interface Props {
-  currentSettings: Omit<LogEntry, 'id' | 'date' | 'memo'>;
+  /** 省略時は保存フォームなしの履歴表示のみ */
+  currentSettings?: Omit<LogEntry, 'id' | 'date' | 'memo'>;
   lang: Lang;
 }
 
@@ -40,6 +47,7 @@ export function PracticeLogPanel({ currentSettings, lang }: Props) {
   const [memo, setMemo] = useState('');
 
   const addLog = () => {
+    if (!currentSettings) return;
     const entry: LogEntry = {
       id: `${Date.now()}`,
       date: new Date().toISOString(),
@@ -61,20 +69,22 @@ export function PracticeLogPanel({ currentSettings, lang }: Props) {
   return (
     <section className="panel log-panel">
       <h2>{t(lang, 'logTitle')}</h2>
-      <div className="log-form">
-        <textarea
-          value={memo}
-          onChange={(e) => setMemo(e.target.value)}
-          placeholder={t(lang, 'logPlaceholder')}
-          rows={3}
-        />
-        <div className="log-form-meta">
-          <span>
-            {currentSettings.menu} / Key {currentSettings.key} / {currentSettings.bpm} BPM / {currentSettings.instrument} / {currentSettings.mode}
-          </span>
-          <button className="btn primary" onClick={addLog}>{t(lang, 'logSave')}</button>
+      {currentSettings && (
+        <div className="log-form">
+          <textarea
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            placeholder={t(lang, 'logPlaceholder')}
+            rows={3}
+          />
+          <div className="log-form-meta">
+            <span>
+              {currentSettings.menu} / Key {currentSettings.key} / {currentSettings.bpm} BPM / {currentSettings.instrument} / {currentSettings.mode}
+            </span>
+            <button className="btn primary" onClick={addLog}>{t(lang, 'logSave')}</button>
+          </div>
         </div>
-      </div>
+      )}
       {logs.length === 0 ? (
         <p className="hint-text">{t(lang, 'logEmpty')}</p>
       ) : (

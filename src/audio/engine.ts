@@ -20,7 +20,7 @@ export interface StartOptions {
   /** リージョンの小節数 */
   regionBars: number;
   metronome: boolean;
-  /** 見本フレーズ(リージョン先頭からの拍で正規化済み) */
+  /** 譜面に表示中のノート(音の確認/リズムガイド用。リージョン先頭からの拍で正規化済み) */
   notes?: NoteEvent[];
   /** true なら音程なしでリズムのみ */
   rhythmOnly?: boolean;
@@ -30,7 +30,7 @@ export interface StartOptions {
   swing?: number;
   /** 再生位置コールバック: bar はリージョン内小節(カウントイン中は -1) */
   onPosition?: (bar: number, beat: number) => void;
-  /** 現在鳴っている見本ノートのインデックス(-1はなし) */
+  /** ガイド対象ノートのインデックス(-1はなし) */
   onNoteIndex?: (index: number) => void;
   onEnded?: () => void;
 }
