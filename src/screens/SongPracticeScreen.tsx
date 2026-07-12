@@ -5,9 +5,11 @@ import { appendLog } from '../components/PracticeLogPanel';
 import { ChordProgressionView } from '../components/ChordProgressionView';
 import { StaffView, type ChordDisplay, type LabelMode } from '../components/StaffView';
 import { PRACTICE_MISSIONS } from '../data/missions';
+import { SessionSetupPanel } from '../components/SessionSetupPanel';
+import type { MyInstrumentSettings } from '../state/storage';
 import { usePracticePlayback } from '../hooks/usePracticePlayback';
 import { chordSymbol } from '../theory/chords';
-import { getInstrument, displayShift, type Clef, type PitchMode } from '../theory/instruments';
+import { getInstrument, displayShift, type Clef } from '../theory/instruments';
 import { KEYS, mod12, useFlatsForKey } from '../theory/notes';
 import { chordTonesAsNotes, guideTonesAsNotes, scaleAsNotes, type NoteEvent } from '../theory/phrases';
 import { getProgression, PROGRESSIONS, type ProgressionId } from '../theory/progressions';
@@ -28,12 +30,14 @@ const SELF_CHECK: { ja: string; en: string }[] = [
 
 interface Props {
   lang: Lang;
-  instrumentId: string;
-  clefOverride: Clef | null;
-  pitchMode: PitchMode;
+  session: MyInstrumentSettings;
+  onPatchSession: (patch: Partial<MyInstrumentSettings>) => void;
+  onChangeInstrument: (id: string) => void;
+  onSaveBase: () => void;
 }
 
-export function SongPracticeScreen({ lang, instrumentId, clefOverride, pitchMode }: Props) {
+export function SongPracticeScreen({ lang, session, onPatchSession, onChangeInstrument, onSaveBase }: Props) {
+  const { instrumentId, pitchMode } = session;
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
 
   const [progressionId, setProgressionId] = useState<ProgressionId>('blues');
@@ -49,11 +53,14 @@ export function SongPracticeScreen({ lang, instrumentId, clefOverride, pitchMode
   const [checks, setChecks] = useState<boolean[]>(() => SELF_CHECK.map(() => false));
   const [memo, setMemo] = useState('');
   const [saved, setSaved] = useState(false);
+  // 楽器・譜面の確認バー(変更を押すと全設定パネルを展開)
+  const [setupConfirmed, setSetupConfirmed] = useState(true);
 
   const progression = getProgression(progressionId);
   const mission = PRACTICE_MISSIONS.find((m) => m.id === missionId)!;
   const instrument = getInstrument(instrumentId);
-  const clef: Clef = clefOverride && instrument.clefs.includes(clefOverride) ? clefOverride : instrument.defaultClef;
+  const clef: Clef = session.clefOverride && instrument.clefs.includes(session.clefOverride) ? session.clefOverride : instrument.defaultClef;
+  const effNotation = instrumentId === 'guitar' ? session.notationMode : 'staff';
   const shift = displayShift(instrument, pitchMode);
   const flats = useFlatsForKey(mod12(keyPc + shift));
 
@@ -108,6 +115,22 @@ export function SongPracticeScreen({ lang, instrumentId, clefOverride, pitchMode
 
   return (
     <main className="song-main">
+      <SessionSetupPanel
+        lang={lang}
+        practiceTitle={`${pick(lang, progression.label, progression.labelEn)} × ${pick(lang, mission.title, mission.titleEn)}`}
+        session={session}
+        onPatch={onPatchSession}
+        onChangeInstrument={onChangeInstrument}
+        onSaveBase={onSaveBase}
+        keyPc={keyPc}
+        setKeyPc={setKeyPc}
+        bpm={bpm}
+        setBpm={setBpm}
+        confirmed={setupConfirmed}
+        onConfirm={() => setSetupConfirmed(true)}
+        onEdit={() => { stopAll(); setSetupConfirmed(false); }}
+      />
+
       <section className="panel">
         <h2>{t('homeSongTitle')}</h2>
         <div className="field-row">
@@ -212,6 +235,9 @@ export function SongPracticeScreen({ lang, instrumentId, clefOverride, pitchMode
             labelMode={labelMode}
             chords={chordDisplays}
             currentIndex={currentNoteIndex}
+            notation={effNotation}
+            guitarPosition={session.guitarPosition}
+            guitarOpenStrings={session.guitarOpenStrings}
           />
         </div>
       </section>

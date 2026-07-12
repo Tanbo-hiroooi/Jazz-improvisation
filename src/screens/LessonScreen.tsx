@@ -5,10 +5,12 @@ import { useMemo, useRef, useState } from 'react';
 import { appendLog } from '../components/PracticeLogPanel';
 import { ChordProgressionView } from '../components/ChordProgressionView';
 import { StaffView, type ChordDisplay, type LabelMode } from '../components/StaffView';
+import { SessionSetupPanel } from '../components/SessionSetupPanel';
 import type { Bi, Lesson } from '../data/courses';
+import type { MyInstrumentSettings } from '../state/storage';
 import { usePracticePlayback } from '../hooks/usePracticePlayback';
 import { chordSymbol } from '../theory/chords';
-import { getInstrument, displayShift, type Clef, type PitchMode } from '../theory/instruments';
+import { getInstrument, displayShift, type Clef } from '../theory/instruments';
 import { KEYS, mod12, useFlatsForKey } from '../theory/notes';
 import {
   approachAsNotes,
@@ -36,15 +38,17 @@ interface Props {
   onNext: () => void;
   onBack: () => void;
   onReview: (init: FreePracticeInit) => void;
-  instrumentId: string;
-  clefOverride: Clef | null;
-  pitchMode: PitchMode;
+  session: MyInstrumentSettings;
+  onPatchSession: (patch: Partial<MyInstrumentSettings>) => void;
+  onChangeInstrument: (id: string) => void;
+  onSaveBase: () => void;
 }
 
 export function LessonScreen({
   lang, lesson, courseTitle, chapterTitle, lessonNumber, totalLessons, alreadyDone, hasNext,
-  onComplete, onNext, onBack, onReview, instrumentId, clefOverride, pitchMode,
+  onComplete, onNext, onBack, onReview, session, onPatchSession, onChangeInstrument, onSaveBase,
 }: Props) {
+  const { instrumentId, pitchMode } = session;
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
   const p = (x: Bi) => pick(lang, x.ja, x.en);
 
@@ -58,11 +62,14 @@ export function LessonScreen({
   const [checks, setChecks] = useState<boolean[]>(() => lesson.selfCheck.map(() => false));
   const [memo, setMemo] = useState('');
   const [completedNow, setCompletedNow] = useState(false);
+  // 練習開始前の設定確認(マイ楽器を初期値に、今回だけの変更が可能)
+  const [setupConfirmed, setSetupConfirmed] = useState(false);
   const practiceRef = useRef<HTMLElement>(null);
 
   const progression = getProgression(lesson.progressionId);
   const instrument = getInstrument(instrumentId);
-  const clef: Clef = clefOverride && instrument.clefs.includes(clefOverride) ? clefOverride : instrument.defaultClef;
+  const clef: Clef = session.clefOverride && instrument.clefs.includes(session.clefOverride) ? session.clefOverride : instrument.defaultClef;
+  const effNotation = instrumentId === 'guitar' ? session.notationMode : 'staff';
   const shift = displayShift(instrument, pitchMode);
   const flats = useFlatsForKey(mod12(keyPc + shift));
 
@@ -132,6 +139,22 @@ export function LessonScreen({
         <span className="key-badge">{chapterTitle}</span>
         <span className="key-badge">{lessonNumber} / {totalLessons}{alreadyDone ? ` ✓ ${t('doneBadge')}` : ''}</span>
       </div>
+
+      <SessionSetupPanel
+        lang={lang}
+        practiceTitle={p(lesson.title)}
+        session={session}
+        onPatch={onPatchSession}
+        onChangeInstrument={onChangeInstrument}
+        onSaveBase={onSaveBase}
+        keyPc={keyPc}
+        setKeyPc={setKeyPc}
+        bpm={bpm}
+        setBpm={setBpm}
+        confirmed={setupConfirmed}
+        onConfirm={() => setSetupConfirmed(true)}
+        onEdit={() => { stopAll(); setSetupConfirmed(false); }}
+      />
 
       {/* 1-4. タイトル / 専門用語 / 悩み / できるようになること */}
       <section className="panel">
@@ -219,6 +242,9 @@ export function LessonScreen({
             labelMode={labelMode}
             chords={chordDisplays}
             currentIndex={currentNoteIndex}
+            notation={effNotation}
+            guitarPosition={session.guitarPosition}
+            guitarOpenStrings={session.guitarOpenStrings}
           />
         </div>
       </section>

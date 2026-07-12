@@ -2,24 +2,24 @@
 
 import { useState } from 'react';
 import { CHAPTERS, COURSES, courseLessonIds, getLesson, lessonsOfChapter } from '../data/courses';
-import { loadCourseProgress, saveCourseProgress } from '../state/storage';
-import type { Clef, PitchMode } from '../theory/instruments';
+import { loadCourseProgress, saveCourseProgress, type MyInstrumentSettings } from '../state/storage';
 import { pick, t as tr, type Lang } from '../i18n';
 import { LessonScreen } from './LessonScreen';
 import type { FreePracticeInit } from './FreePracticeScreen';
 
 interface Props {
   lang: Lang;
-  instrumentId: string;
-  clefOverride: Clef | null;
-  pitchMode: PitchMode;
+  session: MyInstrumentSettings;
+  onPatchSession: (patch: Partial<MyInstrumentSettings>) => void;
+  onChangeInstrument: (id: string) => void;
+  onSaveBase: () => void;
   /** 選択中レッスン(自由練習からの復帰に備えてApp側で保持) */
   selectedLessonId: string | null;
   onSelectLesson: (id: string | null) => void;
   onReview: (init: FreePracticeInit) => void;
 }
 
-export function CourseScreen({ lang, instrumentId, clefOverride, pitchMode, selectedLessonId, onSelectLesson, onReview }: Props) {
+export function CourseScreen({ lang, session, onPatchSession, onChangeInstrument, onSaveBase, selectedLessonId, onSelectLesson, onReview }: Props) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
   const [progress, setProgress] = useState(loadCourseProgress);
 
@@ -54,9 +54,10 @@ export function CourseScreen({ lang, instrumentId, clefOverride, pitchMode, sele
           onNext={() => onSelectLesson(nextId ?? null)}
           onBack={() => onSelectLesson(null)}
           onReview={onReview}
-          instrumentId={instrumentId}
-          clefOverride={clefOverride}
-          pitchMode={pitchMode}
+          session={session}
+          onPatchSession={onPatchSession}
+          onChangeInstrument={onChangeInstrument}
+          onSaveBase={onSaveBase}
         />
       );
     }

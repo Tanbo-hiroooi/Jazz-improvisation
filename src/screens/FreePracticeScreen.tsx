@@ -7,9 +7,12 @@ import { CustomProgressionEditor, DEFAULT_CUSTOM, type CustomChord } from '../co
 import { PracticeLogPanel } from '../components/PracticeLogPanel';
 import { StaffView, type ChordDisplay, type LabelMode } from '../components/StaffView';
 import { EXERCISES, EXERCISE_CATEGORY_LABELS, type ExerciseCategory } from '../data/exercises';
+import { notationLabel, positionLabel } from '../components/SessionSetupPanel';
 import { usePracticePlayback, type LoopRange } from '../hooks/usePracticePlayback';
+import type { MyInstrumentSettings } from '../state/storage';
 import { chordSymbol } from '../theory/chords';
-import { INSTRUMENTS, getInstrument, displayShift, type Clef, type PitchMode } from '../theory/instruments';
+import { GUITAR_POSITIONS } from '../theory/guitar';
+import { INSTRUMENTS, getInstrument, displayShift, notationModesOf, type Clef } from '../theory/instruments';
 import { getPracticeGuide, type StaffTab } from '../theory/modes';
 import { KEYS, mod12, useFlatsForKey } from '../theory/notes';
 import {
@@ -42,19 +45,18 @@ export interface FreePracticeInit {
 
 interface Props {
   lang: Lang;
-  instrumentId: string;
-  setInstrumentId: (id: string) => void;
-  clefOverride: Clef | null;
-  setClefOverride: (c: Clef | null) => void;
-  pitchMode: PitchMode;
-  setPitchMode: (m: PitchMode) => void;
+  session: MyInstrumentSettings;
+  onPatchSession: (patch: Partial<MyInstrumentSettings>) => void;
+  onChangeInstrument: (id: string) => void;
+  onSaveBase: () => void;
   /** レッスンから引き継いだ初期設定 */
   initial?: FreePracticeInit | null;
   /** 復習元のレッスンへ戻る導線(引き継ぎ時のみ) */
   onReturnToLesson?: () => void;
 }
 
-export function FreePracticeScreen({ lang, instrumentId, setInstrumentId, clefOverride, setClefOverride, pitchMode, setPitchMode, initial, onReturnToLesson }: Props) {
+export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInstrument, onSaveBase, initial, onReturnToLesson }: Props) {
+  const { instrumentId, pitchMode } = session;
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
 
   // ---- 設定 ----
@@ -96,7 +98,9 @@ export function FreePracticeScreen({ lang, instrumentId, setInstrumentId, clefOv
     };
   }, [isCustom, menuId, customChords]);
   const instrument = getInstrument(instrumentId);
-  const clef: Clef = clefOverride && instrument.clefs.includes(clefOverride) ? clefOverride : instrument.defaultClef;
+  const clef: Clef = session.clefOverride && instrument.clefs.includes(session.clefOverride) ? session.clefOverride : instrument.defaultClef;
+  const isGuitar = instrumentId === 'guitar';
+  const effNotation = isGuitar ? session.notationMode : 'staff';
   const shift = displayShift(instrument, pitchMode);
   const displayKeyPc = mod12(effKeyPc + shift);
   const flats = useFlatsForKey(displayKeyPc);
@@ -204,7 +208,7 @@ export function FreePracticeScreen({ lang, instrumentId, setInstrumentId, clefOv
           </div>
           <div className="field">
             <label htmlFor="instrument-select">{t('instrumentLabel')}</label>
-            <select id="instrument-select" value={instrumentId} onChange={(e) => { setInstrumentId(e.target.value); setClefOverride(null); }}>
+            <select id="instrument-select" value={instrumentId} onChange={(e) => onChangeInstrument(e.target.value)}>
               {INSTRUMENTS.map((i) => (
                 <option key={i.id} value={i.id}>{i.label}</option>
               ))}
@@ -216,8 +220,8 @@ export function FreePracticeScreen({ lang, instrumentId, setInstrumentId, clefOv
           <div className="field">
             <label>{t('pitchLabel')}</label>
             <div className="seg-group">
-              <button className={`seg${pitchMode === 'concert' ? ' on' : ''}`} onClick={() => setPitchMode('concert')}>{t('concert')}</button>
-              <button className={`seg${pitchMode === 'written' ? ' on' : ''}`} onClick={() => setPitchMode('written')}>{t('written')}</button>
+              <button className={`seg${pitchMode === 'concert' ? ' on' : ''}`} onClick={() => onPatchSession({ pitchMode: 'concert' })}>{t('concert')}</button>
+              <button className={`seg${pitchMode === 'written' ? ' on' : ''}`} onClick={() => onPatchSession({ pitchMode: 'written' })}>{t('written')}</button>
             </div>
             <p className="hint-text">{pick(lang, instrument.transposeLabel, instrument.transposeLabelEn)}</p>
           </div>
@@ -226,7 +230,7 @@ export function FreePracticeScreen({ lang, instrumentId, setInstrumentId, clefOv
               <label>{t('clefLabel')}</label>
               <div className="seg-group">
                 {instrument.clefs.map((c) => (
-                  <button key={c} className={`seg${clef === c ? ' on' : ''}`} onClick={() => setClefOverride(c)}>
+                  <button key={c} className={`seg${clef === c ? ' on' : ''}`} onClick={() => onPatchSession({ clefOverride: c })}>
                     {c === 'grand' ? 'Grand' : c === 'treble' ? 'Treble' : 'Bass'}
                   </button>
                 ))}
@@ -234,6 +238,41 @@ export function FreePracticeScreen({ lang, instrumentId, setInstrumentId, clefOv
             </div>
           )}
         </div>
+
+        {isGuitar && (
+          <div className="field">
+            <label>{t('notationLabel')}</label>
+            <div className="seg-group">
+              {notationModesOf(instrument).map((m) => (
+                <button key={m} className={`seg${session.notationMode === m ? ' on' : ''}`} onClick={() => onPatchSession({ notationMode: m })}>
+                  {notationLabel(lang, m)}
+                </button>
+              ))}
+            </div>
+            {session.notationMode !== 'staff' && (
+              <div className="sub-field">
+                <label>{t('positionLabel')}</label>
+                <div className="seg-group wrap">
+                  {GUITAR_POSITIONS.map((p) => (
+                    <button key={p} className={`seg${session.guitarPosition === p ? ' on' : ''}`} onClick={() => onPatchSession({ guitarPosition: p })}>
+                      {positionLabel(lang, p)}
+                    </button>
+                  ))}
+                </div>
+                <label className="toggle" style={{ marginTop: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={session.guitarOpenStrings}
+                    onChange={(e) => onPatchSession({ guitarOpenStrings: e.target.checked })}
+                  />
+                  {t('openStringsLabel')}
+                </label>
+                <p className="hint-text">{t('tuningLabel')}: {t('tuningStandard')}</p>
+              </div>
+            )}
+            <button className="btn tiny save-base-btn" onClick={onSaveBase}>{t('saveAsMyInstrument')}</button>
+          </div>
+        )}
 
         <div className="field">
           <label htmlFor="bpm-slider">{t('tempoLabel')}: <strong>{bpm} BPM</strong></label>
@@ -425,6 +464,9 @@ export function FreePracticeScreen({ lang, instrumentId, setInstrumentId, clefOv
               labelMode={labelMode}
               chords={chordDisplays}
               currentIndex={currentNoteIndex}
+              notation={effNotation}
+              guitarPosition={session.guitarPosition}
+              guitarOpenStrings={session.guitarOpenStrings}
             />
           </div>
           {pitchMode === 'written' && shift !== 0 && (

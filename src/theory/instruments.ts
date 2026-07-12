@@ -2,22 +2,30 @@
 
 export type Clef = 'treble' | 'bass' | 'grand';
 export type PitchMode = 'concert' | 'written';
+/** 譜面の表示形式(TABはギターのみ) */
+export type NotationMode = 'staff' | 'tab' | 'staff-tab';
 
 export interface InstrumentDef {
   id: string;
   label: string;
   clefs: Clef[];
   defaultClef: Clef;
-  /** 記譜音 = 実音 + writtenShift(半音)。例: B♭管は +2、E♭管(アルト)は +9 */
+  /**
+   * 記譜音 = 実音 + writtenShift(半音)。例: B♭管は +2、E♭管(アルト)は +9。
+   * ギターの +12 は移調ではなく記譜オクターブ(実音より1オクターブ上に記譜)。
+   */
   writtenShift: number;
   /** 移調楽器の説明表示用 */
   transposeLabel: string;
   transposeLabelEn: string;
+  /** 選択できる譜面表示(既定は五線譜のみ) */
+  notationModes?: NotationMode[];
+  defaultNotation?: NotationMode;
 }
 
 export const INSTRUMENTS: InstrumentDef[] = [
   { id: 'piano', label: 'Piano', clefs: ['grand', 'treble', 'bass'], defaultClef: 'grand', writtenShift: 0, transposeLabel: 'C(実音)', transposeLabelEn: 'C (concert pitch)' },
-  { id: 'guitar', label: 'Guitar', clefs: ['treble'], defaultClef: 'treble', writtenShift: 12, transposeLabel: 'C(記譜は1オクターブ上)', transposeLabelEn: 'C (written an octave up)' },
+  { id: 'guitar', label: 'Guitar', clefs: ['treble'], defaultClef: 'treble', writtenShift: 12, transposeLabel: 'C(記譜は1オクターブ上)', transposeLabelEn: 'C (written an octave up)', notationModes: ['staff', 'tab', 'staff-tab'], defaultNotation: 'staff-tab' },
   { id: 'bass', label: 'Bass', clefs: ['bass'], defaultClef: 'bass', writtenShift: 12, transposeLabel: 'C(記譜は1オクターブ上)', transposeLabelEn: 'C (written an octave up)' },
   { id: 'trumpet', label: 'Trumpet', clefs: ['treble'], defaultClef: 'treble', writtenShift: 2, transposeLabel: 'B♭管(長2度上に記譜)', transposeLabelEn: 'B♭ instrument (written a major 2nd up)' },
   { id: 'trombone', label: 'Trombone', clefs: ['bass'], defaultClef: 'bass', writtenShift: 0, transposeLabel: 'C(実音)', transposeLabelEn: 'C (concert pitch)' },
@@ -31,6 +39,15 @@ export const INSTRUMENTS: InstrumentDef[] = [
 
 export function getInstrument(id: string): InstrumentDef {
   return INSTRUMENTS.find((i) => i.id === id) ?? INSTRUMENTS[0];
+}
+
+/** 楽器で選択できる譜面表示(未定義なら五線譜のみ) */
+export function notationModesOf(inst: InstrumentDef): NotationMode[] {
+  return inst.notationModes ?? ['staff'];
+}
+
+export function defaultNotationOf(inst: InstrumentDef): NotationMode {
+  return inst.defaultNotation ?? 'staff';
 }
 
 /** 表示モードに応じた移調量(半音)。Concert Pitch では常に 0 */

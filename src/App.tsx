@@ -5,8 +5,8 @@ import { CourseScreen } from './screens/CourseScreen';
 import { FreePracticeScreen, type FreePracticeInit } from './screens/FreePracticeScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { SongPracticeScreen } from './screens/SongPracticeScreen';
-import { loadJSON, saveJSON, STORAGE_KEYS } from './state/storage';
-import type { Clef, PitchMode } from './theory/instruments';
+import { loadJSON, saveJSON, loadMyInstrument, saveMyInstrument, STORAGE_KEYS, type MyInstrumentSettings } from './state/storage';
+import { defaultNotationOf, getInstrument } from './theory/instruments';
 import { loadLang, saveLang, t as tr, type Lang } from './i18n';
 import './styles.css';
 
@@ -53,10 +53,46 @@ export default function App() {
     setScreen('course'); // courseLessonId が保持されているので同じレッスンに戻る
   };
 
-  // ---- 楽器などの共通設定(全画面で共有) ----
-  const [instrumentId, setInstrumentId] = useState('piano');
-  const [clefOverride, setClefOverride] = useState<Clef | null>(null);
-  const [pitchMode, setPitchMode] = useState<PitchMode>('concert');
+  // ---- 楽器設定 ----
+  // 「マイ楽器」(基本設定・永続化)を初期値として読み込み、以降は「今回の練習設定」
+  // (セッション設定)として扱う。セッション中の変更はマイ楽器を上書きしない。
+  const [session, setSession] = useState<MyInstrumentSettings>(loadMyInstrument);
+  const patchSession = (patch: Partial<MyInstrumentSettings>) => setSession((s) => ({ ...s, ...patch }));
+
+  /** 楽器変更時の付随初期値(譜表・譜面表示・ギター設定) */
+  const instrumentDefaults = (id: string): Partial<MyInstrumentSettings> => {
+    const inst = getInstrument(id);
+    return { instrumentId: id, clefOverride: null, notationMode: defaultNotationOf(inst), guitarPosition: 'auto', guitarOpenStrings: true };
+  };
+
+  /** セッションの楽器変更: マイ楽器と同じ楽器ならその保存値を採用 */
+  const changeSessionInstrument = (id: string) => {
+    const base = loadMyInstrument();
+    if (base.instrumentId === id) {
+      patchSession({
+        instrumentId: id,
+        clefOverride: base.clefOverride,
+        notationMode: base.notationMode,
+        guitarPosition: base.guitarPosition,
+        guitarOpenStrings: base.guitarOpenStrings,
+      });
+    } else {
+      patchSession(instrumentDefaults(id));
+    }
+  };
+
+  /** 現在のセッション設定をマイ楽器として保存(ユーザーが明示的に選んだときだけ) */
+  const saveSessionAsBase = () => saveMyInstrument(session);
+
+  /** ホームのマイ楽器編集: 基本設定を更新し、セッションにも反映 */
+  const updateBase = (patch: Partial<MyInstrumentSettings>) => {
+    setSession((s) => {
+      const next = { ...s, ...patch };
+      saveMyInstrument(next);
+      return next;
+    });
+  };
+  const changeBaseInstrument = (id: string) => updateBase(instrumentDefaults(id));
 
   return (
     <div className="app">
@@ -66,7 +102,10 @@ export default function App() {
             {screen !== 'home' && (
               <button className="btn back-btn" onClick={() => navigate('home')}>← {t('backToHome')}</button>
             )}
-            <h1>Jazz Phrase Lab</h1>
+            <div className="app-title-block">
+              <h1>First Chorus</h1>
+              <span className="app-subtitle">{t('appSubtitle')}</span>
+            </div>
             {screen !== 'home' && <span className="key-badge screen-badge">{t(SCREEN_TITLES[screen])}</span>}
           </div>
           <div className="seg-group lang-toggle">
@@ -74,7 +113,6 @@ export default function App() {
             <button className={`seg${lang === 'en' ? ' on' : ''}`} onClick={() => changeLang('en')}>English</button>
           </div>
         </div>
-        {screen === 'home' && <p className="tagline">{t('tagline')}</p>}
       </header>
 
       {screen === 'home' && (
@@ -82,22 +120,19 @@ export default function App() {
           lang={lang}
           onNavigate={navigate}
           lastScreen={lastScreen}
-          instrumentId={instrumentId}
-          setInstrumentId={setInstrumentId}
-          pitchMode={pitchMode}
-          setPitchMode={setPitchMode}
+          session={session}
+          onUpdateBase={updateBase}
+          onChangeBaseInstrument={changeBaseInstrument}
         />
       )}
       {screen === 'free' && (
         <FreePracticeScreen
           key={freeInit ? `review-${courseLessonId}` : 'free'}
           lang={lang}
-          instrumentId={instrumentId}
-          setInstrumentId={setInstrumentId}
-          clefOverride={clefOverride}
-          setClefOverride={setClefOverride}
-          pitchMode={pitchMode}
-          setPitchMode={setPitchMode}
+          session={session}
+          onPatchSession={patchSession}
+          onChangeInstrument={changeSessionInstrument}
+          onSaveBase={saveSessionAsBase}
           initial={freeInit}
           onReturnToLesson={freeInit ? returnToLesson : undefined}
         />
@@ -105,16 +140,23 @@ export default function App() {
       {screen === 'course' && (
         <CourseScreen
           lang={lang}
-          instrumentId={instrumentId}
-          clefOverride={clefOverride}
-          pitchMode={pitchMode}
+          session={session}
+          onPatchSession={patchSession}
+          onChangeInstrument={changeSessionInstrument}
+          onSaveBase={saveSessionAsBase}
           selectedLessonId={courseLessonId}
           onSelectLesson={setCourseLessonId}
           onReview={startReview}
         />
       )}
       {screen === 'song' && (
-        <SongPracticeScreen lang={lang} instrumentId={instrumentId} clefOverride={clefOverride} pitchMode={pitchMode} />
+        <SongPracticeScreen
+          lang={lang}
+          session={session}
+          onPatchSession={patchSession}
+          onChangeInstrument={changeSessionInstrument}
+          onSaveBase={saveSessionAsBase}
+        />
       )}
 
       <footer className="app-footer">

@@ -1,5 +1,6 @@
-// VexFlow による五線譜表示
-// 表示専用: 音の高さは Concert MIDI + 表示シフト(移調楽器/クレフ)で描画する
+// VexFlow による五線譜/TAB譜表示
+// 表示専用: 五線譜は Concert MIDI + 表示シフト(移調楽器/記譜オクターブ)で描画し、
+// TABは実音MIDIから弦・フレットを求める(音声・五線譜と音程が一致する)
 
 import { useEffect, useMemo, useRef } from 'react';
 import {
@@ -9,16 +10,21 @@ import {
   Beam,
   Dot,
   Formatter,
+  GhostNote,
   Renderer,
   Stave,
   StaveConnector,
   StaveNote,
+  TabNote,
+  TabStave,
   Tuplet,
+  Voice,
 } from 'vexflow';
 import { degreeLabel, type Quality } from '../theory/chords';
+import { midiSeqToTab, type GuitarPosition, type TabPosition } from '../theory/guitar';
 import { midiToParts, midiToName, midiToSolfege, mod12 } from '../theory/notes';
 import type { NoteEvent } from '../theory/phrases';
-import type { Clef } from '../theory/instruments';
+import type { Clef, NotationMode } from '../theory/instruments';
 
 export type LabelMode = 'none' | 'name' | 'solfege' | 'degree';
 
@@ -41,6 +47,10 @@ interface Props {
   chords: ChordDisplay[];
   /** 再生中のノートインデックス(-1: なし) */
   currentIndex: number;
+  /** 譜面表示(TABはギター用。既定は五線譜のみ) */
+  notation?: NotationMode;
+  guitarPosition?: GuitarPosition;
+  guitarOpenStrings?: boolean;
 }
 
 const DUR_MAP: { beats: number; dur: string; dots: number }[] = [
@@ -80,10 +90,14 @@ function restDurations(beats: number): { dur: string; dots: number }[] {
   return out;
 }
 
-export function StaffView({ notes, measures, clef, shift, flats, labelMode, chords, currentIndex }: Props) {
+export function StaffView({
+  notes, measures, clef, shift, flats, labelMode, chords, currentIndex,
+  notation = 'staff', guitarPosition = 'auto', guitarOpenStrings = true,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const noteElsRef = useRef<(SVGElement | null)[]>([]);
-  const prevHighlight = useRef<SVGElement | null>(null);
+  // 1つのノートに五線譜とTABの両方の要素が対応することがある
+  const noteElsRef = useRef<SVGElement[][]>([]);
+  const prevHighlight = useRef<SVGElement[]>([]);
   // 再描画でSVGが作り直されてもハイライトを復元できるよう、現在位置をrefにも保持
   const currentIndexRef = useRef(currentIndex);
   currentIndexRef.current = currentIndex;
@@ -113,10 +127,22 @@ export function StaffView({ notes, measures, clef, shift, flats, labelMode, chor
     const render = () => {
       container.innerHTML = '';
       noteElsRef.current = [];
-      prevHighlight.current = null;
+      prevHighlight.current = [];
 
       const width = container.clientWidth || 600;
       const noteClef = clef === 'bass' ? 'bass' : 'treble';
+      const showStaff = notation !== 'tab';
+      const showTab = notation === 'tab' || notation === 'staff-tab';
+
+      // TAB: 実音MIDIを時系列で弦・フレットへ変換(globalIndexで引けるようにする)
+      const tabByGi: (TabPosition | undefined)[] = [];
+      if (showTab) {
+        const order = displayNotes
+          .map((n, gi) => ({ gi, midi: n.midi, start: n.start }))
+          .sort((a, b) => a.start - b.start);
+        const tabs = midiSeqToTab(order.map((o) => o.midi), guitarPosition, guitarOpenStrings);
+        order.forEach((o, i) => { tabByGi[o.gi] = tabs[i]; });
+      }
 
       // 小節ごとの表示ノート(休符詰め)を構築
       interface Item {
@@ -187,8 +213,10 @@ export function StaffView({ notes, measures, clef, shift, flats, labelMode, chor
       const hardCap = width < 620 ? 2 : 4;
       const perLine = Math.max(1, Math.min(measures, hardCap, Math.floor(width / maxRequired)));
       const lines = Math.ceil(measures / perLine);
-      const isGrand = clef === 'grand';
-      const lineHeight = isGrand ? 210 : 130;
+      const isGrand = clef === 'grand' && showStaff;
+      // 行の高さ: 五線譜のみ130 / TABのみ120 / 五線譜+TAB 235 / グランド210
+      const lineHeight = isGrand ? 210 : showStaff && showTab ? 235 : showTab ? 120 : 130;
+      const tabOffsetY = showStaff ? 95 : 0; // 五線譜の下にTABを置くときのオフセット
       const topPad = 24;
       const height = lines * lineHeight + topPad;
 
@@ -204,14 +232,28 @@ export function StaffView({ notes, measures, clef, shift, flats, labelMode, chor
         const x = col * baseW;
         const y = topPad + line * lineHeight;
 
-        const stave = new Stave(x, y, baseW - 1);
-        if (isLineStart) stave.addClef(noteClef);
-        if (m === measures - 1) stave.setEndBarType(3); // BarlineType.END
-        stave.setContext(ctx);
-        stave.draw();
+        // 五線譜(TABのみの場合は描かない)
+        let stave: Stave | null = null;
+        if (showStaff) {
+          stave = new Stave(x, y, baseW - 1);
+          if (isLineStart) stave.addClef(noteClef);
+          if (m === measures - 1) stave.setEndBarType(3); // BarlineType.END
+          stave.setContext(ctx);
+          stave.draw();
+        }
+
+        // TAB譜
+        let tabStave: TabStave | null = null;
+        if (showTab) {
+          tabStave = new TabStave(x, y + tabOffsetY, baseW - 1);
+          if (isLineStart) tabStave.addTabGlyph();
+          if (m === measures - 1) tabStave.setEndBarType(3);
+          tabStave.setContext(ctx);
+          tabStave.draw();
+        }
 
         let bassStave: Stave | null = null;
-        if (isGrand) {
+        if (isGrand && stave) {
           bassStave = new Stave(x, y + 85, baseW - 1);
           if (isLineStart) bassStave.addClef('bass');
           if (m === measures - 1) bassStave.setEndBarType(3);
@@ -223,70 +265,124 @@ export function StaffView({ notes, measures, clef, shift, flats, labelMode, chor
           }
         }
 
+        // コード名などの横位置の基準になる譜表
+        const anchor = (stave ?? tabStave)!;
+
         // コードネーム
         const chordsInMeasure = chords.filter((c) => c.measure === m);
         ctx.save();
         ctx.setFont('Helvetica', 13, 'bold');
         ctx.setFillStyle('#1a1a2e');
         for (const c of chordsInMeasure) {
-          const nx = stave.getNoteStartX() + (c.beat / 4) * (stave.getNoteEndX() - stave.getNoteStartX());
+          const nx = anchor.getNoteStartX() + (c.beat / 4) * (anchor.getNoteEndX() - anchor.getNoteStartX());
           ctx.fillText(c.symbol, nx, y - 2);
         }
         ctx.restore();
 
-        // ノート生成
         const items = measureItems[m];
-        const staveNotes = items.map((item) => {
-          const sn = new StaveNote({ keys: item.keys, duration: item.dur, clef: noteClef, auto_stem: true });
-          if (item.acc && !item.isRest) sn.addModifier(new Accidental(item.acc), 0);
-          if (item.dots > 0) Dot.buildAndAttach([sn], { all: true });
-          if (item.label) {
-            const ann = new Annotation(item.label);
-            ann.setFont('Helvetica', 9);
-            ann.setVerticalJustification(AnnotationVerticalJustify.BOTTOM);
-            sn.addModifier(ann, 0);
-          }
-          return sn;
-        });
+
+        // 五線譜ノート
+        let staveNotes: StaveNote[] = [];
+        if (showStaff) {
+          staveNotes = items.map((item) => {
+            const sn = new StaveNote({ keys: item.keys, duration: item.dur, clef: noteClef, auto_stem: true });
+            if (item.acc && !item.isRest) sn.addModifier(new Accidental(item.acc), 0);
+            if (item.dots > 0) Dot.buildAndAttach([sn], { all: true });
+            if (item.label) {
+              const ann = new Annotation(item.label);
+              ann.setFont('Helvetica', 9);
+              ann.setVerticalJustification(AnnotationVerticalJustify.BOTTOM);
+              sn.addModifier(ann, 0);
+            }
+            return sn;
+          });
+        }
+
+        // TABノート(休符は透明なスペーサーで揃える)
+        let tabTickables: (TabNote | GhostNote)[] = [];
+        if (showTab) {
+          tabTickables = items.map((item) => {
+            const baseDur = item.dur.replace('r', '');
+            if (item.isRest) return new GhostNote(baseDur);
+            const pos = tabByGi[item.globalIndex] ?? { str: 1, fret: 0 };
+            const tn = new TabNote({ positions: [pos], duration: baseDur });
+            // TABのみ表示のときは、音の役割ラベルをTAB側に付ける
+            if (!showStaff && item.label) {
+              const ann = new Annotation(item.label);
+              ann.setFont('Helvetica', 9);
+              ann.setVerticalJustification(AnnotationVerticalJustify.BOTTOM);
+              tn.addModifier(ann, 0);
+            }
+            return tn;
+          });
+        }
 
         // 3連符: 連続する3つの1/3拍ノートを連符としてまとめる(フォーマット前に作成)
         const tuplets: Tuplet[] = [];
-        let run: StaveNote[] = [];
-        items.forEach((item, i) => {
-          if (item.triplet) {
-            run.push(staveNotes[i]);
-            if (run.length === 3) {
-              tuplets.push(new Tuplet(run, { num_notes: 3, notes_occupied: 2 }));
+        if (showStaff) {
+          let run: StaveNote[] = [];
+          items.forEach((item, i) => {
+            if (item.triplet) {
+              run.push(staveNotes[i]);
+              if (run.length === 3) {
+                tuplets.push(new Tuplet(run, { num_notes: 3, notes_occupied: 2 }));
+                run = [];
+              }
+            } else {
               run = [];
             }
-          } else {
-            run = [];
-          }
-        });
+          });
+        }
 
-        const beams = Beam.generateBeams(staveNotes);
-        Formatter.FormatAndDraw(ctx, stave, staveNotes);
-        beams.forEach((b) => b.setContext(ctx).draw());
-        tuplets.forEach((tp) => tp.setContext(ctx).draw());
+        if (showStaff && !showTab && stave) {
+          // 従来どおりの五線譜のみ
+          const beams = Beam.generateBeams(staveNotes);
+          Formatter.FormatAndDraw(ctx, stave, staveNotes);
+          beams.forEach((b) => b.setContext(ctx).draw());
+          tuplets.forEach((tp) => tp.setContext(ctx).draw());
+        } else if (showStaff && showTab && stave && tabStave) {
+          // 五線譜+TAB: 両方の声部を同じ横位置に揃えてフォーマット
+          const beams = Beam.generateBeams(staveNotes);
+          const voice = new Voice({ num_beats: 4, beat_value: 4 }).setMode(Voice.Mode.SOFT).addTickables(staveNotes);
+          const tabVoice = new Voice({ num_beats: 4, beat_value: 4 }).setMode(Voice.Mode.SOFT).addTickables(tabTickables);
+          new Formatter().joinVoices([voice]).joinVoices([tabVoice]).formatToStave([voice, tabVoice], stave);
+          voice.draw(ctx, stave);
+          beams.forEach((b) => b.setContext(ctx).draw());
+          tuplets.forEach((tp) => tp.setContext(ctx).draw());
+          tabVoice.draw(ctx, tabStave);
+        } else if (showTab && tabStave) {
+          // TABのみ
+          const tabVoice = new Voice({ num_beats: 4, beat_value: 4 }).setMode(Voice.Mode.SOFT).addTickables(tabTickables);
+          new Formatter().joinVoices([tabVoice]).formatToStave([tabVoice], tabStave);
+          tabVoice.draw(ctx, tabStave);
+        }
 
         // ハイライト用に SVG 要素を記録(VexFlowは各ノートを g#vf-{id} に描画する)
+        const collectEl = (note: unknown): SVGElement | null => {
+          const id = (note as { getAttribute(name: string): string | undefined }).getAttribute('id');
+          return id ? (container.querySelector(`#vf-${id}`) as SVGElement | null) : null;
+        };
         items.forEach((item, i) => {
-          if (item.globalIndex >= 0) {
-            const id = (staveNotes[i] as unknown as { getAttribute(name: string): string | undefined }).getAttribute('id');
-            const el = id ? (container.querySelector(`#vf-${id}`) as SVGElement | null) : null;
-            noteElsRef.current[item.globalIndex] = el;
+          if (item.globalIndex < 0) return;
+          const els: SVGElement[] = [];
+          if (showStaff) {
+            const el = collectEl(staveNotes[i]);
+            if (el) els.push(el);
           }
+          if (showTab) {
+            const el = collectEl(tabTickables[i]);
+            if (el) els.push(el);
+          }
+          noteElsRef.current[item.globalIndex] = els;
         });
       }
 
       // 再描画後にハイライトを復元
       const ci = currentIndexRef.current;
       if (ci >= 0) {
-        const el = noteElsRef.current[ci];
-        if (el) {
-          el.classList.add('vf-current');
-          prevHighlight.current = el;
-        }
+        const els = noteElsRef.current[ci] ?? [];
+        els.forEach((el) => el.classList.add('vf-current'));
+        prevHighlight.current = els;
       }
     };
 
@@ -294,20 +390,16 @@ export function StaffView({ notes, measures, clef, shift, flats, labelMode, chor
     const ro = new ResizeObserver(() => render());
     ro.observe(container);
     return () => ro.disconnect();
-  }, [displayNotes, measures, clef, flats, labelMode, chords]);
+  }, [displayNotes, measures, clef, flats, labelMode, chords, notation, guitarPosition, guitarOpenStrings]);
 
   // 再生中ノートのハイライト(再描画せずクラス切替)
   useEffect(() => {
-    if (prevHighlight.current) {
-      prevHighlight.current.classList.remove('vf-current');
-      prevHighlight.current = null;
-    }
+    prevHighlight.current.forEach((el) => el.classList.remove('vf-current'));
+    prevHighlight.current = [];
     if (currentIndex >= 0) {
-      const el = noteElsRef.current[currentIndex];
-      if (el) {
-        el.classList.add('vf-current');
-        prevHighlight.current = el;
-      }
+      const els = noteElsRef.current[currentIndex] ?? [];
+      els.forEach((el) => el.classList.add('vf-current'));
+      prevHighlight.current = els;
     }
   }, [currentIndex]);
 
