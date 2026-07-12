@@ -8,7 +8,9 @@ import { PracticeLogPanel } from '../components/PracticeLogPanel';
 import { StaffView, type ChordDisplay, type LabelMode } from '../components/StaffView';
 import { EXERCISES, EXERCISE_CATEGORY_LABELS, type ExerciseCategory } from '../data/exercises';
 import { notationLabel, positionLabel } from '../components/SessionSetupPanel';
+import { PhraseComposer } from '../components/PhraseComposer';
 import { usePracticePlayback, type LoopRange } from '../hooks/usePracticePlayback';
+import type { EditorLevel, PhraseMaterial } from '../theory/editablePhrase';
 import type { MyInstrumentSettings } from '../state/storage';
 import { chordSymbol } from '../theory/chords';
 import { GUITAR_POSITIONS } from '../theory/guitar';
@@ -69,6 +71,10 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
   const [arpPattern, setArpPattern] = useState<ArpPatternId>(initial?.arpPattern ?? 'up');
   const [scaleView, setScaleView] = useState<'scale' | 'tension'>(initial?.scaleView ?? 'scale');
   const [exerciseId, setExerciseId] = useState('');
+  // フレーズ作成モード
+  const [composeMode, setComposeMode] = useState(false);
+  const [composeMaterial, setComposeMaterial] = useState<PhraseMaterial>('chord-tone');
+  const [composeLevel, setComposeLevel] = useState<EditorLevel>(1);
   // BPMの直接入力用テキスト(入力途中の値をクランプしないための分離)
   const [bpmText, setBpmText] = useState(String(initial?.bpm ?? 100));
   const [labelMode, setLabelMode] = useState<LabelMode>('none');
@@ -161,6 +167,13 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
       {/* ===== 設定パネル ===== */}
       <section className="panel settings-panel">
         <h2>{t('setupTitle')}</h2>
+
+        <button
+          className={`btn compose-toggle${composeMode ? ' active-compose' : ''}`}
+          onClick={() => setComposeMode(!composeMode)}
+        >
+          {composeMode ? `← ${t('composeExit')}` : t('composeEntry')}
+        </button>
 
         <div className="field">
           <label htmlFor="menu-select">{t('menuLabel')}</label>
@@ -378,7 +391,25 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
         </div>
       </section>
 
+      {/* ===== フレーズ作成モード ===== */}
+      {composeMode && (
+        <div className="main-col">
+          <PhraseComposer
+            lang={lang}
+            session={session}
+            keyPc={effKeyPc}
+            chordOptions={progression.chords.map((c) => ({ rootOffset: c.rootOffset, quality: c.quality }))}
+            material={composeMaterial}
+            setMaterial={setComposeMaterial}
+            level={composeLevel}
+            setLevel={setComposeLevel}
+            initialBpm={bpm}
+          />
+        </div>
+      )}
+
       {/* ===== メイン(進行・譜面・再生) ===== */}
+      {!composeMode && (
       <div className="main-col">
         <section className="panel">
           <h2>{t('progressionTitle')} <span className="key-badge">{isCustom ? t('customBadge') : `Key: ${keyName}${pitchMode === 'written' && shift % 12 !== 0 ? `(${t('writtenBadge')}: ${KEYS.find((k) => k.pc === displayKeyPc)!.name})` : ''}`}</span></h2>
@@ -525,6 +556,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
           }}
         />
       </div>
+      )}
     </main>
   );
 }

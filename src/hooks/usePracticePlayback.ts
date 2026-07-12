@@ -28,12 +28,17 @@ export interface PlaybackParams {
   selectedMeasure: number;
 }
 
+/** startPlayback 呼び出しごとの上書き(例: 単音で確認=伴奏なし) */
+export interface PlaybackOverrides {
+  compOn?: boolean;
+}
+
 export interface PlaybackState {
   playing: PlayKind | null;
   /** 再生位置(measure=-1はカウントイン中、nullは停止中) */
   position: { measure: number; beat: number } | null;
   currentNoteIndex: number;
-  startPlayback: (kind: PlayKind) => Promise<void>;
+  startPlayback: (kind: PlayKind, overrides?: PlaybackOverrides) => Promise<void>;
   stopAll: () => void;
 }
 
@@ -52,8 +57,9 @@ export function usePracticePlayback(p: PlaybackParams): PlaybackState {
   }, []);
 
   const startPlayback = useCallback(
-    async (kind: PlayKind) => {
+    async (kind: PlayKind, overrides?: PlaybackOverrides) => {
       engine.stop();
+      const useComp = overrides?.compOn ?? p.compOn;
       const totalBars = p.progression.measures;
       let regionStart = 0;
       let regionBars = totalBars;
@@ -82,7 +88,7 @@ export function usePracticePlayback(p: PlaybackParams): PlaybackState {
 
       // 簡易コード音(ルート+ガイドトーン)
       let comp: CompEvent[] | undefined;
-      if (p.compOn) {
+      if (useComp) {
         comp = [];
         for (const c of p.progression.chords) {
           const cStart = c.measure * 4 + c.beat;

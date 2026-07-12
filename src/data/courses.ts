@@ -1,6 +1,7 @@
 // 練習コース: 「悩み→できるようになること→理由→ルール→STEP→確認」の流れで
 // 段階的にアドリブを学ぶモードのデータ。UIから分離した純データ(日英対応)。
 
+import type { EditorLevel, PhraseMaterial } from '../theory/editablePhrase';
 import type { StaffTab } from '../theory/modes';
 import type { ArpPatternId, ToneRhythmId } from '../theory/phrases';
 import type { ProgressionId } from '../theory/progressions';
@@ -71,6 +72,12 @@ export interface Lesson {
   /** 次のレッスンとのつながり */
   nextConnection?: Bi;
   estimatedMinutes?: number;
+  /** フレーズ作成(あればレッスン内で編集エリアを表示) */
+  editor?: {
+    material: PhraseMaterial;
+    level: EditorLevel;
+    task: Bi;
+  };
 }
 
 export interface Course {
@@ -195,6 +202,11 @@ export const LESSONS: Lesson[] = [
     ],
     nextConnection: b('次は、この4音から2音だけ選んで「小さなフレーズ」を作ります。', 'Next, we’ll pick just two of these notes and make tiny phrases.'),
     estimatedMinutes: 8,
+    editor: {
+      material: 'chord-tone',
+      level: 1,
+      task: b('音の順番を並べ替えて、同じ4音から違うメロディーを作ってください。', 'Reorder the four notes to make a different melody from the same material.'),
+    },
   },
   {
     id: 'c1-two-notes',
@@ -237,6 +249,63 @@ export const LESSONS: Lesson[] = [
     ],
     nextConnection: b('第2章では、この少ない音数のまま「コードが変わった感じ」を出す音の選び方を学びます。', 'In Chapter 2, we’ll keep this economy but learn which notes make the chord changes audible.'),
     estimatedMinutes: 8,
+    editor: {
+      material: 'chord-tone',
+      level: 2,
+      task: b('音の順番を変え、休符を1つ以上入れてください。', 'Reorder the notes and include at least one rest.'),
+    },
+  },
+
+  {
+    id: 'c1-my-measure',
+    courseId: 'adlib-basics',
+    chapterId: 'ch1',
+    title: b('自分の1小節を作ろう', 'Build your own measure'),
+    technicalName: 'Phrase Building/フレーズ作成',
+    problem: b('音の場所は覚えたのに、いざ「自由にどうぞ」と言われると手が止まる。', 'You know where the notes are, but “play anything” still freezes you.'),
+    outcome: b('コードトーンだけを材料に、始まりと終わりのある自分の1小節を作れるようになります。', 'Using only chord tones, you’ll build one measure of your own with a beginning and an end.'),
+    reason: b('アドリブは「その場で作曲」です。まず時間を止めて、並べ替え・休符・リズムを自分で決めて1小節を作ると、即興で同じ判断をする準備ができます。作った楽譜は音で確認できます。', 'Improvising is composing in real time. First, stop the clock: decide the order, rests and rhythm yourself and build one measure. Then you’re rehearsed for making the same choices live. You can hear what you wrote at any time.'),
+    realUseCases: [
+      b('お気に入りの1小節を「持ちネタ」として貯めるとき', 'Stockpiling favorite one-bar ideas'),
+      b('アドリブ前のウォームアップとして', 'As a pre-improv warm-up'),
+    ],
+    progressionId: 'ii-V-I',
+    contentTab: 'chordtones',
+    toneRhythm: 'basic',
+    rules: [
+      b('使用できる音はコードトーン(+休符)のみ', 'Chord tones (plus rests) only'),
+      b('合計がちょうど4拍になるように', 'Make the measure total exactly 4 beats'),
+      b('休符を最低1つ入れる', 'Include at least one rest'),
+    ],
+    steps: [
+      { title: b('並べ替える', 'Reorder'), instruction: b('下のフレーズ編集で、まず音の順番だけを入れ替えてみます。', 'In the phrase editor below, start by just reordering the notes.') },
+      { title: b('休符とリズム', 'Rests & rhythm'), instruction: b('どれか1音を休符にし、8分音符も混ぜてリズムを作ります。', 'Turn one note into a rest and mix in 8th notes to shape the rhythm.') },
+      { title: b('確認して演奏', 'Check & play'), instruction: b('「音を確認」で聴き、良ければ自分の楽器で演奏します。', 'Listen with “Check the notes,” then play it on your instrument.') },
+    ],
+    successSigns: [
+      b('作った1小節に「言い切った感」がある', 'Your measure sounds like a finished statement'),
+      b('音を確認したとき、想像した響きと合っている', 'What you hear matches what you imagined'),
+      b('譜面を見て自分の楽器で再現できる', 'You can play your own measure from the staff'),
+    ],
+    commonMistakes: [
+      {
+        problem: b('欲張って音を詰め込みすぎる', 'You cram in too many notes'),
+        advice: b('最初の傑作は3〜5音で十分です。休符が入っているフレーズの方が、聴き手には上手に聞こえます。', 'Your first masterpiece needs only 3–5 notes. Phrases with rests sound more skilled to listeners.'),
+      },
+    ],
+    selfCheck: [
+      b('4拍ちょうどの1小節を作れた', 'I built a measure of exactly 4 beats'),
+      b('休符を入れられた', 'I included a rest'),
+      b('音で確認してから演奏した', 'I checked the sound before playing'),
+      b('自分の楽器で再現できた', 'I reproduced it on my instrument'),
+    ],
+    nextConnection: b('第2章では、コードが変わるときの音選びを学び、この1小節を「進行の中のフレーズ」に育てます。', 'Chapter 2 adds chord-change awareness, growing your measure into a phrase that lives inside a progression.'),
+    estimatedMinutes: 10,
+    editor: {
+      material: 'chord-tone',
+      level: 4,
+      task: b('音符の追加・削除・並べ替え・休符・リズム・オクターブを自由に使い、4拍の1小節を完成させてください。', 'Use add/delete/reorder, rests, rhythm and octaves freely to complete one 4-beat measure.'),
+    },
   },
 
   // ================= 第2章 =================
@@ -384,6 +453,11 @@ export const LESSONS: Lesson[] = [
     ],
     nextConnection: b('第3章では、フレーズの「終わり方」— 次のコードへの着地を練習します。', 'Chapter 3 tackles how phrases end: landing on the next chord.'),
     estimatedMinutes: 8,
+    editor: {
+      material: 'guide-tone',
+      level: 3,
+      task: b('ガイドトーンの音は保ったまま、8分音符と休符でリズムをアレンジしてください。', 'Keep the guide tones but rearrange the rhythm with 8th notes and rests.'),
+    },
   },
 
   // ================= 第3章 =================

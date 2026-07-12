@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from 'react';
 import { appendLog } from '../components/PracticeLogPanel';
 import { ChordProgressionView } from '../components/ChordProgressionView';
 import { StaffView, type ChordDisplay, type LabelMode } from '../components/StaffView';
+import { PhraseComposer } from '../components/PhraseComposer';
 import { SessionSetupPanel } from '../components/SessionSetupPanel';
 import type { Bi, Lesson } from '../data/courses';
 import type { MyInstrumentSettings } from '../state/storage';
@@ -314,6 +315,22 @@ export function LessonScreen({
           <label className="toggle"><input type="checkbox" checked={compOn} onChange={(e) => setCompOn(e.target.checked)} /> {t('compSound')}</label>
         </div>
       </section>
+
+      {/* フレーズ作成(レッスンに編集課題がある場合) */}
+      {lesson.editor && (
+        <PhraseComposer
+          lang={lang}
+          session={session}
+          keyPc={keyPc}
+          chordOptions={progression.chords
+            .filter((c, i, arr) => arr.findIndex((x) => x.rootOffset === c.rootOffset && x.quality === c.quality) === i)
+            .map((c) => ({ rootOffset: c.rootOffset, quality: c.quality }))}
+          material={lesson.editor.material}
+          level={lesson.editor.level}
+          taskText={p(lesson.editor.task)}
+          initialBpm={bpm}
+        />
+      )}
 
       {/* 12-13. 成功サイン / よくある失敗 */}
       <section className="panel">
