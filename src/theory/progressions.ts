@@ -168,6 +168,20 @@ export function getProgression(id: ProgressionId): Progression {
   return PROGRESSIONS.find((p) => p.id === id)!;
 }
 
+/** コードが直前と変わる小節番号の一覧(0始まり)。STEPの「コードが変わる小節だけ」練習に使う */
+export function changeMeasures(prog: Progression): number[] {
+  const result: number[] = [];
+  let prevKey: string | null = null;
+  for (const c of prog.chords) {
+    const key = `${c.rootOffset}-${c.quality}`;
+    if (key !== prevKey) {
+      if (!result.includes(c.measure)) result.push(c.measure);
+      prevKey = key;
+    }
+  }
+  return result;
+}
+
 /** 指定位置(小節・拍)で鳴っているコードイベントを返す */
 export function chordAt(prog: Progression, measure: number, beat: number): ChordEvent {
   let current = prog.chords[0];

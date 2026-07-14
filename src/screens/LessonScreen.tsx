@@ -1,27 +1,16 @@
 // レッスン詳細画面: 悩み → できるようになること → なぜ(折りたたみ) → 進行 →
-// 使う音 → ルール → STEP → 練習 → 成功サイン → よくある失敗 → チェック → 次へ → 完了
+// STEP統合練習(楽譜・編集・確認・演奏) → 成功サイン → よくある失敗 → チェック → 前後のレッスン → 完了
 
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { appendLog } from '../components/PracticeLogPanel';
 import { ChordProgressionView } from '../components/ChordProgressionView';
-import { StaffView, type ChordDisplay, type LabelMode } from '../components/StaffView';
-import { PhraseComposer } from '../components/PhraseComposer';
 import { SessionSetupPanel } from '../components/SessionSetupPanel';
+import { StepPractice } from '../components/StepPractice';
+import type { LabelMode } from '../components/StaffView';
 import type { Bi, Lesson } from '../data/courses';
 import type { MyInstrumentSettings } from '../state/storage';
-import { usePracticePlayback } from '../hooks/usePracticePlayback';
-import { chordSymbol } from '../theory/chords';
 import { getInstrument, displayShift, type Clef } from '../theory/instruments';
 import { KEYS, mod12, useFlatsForKey } from '../theory/notes';
-import {
-  approachAsNotes,
-  chordTonesAsNotes,
-  guideTonesAsNotes,
-  scaleAsNotes,
-  targetAsNotes,
-  tensionsAsNotes,
-  type NoteEvent,
-} from '../theory/phrases';
 import { getProgression } from '../theory/progressions';
 import { pick, t as tr, type Lang } from '../i18n';
 import type { FreePracticeInit } from './FreePracticeScreen';
@@ -34,8 +23,10 @@ interface Props {
   lessonNumber: number;
   totalLessons: number;
   alreadyDone: boolean;
+  hasPrev: boolean;
   hasNext: boolean;
   onComplete: (lessonId: string) => void;
+  onPrev: () => void;
   onNext: () => void;
   onBack: () => void;
   onReview: (init: FreePracticeInit) => void;
@@ -46,8 +37,8 @@ interface Props {
 }
 
 export function LessonScreen({
-  lang, lesson, courseTitle, chapterTitle, lessonNumber, totalLessons, alreadyDone, hasNext,
-  onComplete, onNext, onBack, onReview, session, onPatchSession, onChangeInstrument, onSaveBase,
+  lang, lesson, courseTitle, chapterTitle, lessonNumber, totalLessons, alreadyDone, hasPrev, hasNext,
+  onComplete, onPrev, onNext, onBack, onReview, session, onPatchSession, onChangeInstrument, onSaveBase,
 }: Props) {
   const { instrumentId, pitchMode } = session;
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
@@ -59,13 +50,25 @@ export function LessonScreen({
   const [metronomeOn, setMetronomeOn] = useState(true);
   const [compOn, setCompOn] = useState(true);
   const [labelMode, setLabelMode] = useState<LabelMode>('degree');
-  const [currentStep, setCurrentStep] = useState(0);
   const [checks, setChecks] = useState<boolean[]>(() => lesson.selfCheck.map(() => false));
   const [memo, setMemo] = useState('');
   const [completedNow, setCompletedNow] = useState(false);
+  const [stepDirty, setStepDirty] = useState(false);
+  // STEP達成状況(レッスン完了のハードゲート用)
+  const [stepProgress, setStepProgress] = useState({ allStepsDone: false, pendingCount: 0 });
+  // 「もう一度練習する」でSTEP練習を完全リセットするためのキー(StepPracticeを再マウントさせる)
+  const [practiceGen, setPracticeGen] = useState(0);
   // 練習開始前の設定確認(マイ楽器を初期値に、今回だけの変更が可能)
   const [setupConfirmed, setSetupConfirmed] = useState(false);
   const practiceRef = useRef<HTMLElement>(null);
+
+  // 現在アクティブなSTEPの再生停止関数(StepPractice配下のbodyが登録する)。
+  // 複数のusePracticePlaybackが同時に競合しないよう、常に「今アクティブな1つ」だけを指す。
+  const stopRef = useRef<() => void>(() => {});
+  const registerStop = useCallback((fn: (() => void) | null) => {
+    stopRef.current = fn ?? (() => {});
+  }, []);
+  const stopActive = () => stopRef.current();
 
   const progression = getProgression(lesson.progressionId);
   const instrument = getInstrument(instrumentId);
@@ -74,32 +77,25 @@ export function LessonScreen({
   const shift = displayShift(instrument, pitchMode);
   const flats = useFlatsForKey(mod12(keyPc + shift));
 
-  const displayedNotes: NoteEvent[] = useMemo(() => {
-    switch (lesson.contentTab) {
-      case 'guidetones': return guideTonesAsNotes(progression, keyPc, lesson.toneRhythm ?? 'basic');
-      case 'approach': return approachAsNotes(progression, keyPc);
-      case 'target': return targetAsNotes(progression, keyPc);
-      case 'scale': return lesson.scaleView === 'tension' ? tensionsAsNotes(progression, keyPc) : scaleAsNotes(progression, keyPc);
-      default: return chordTonesAsNotes(progression, keyPc, lesson.toneRhythm ?? 'basic', lesson.arpPattern ?? 'up');
-    }
-  }, [lesson, progression, keyPc]);
+  const hasUnsaved = stepDirty || memo.trim().length > 0;
+  const guardNav = (action: () => void) => {
+    if (hasUnsaved && !window.confirm(t('unsavedNavConfirm'))) return;
+    stopActive();
+    action();
+  };
 
-  const chordDisplays: ChordDisplay[] = useMemo(
-    () =>
-      progression.chords.map((c) => {
-        const rootPc = mod12(keyPc + c.rootOffset + shift);
-        return { measure: c.measure, beat: c.beat, symbol: chordSymbol(rootPc, c.quality, flats), rootPc, quality: c.quality };
-      }),
-    [progression, keyPc, shift, flats],
-  );
-
-  const { playing, position, currentNoteIndex, startPlayback, stopAll } = usePracticePlayback({
-    progression, effKeyPc: keyPc, displayedNotes, bpm, countIn,
-    loopEnabled: true, metronomeOn, compOn, swing: 1 / 6, loopRange: 'full', selectedMeasure: 0,
-  });
+  // キー変更の一元管理(§1): STEP内のキー選択・設定パネルのどちらから変更しても
+  // ここを通る。編集中の下書きがあれば確認し、承認時のみ変更する(下書きの破棄は
+  // StepPractice が keyPc の変化を検知して全STEP分行う)。
+  const changeKey = (pc: number) => {
+    if (pc === keyPc) return;
+    if (stepDirty && !window.confirm(t('keyChangeConfirm'))) return;
+    stopActive();
+    setKeyPc(pc);
+  };
 
   const complete = () => {
-    stopAll();
+    stopActive();
     onComplete(lesson.id);
     const checked = checks.filter(Boolean).length;
     appendLog({
@@ -112,16 +108,24 @@ export function LessonScreen({
       memo: memo.trim(),
     });
     setCompletedNow(true);
+    setStepDirty(false);
   };
 
+  // 「もう一度練習する」: 自己評価・完了表示だけでなく、STEP練習(現在位置・編集フレーズ・
+  // Undo履歴)も先頭から作り直す。編集中の内容がある場合は先に確認する。
   const retry = () => {
+    if (hasUnsaved && !window.confirm(t('unsavedNavConfirm'))) return;
+    stopActive();
     setChecks(lesson.selfCheck.map(() => false));
     setCompletedNow(false);
+    setStepDirty(false);
+    setPracticeGen((g) => g + 1);
     practiceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const review = () => {
-    stopAll();
+    if (hasUnsaved && !window.confirm(t('unsavedNavConfirm'))) return;
+    stopActive();
     onReview({
       progressionId: lesson.progressionId,
       keyPc,
@@ -136,7 +140,7 @@ export function LessonScreen({
   return (
     <main className="lesson-main">
       <div className="lesson-header">
-        <button className="btn" onClick={() => { stopAll(); onBack(); }}>← {t('backToCourse')}</button>
+        <button className="btn" onClick={() => guardNav(onBack)}>← {t('backToCourse')}</button>
         <span className="key-badge">{chapterTitle}</span>
         <span className="key-badge">{lessonNumber} / {totalLessons}{alreadyDone ? ` ✓ ${t('doneBadge')}` : ''}</span>
       </div>
@@ -149,12 +153,12 @@ export function LessonScreen({
         onChangeInstrument={onChangeInstrument}
         onSaveBase={onSaveBase}
         keyPc={keyPc}
-        setKeyPc={setKeyPc}
+        setKeyPc={changeKey}
         bpm={bpm}
         setBpm={setBpm}
         confirmed={setupConfirmed}
         onConfirm={() => setSetupConfirmed(true)}
-        onEdit={() => { stopAll(); setSetupConfirmed(false); }}
+        onEdit={() => { stopActive(); setSetupConfirmed(false); }}
       />
 
       {/* 1-4. タイトル / 専門用語 / 悩み / できるようになること */}
@@ -197,7 +201,7 @@ export function LessonScreen({
         </details>
       </section>
 
-      {/* 7. コード進行 */}
+      {/* 7. コード進行(全体像) */}
       <section className="panel">
         <h2>{t('lessonProgressionTitle')} <span className="key-badge">{pick(lang, progression.label, progression.labelEn)}</span></h2>
         <ChordProgressionView
@@ -205,24 +209,12 @@ export function LessonScreen({
           keyPc={keyPc}
           shift={shift}
           flats={flats}
-          currentMeasure={position ? position.measure : null}
-          currentBeat={position?.beat ?? 0}
+          currentMeasure={null}
+          currentBeat={0}
           selectedMeasure={0}
           onSelectMeasure={() => {}}
           lang={lang}
         />
-      </section>
-
-      {/* 8. 今回使う音 */}
-      <section className="panel">
-        <div className="staff-head">
-          <h2>{t('usableNotesTitle')}</h2>
-          <div className="seg-group">
-            <button className={`seg${labelMode === 'none' ? ' on' : ''}`} onClick={() => setLabelMode('none')}>{t('labelNone')}</button>
-            <button className={`seg${labelMode === 'name' ? ' on' : ''}`} onClick={() => setLabelMode('name')}>C D E</button>
-            <button className={`seg${labelMode === 'degree' ? ' on' : ''}`} onClick={() => setLabelMode('degree')}>{t('labelDegree')}</button>
-          </div>
-        </div>
         {lesson.usableNotes && (
           <div className="usable-notes">
             <span className="lesson-step-label">{t('usableNotesExample')}</span>
@@ -233,104 +225,47 @@ export function LessonScreen({
             </ul>
           </div>
         )}
-        <div className="staff-card">
-          <StaffView
-            notes={displayedNotes}
-            measures={progression.measures}
-            clef={clef}
-            shift={shift}
-            flats={flats}
-            labelMode={labelMode}
-            chords={chordDisplays}
-            currentIndex={currentNoteIndex}
-            notation={effNotation}
-            guitarPosition={session.guitarPosition}
-            guitarOpenStrings={session.guitarOpenStrings}
-          />
-        </div>
-      </section>
-
-      {/* 9-11. ルール / STEP / 練習 */}
-      <section className="panel" ref={practiceRef}>
-        <h2>{t('practiceTitle')}</h2>
-
         <div className="lesson-block">
-          <span className="lesson-step-label">📌 {t('rulesTitle')}</span>
+          <span className="lesson-step-label">🏁 {t('lessonGoalTitle')}</span>
           <div className="rule-chips">
             {lesson.rules.map((r, i) => (
               <span key={i} className="rule-chip">{p(r)}</span>
             ))}
           </div>
-        </div>
-
-        <div className="lesson-block">
-          <span className="lesson-step-label">🪜 {t('stepsTitle')}</span>
-          <div className="seg-group step-tabs">
-            {lesson.steps.map((_, i) => (
-              <button key={i} className={`seg${currentStep === i ? ' on' : ''}`} onClick={() => setCurrentStep(i)}>
-                {t('stepLabel')} {i + 1}
-              </button>
-            ))}
-          </div>
-          <div className="step-card">
-            <span className="step-card-title">{t('stepLabel')} {currentStep + 1}: {p(lesson.steps[currentStep].title)}</span>
-            <p className="step-card-text">{p(lesson.steps[currentStep].instruction)}</p>
-          </div>
-        </div>
-
-        <div className="field-row">
-          <div className="field">
-            <label htmlFor="lesson-key">{t('keyLabel')}</label>
-            <select id="lesson-key" value={keyPc} onChange={(e) => setKeyPc(Number(e.target.value))}>
-              {KEYS.map((k) => (
-                <option key={k.pc} value={k.pc}>{k.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="lesson-bpm">{t('tempoLabel')}: <strong>{bpm} BPM</strong></label>
-            <input
-              id="lesson-bpm"
-              type="range" min={40} max={220} value={bpm}
-              onChange={(e) => setBpm(Number(e.target.value))}
-            />
-          </div>
-        </div>
-        <div className="transport-main">
-          {playing ? (
-            <button className="btn big stop" onClick={stopAll}>■ Stop</button>
-          ) : (
-            <button className="btn big start" onClick={() => startPlayback('backing')}>▶ Start</button>
-          )}
-          <button
-            className={`btn big example${playing === 'example' ? ' active' : ''}`}
-            onClick={() => (playing === 'example' ? stopAll() : startPlayback('example'))}
-          >
-            ♪ {t('checkThisNote')}
-          </button>
-        </div>
-        <div className="transport-opts">
-          <label className="toggle"><input type="checkbox" checked={countIn} onChange={(e) => setCountIn(e.target.checked)} /> 4 Count In</label>
-          <label className="toggle"><input type="checkbox" checked={metronomeOn} onChange={(e) => setMetronomeOn(e.target.checked)} /> {t('metronome')}</label>
-          <label className="toggle"><input type="checkbox" checked={compOn} onChange={(e) => setCompOn(e.target.checked)} /> {t('compSound')}</label>
+          <p className="hint-text">{t('lessonGoalHint')}</p>
         </div>
       </section>
 
-      {/* フレーズ作成(レッスンに編集課題がある場合) */}
-      {lesson.editor && (
-        <PhraseComposer
+      {/* 9-11. STEP統合練習: 今のSTEPの目的・楽譜・編集・確認・演奏 */}
+      <section ref={practiceRef}>
+        <StepPractice
+          key={`${lesson.id}-${practiceGen}`}
           lang={lang}
-          session={session}
+          lesson={lesson}
+          progression={progression}
           keyPc={keyPc}
-          chordOptions={progression.chords
-            .filter((c, i, arr) => arr.findIndex((x) => x.rootOffset === c.rootOffset && x.quality === c.quality) === i)
-            .map((c) => ({ rootOffset: c.rootOffset, quality: c.quality }))}
-          material={lesson.editor.material}
-          level={lesson.editor.level}
-          taskText={p(lesson.editor.task)}
-          initialBpm={bpm}
+          setKeyPc={changeKey}
+          shift={shift}
+          flats={flats}
+          clef={clef}
+          notation={effNotation}
+          guitarPosition={session.guitarPosition}
+          guitarOpenStrings={session.guitarOpenStrings}
+          bpm={bpm}
+          setBpm={setBpm}
+          countIn={countIn}
+          setCountIn={setCountIn}
+          metronomeOn={metronomeOn}
+          setMetronomeOn={setMetronomeOn}
+          compOn={compOn}
+          setCompOn={setCompOn}
+          labelMode={labelMode}
+          setLabelMode={setLabelMode}
+          onDirtyChange={setStepDirty}
+          onProgressChange={setStepProgress}
+          registerStop={registerStop}
         />
-      )}
+      </section>
 
       {/* 12-13. 成功サイン / よくある失敗 */}
       <section className="panel">
@@ -353,7 +288,7 @@ export function LessonScreen({
         </details>
       </section>
 
-      {/* 14-16. 今日のチェック / 次へのつながり / 完了 */}
+      {/* 14-16. 今日のチェック / 前後のレッスン / 完了 */}
       <section className="panel">
         <h2>☑ {t('todayCheck')}</h2>
         <ul className="check-list">
@@ -384,22 +319,34 @@ export function LessonScreen({
           </div>
         )}
 
+        <div className="lesson-prev-next-row">
+          <button className="btn" onClick={() => guardNav(onPrev)} disabled={!hasPrev}>← {t('prevLesson')}</button>
+          <span className="hint-text">{hasPrev ? '' : t('isFirstLessonNote')}</span>
+          <button className="btn" onClick={() => guardNav(onNext)} disabled={!hasNext}>{t('nextLesson')} →</button>
+        </div>
+        {!hasNext && <p className="hint-text">{t('isLastLessonNote')}</p>}
+
         <div className="lesson-complete-row">
           {completedNow ? (
             <>
               <span className="saved-note">✓ {t('lessonCompleted')}</span>
-              {hasNext && <button className="btn big start" onClick={onNext}>{t('nextLesson')} →</button>}
+              {hasNext && <button className="btn big start" onClick={() => guardNav(onNext)}>{t('nextLesson')} →</button>}
               <button className="btn" onClick={retry}>{t('retryPractice')}</button>
-              <button className="btn" onClick={onBack}>{t('backToCourse')}</button>
+              <button className="btn" onClick={() => guardNav(onBack)}>{t('backToCourse')}</button>
             </>
           ) : (
             <>
-              <button className="btn big primary complete-btn" onClick={complete}>✓ {t('completeLesson')}</button>
+              <button className="btn big primary complete-btn" onClick={complete} disabled={!stepProgress.allStepsDone}>
+                ✓ {t('completeLesson')}
+              </button>
               <button className="btn" onClick={retry}>{t('retryPractice')}</button>
               <button className="btn" onClick={review}>{t('reviewInFree')}</button>
             </>
           )}
         </div>
+        {!completedNow && !stepProgress.allStepsDone && (
+          <p className="hint-text">🔒 {t('completeGateHint').replace('{n}', String(stepProgress.pendingCount))}</p>
+        )}
       </section>
     </main>
   );

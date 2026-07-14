@@ -180,6 +180,8 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
   padding: 10px 14px;
 }
 .btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn:disabled:active { transform: none; }
 .btn.big { font-size: 15px; padding: 14px 18px; font-weight: 600; min-height: 50px; }
 .btn.start { background: var(--green); border-color: var(--green); color: #06281c; }
 .btn.stop { background: var(--red); border-color: var(--red); color: #3d0505; }
@@ -404,6 +406,9 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
 }
 .phrase-block.selected { border-color: var(--accent); background: var(--accent-soft); }
 .phrase-block.rest { color: var(--text-dim); border-style: dashed; }
+.phrase-block.locked { opacity: 0.85; border-color: var(--text-dim); }
+.phrase-block-lock { font-size: 12px; }
+.locked-note-hint { color: var(--text-dim); }
 .phrase-block.add { border-style: dashed; color: var(--accent); justify-content: center; }
 .phrase-block:active { transform: scale(0.97); }
 .phrase-block-name { font-size: 16px; font-weight: 700; }
@@ -669,6 +674,65 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
 }
 .step-card-title { display: block; font-weight: 700; font-size: 14px; color: var(--accent); margin-bottom: 4px; }
 .step-card-text { margin: 0; font-size: 14.5px; line-height: 1.8; }
+
+/* ---- STEP統合練習パネル ---- */
+.step-practice { display: flex; flex-direction: column; gap: 10px; }
+.step-tablist { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.step-dot {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg-panel-2);
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 12px 6px 6px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  cursor: pointer;
+  min-height: 40px;
+}
+.step-dot-num {
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  font-weight: 700; font-size: 12px;
+}
+.step-dot-title { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.step-dot.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.step-dot.on .step-dot-num { border-color: var(--accent); background: var(--accent); color: var(--bg); }
+.step-dot.past .step-dot-num { border-color: var(--green); color: var(--green); }
+.step-dot.past:not(.on) { color: var(--text); }
+.step-progress-label { margin: 0; font-size: 12.5px; color: var(--text-dim); font-weight: 600; }
+.step-head {
+  background: var(--bg-panel-2);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 10px 10px 0;
+  padding: 12px 14px;
+}
+.step-head h3 { margin: 0 0 4px; font-size: 16px; }
+.editable-task {
+  margin-top: 8px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text);
+}
+.step-rules { margin-top: 10px; }
+.limit-hint { color: var(--red); }
+.req-checklist { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.req-checklist li.met { color: var(--green); }
+.req-checklist li.unmet { color: var(--text-dim); }
+.step-validation-warning { display: flex; flex-direction: column; gap: 4px; }
+.step-footer-nav {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  flex-wrap: wrap; margin-top: 6px;
+}
+.step-footer-nav .hint-text { text-align: center; flex: 1; min-width: 120px; }
+.lesson-prev-next-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  flex-wrap: wrap; margin-top: 12px;
+}
 .success-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
 .success-list li { font-size: 14px; line-height: 1.6; padding-left: 22px; position: relative; }
 .success-list li::before { content: '✓'; position: absolute; left: 0; color: var(--green); font-weight: 700; }

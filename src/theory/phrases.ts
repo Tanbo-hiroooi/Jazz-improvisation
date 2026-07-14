@@ -376,6 +376,184 @@ export function tensionsAsNotes(prog: Progression, keyPc: number): NoteEvent[] {
   return events;
 }
 
+/** STEPが指定する単一の度数(ルート/3度/5度/7度) */
+export type StepDegree = 'root' | 'third' | 'fifth' | 'seventh';
+const DEGREE_TONE_INDEX: Record<StepDegree, number> = { root: 0, third: 1, fifth: 2, seventh: 3 };
+
+/**
+ * コードごとに指定した度数を1音だけ鳴らす練習用ノート生成。
+ * path が1要素なら全コードで同じ度数(ルート練習・3度練習など)、
+ * 複数要素ならコードを跨いで循環し(ガイドトーンの経路など)、直前の音から近いオクターブへ配置する。
+ */
+export function degreePathAsNotes(prog: Progression, keyPc: number, path: StepDegree[], rhythm: ToneRhythmId = 'basic'): NoteEvent[] {
+  const events: NoteEvent[] = [];
+  let prevMidi: number | null = null;
+  prog.chords.forEach((chord, chordIndex) => {
+    const degree = path[chordIndex % path.length];
+    const def = QUALITIES[chord.quality];
+    const rootPc = mod12(keyPc + chord.rootOffset);
+    const offset = def.tones[DEGREE_TONE_INDEX[degree]];
+    let midi = 60 + mod12(rootPc + offset);
+    if (prevMidi !== null) {
+      while (midi - prevMidi > 6) midi -= 12;
+      while (prevMidi - midi > 6) midi += 12;
+    } else if (midi > 65) {
+      midi -= 12;
+    }
+    prevMidi = midi;
+
+    const measureStart = chord.measure * 4 + chord.beat;
+    const beats = chord.beats;
+    let hits: LickNote[];
+    if (rhythm === 'offbeat') {
+      const s = beats >= 4 ? 1 : 0.5;
+      hits = [n(0, s, beats - s, 0.85)];
+    } else if (rhythm === 'charleston' && beats >= 4) {
+      hits = [n(0, 0, 1.5, 0.9), n(0, 2.5, 1.5, 0.8)];
+    } else {
+      hits = [n(0, 0, beats, 0.85)];
+    }
+    for (const hit of hits) {
+      events.push({ midi, start: measureStart + hit.s, duration: hit.d, velocity: hit.v ?? 0.85, chordIndex });
+    }
+  });
+  return events;
+}
+
+/** 半音(または全音)アプローチ→ターゲットの2音だけを鳴らす(STEPが「2音セット」と明言する場合用) */
+export function approachPairAsNotes(prog: Progression, keyPc: number, targetDegree: StepDegree = 'third', from: 'below' | 'above' = 'below'): NoteEvent[] {
+  const events: NoteEvent[] = [];
+  prog.chords.forEach((chord, chordIndex) => {
+    const def = QUALITIES[chord.quality];
+    const rootPc = mod12(keyPc + chord.rootOffset);
+    let rootMidi = 60 + rootPc;
+    if (rootMidi > 65) rootMidi -= 12;
+    const target = rootMidi + def.tones[DEGREE_TONE_INDEX[targetDegree]];
+    const approach = from === 'below' ? target - 1 : target + 1;
+    const measureStart = chord.measure * 4 + chord.beat;
+    const beats = chord.beats;
+    events.push(
+      { midi: approach, start: measureStart, duration: Math.min(0.5, beats), velocity: 0.7, chordIndex },
+      { midi: target, start: measureStart + Math.min(0.5, beats), duration: Math.max(beats - 0.5, 0.5), velocity: 0.9, chordIndex },
+    );
+  });
+  return events;
+}
+
+/** 上→下→ターゲットの3音セット(エンクロージャー) */
+export function enclosureAsNotes(prog: Progression, keyPc: number, targetDegree: StepDegree = 'third'): NoteEvent[] {
+  const events: NoteEvent[] = [];
+  prog.chords.forEach((chord, chordIndex) => {
+    const def = QUALITIES[chord.quality];
+    const rootPc = mod12(keyPc + chord.rootOffset);
+    let rootMidi = 60 + rootPc;
+    if (rootMidi > 65) rootMidi -= 12;
+    const target = rootMidi + def.tones[DEGREE_TONE_INDEX[targetDegree]];
+    const measureStart = chord.measure * 4 + chord.beat;
+    const beats = chord.beats;
+    if (beats >= 2) {
+      events.push(
+        { midi: target + 1, start: measureStart, duration: 0.5, velocity: 0.7, chordIndex },
+        { midi: target - 1, start: measureStart + 0.5, duration: 0.5, velocity: 0.7, chordIndex },
+        { midi: target, start: measureStart + 1, duration: beats - 1, velocity: 0.9, chordIndex },
+      );
+    } else {
+      events.push({ midi: target, start: measureStart, duration: beats, velocity: 0.85, chordIndex });
+    }
+  });
+  return events;
+}
+
+/** 着地(現コードの3度など)+次コードへの半音アプローチ、の2音だけ(3拍保持+1拍助走) */
+export function landingWithApproachAsNotes(prog: Progression, keyPc: number, landingDegree: StepDegree = 'third'): NoteEvent[] {
+  const events: NoteEvent[] = [];
+  prog.chords.forEach((chord, chordIndex) => {
+    const def = QUALITIES[chord.quality];
+    const rootPc = mod12(keyPc + chord.rootOffset);
+    let rootMidi = 60 + rootPc;
+    if (rootMidi > 65) rootMidi -= 12;
+    const landing = rootMidi + def.tones[DEGREE_TONE_INDEX[landingDegree]];
+    const measureStart = chord.measure * 4 + chord.beat;
+    const beats = chord.beats;
+
+    const next = prog.chords[(chordIndex + 1) % prog.chords.length];
+    const nextDef = QUALITIES[next.quality];
+    const nextTargetPc = mod12(keyPc + next.rootOffset + nextDef.tones[DEGREE_TONE_INDEX[landingDegree]]);
+    let nextTarget = 60 + nextTargetPc;
+    while (nextTarget - landing > 6) nextTarget -= 12;
+    while (landing - nextTarget > 6) nextTarget += 12;
+    const approach = nextTarget + (landing >= nextTarget ? 1 : -1);
+
+    if (beats >= 2) {
+      events.push(
+        { midi: landing, start: measureStart, duration: beats - 1, velocity: 0.85, chordIndex },
+        { midi: approach, start: measureStart + beats - 1, duration: 1, velocity: 0.75, chordIndex },
+      );
+    } else {
+      events.push({ midi: landing, start: measureStart, duration: beats, velocity: 0.85, chordIndex });
+    }
+  });
+  return events;
+}
+
+// ---- サンプルモチーフ(第5章: モチーフ/展開/シークエンス) ----
+// 度数1-3-5の3音+「タン・タン・ターン」のリズムを共通の種として、
+// 「音はそのままリズムだけ」「最後の音だけ」「輪郭を保って移動」の差分を厳密に作る。
+
+export type MotifVariant = 'repeat' | 'rhythm' | 'landing' | 'alternate' | 'sequence';
+
+/** 元のリズム: タン(1拍)・タン(1拍)・ターン(2拍) */
+const MOTIF_RHYTHM: { s: number; d: number; v: number }[] = [
+  { s: 0, d: 1, v: 0.85 }, { s: 1, d: 1, v: 0.8 }, { s: 2, d: 2, v: 0.9 },
+];
+/** リズム変化: 音順は同じまま「ターン・タッ・ターン」(開始時刻と音価だけ変える) */
+const MOTIF_RHYTHM_VAR: { s: number; d: number; v: number }[] = [
+  { s: 0, d: 1.5, v: 0.9 }, { s: 1.5, d: 0.5, v: 0.75 }, { s: 2, d: 2, v: 0.9 },
+];
+
+export function sampleMotifAsNotes(prog: Progression, keyPc: number, variant: MotifVariant): NoteEvent[] {
+  const events: NoteEvent[] = [];
+  // 種の音: 最初のコードの1-3-5度(固定。コードが変わっても動かさない)
+  const first = prog.chords[0];
+  const firstDef = QUALITIES[first.quality];
+  const firstRootPc = mod12(keyPc + first.rootOffset);
+  let firstRoot = 60 + firstRootPc;
+  if (firstRoot > 65) firstRoot -= 12;
+  const seedPitches = [firstRoot + firstDef.tones[0], firstRoot + firstDef.tones[1], firstRoot + firstDef.tones[2]];
+  // 着地変化: 最後の音(5度)だけ7度に変える。他はまったく同じ
+  const landingPitches = [seedPitches[0], seedPitches[1], firstRoot + firstDef.tones[3]];
+
+  prog.chords.forEach((chord, chordIndex) => {
+    if (chord.beats < 4) return; // このモチーフは4拍の小節が前提(第5章はii-V-Iのみ)
+    const measureStart = chord.measure * 4 + chord.beat;
+
+    let pitches = seedPitches;
+    let rhythm = MOTIF_RHYTHM;
+    if (variant === 'rhythm') {
+      rhythm = MOTIF_RHYTHM_VAR;
+    } else if (variant === 'landing') {
+      pitches = landingPitches;
+    } else if (variant === 'alternate') {
+      // そのまま → リズム変化 → そのまま → 着地変化
+      const mode = chord.measure % 4;
+      if (mode === 1) rhythm = MOTIF_RHYTHM_VAR;
+      else if (mode === 3) pitches = landingPitches;
+    } else if (variant === 'sequence') {
+      // 度数輪郭(1-3-5)とリズムはそのまま、各コードのコードトーンへ平行移動
+      const def = QUALITIES[chord.quality];
+      const rootPc = mod12(keyPc + chord.rootOffset);
+      let rootMidi = 60 + rootPc;
+      if (rootMidi > 65) rootMidi -= 12;
+      pitches = [rootMidi + def.tones[0], rootMidi + def.tones[1], rootMidi + def.tones[2]];
+    }
+
+    rhythm.forEach((r, i) => {
+      events.push({ midi: pitches[i], start: measureStart + r.s, duration: r.d, velocity: r.v, chordIndex });
+    });
+  });
+  return events;
+}
+
 /** 「使える音」表示用: 各コードのおすすめスケールを8分音符で上行(1小節=スケール7音+オクターブ上のルート) */
 export function scaleAsNotes(prog: Progression, keyPc: number): NoteEvent[] {
   const events: NoteEvent[] = [];

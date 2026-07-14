@@ -5,6 +5,7 @@ import { useState } from 'react';
 import {
   DURATION_BEATS,
   newEventId,
+  noteCount,
   OCTAVE_RANGE,
   type AllowedPitch,
   type EventDuration,
@@ -31,6 +32,9 @@ export function PhraseEditor({ lang, events, onChange, allowedPitches, rules, fl
 
   const selectedIndex = events.findIndex((e) => e.id === selectedId);
   const selected = selectedIndex >= 0 ? events[selectedIndex] : null;
+  const atMaxNotes = rules.maxNoteCount !== undefined && noteCount(events) >= rules.maxNoteCount;
+  const isLocked = (i: number) => rules.lockedEventIndexes?.includes(i) ?? false;
+  const selectedLocked = selectedIndex >= 0 && isLocked(selectedIndex);
 
   const durLabel = (d: EventDuration) => (d === 'half' ? t('durHalf') : d === 'quarter' ? t('durQuarter') : t('durEighth'));
 
@@ -60,6 +64,7 @@ export function PhraseEditor({ lang, events, onChange, allowedPitches, rules, fl
   };
 
   const add = () => {
+    if (atMaxNotes) return;
     const ev: PhraseEvent = {
       id: newEventId(),
       type: 'note',
@@ -93,15 +98,17 @@ export function PhraseEditor({ lang, events, onChange, allowedPitches, rules, fl
       <div className="phrase-blocks" role="list">
         {events.map((e, i) => {
           const isSel = e.id === selectedId;
+          const locked = isLocked(i);
           if (e.type === 'rest') {
             return (
               <button
                 key={e.id}
                 role="listitem"
-                className={`phrase-block rest${isSel ? ' selected' : ''}`}
+                className={`phrase-block rest${isSel ? ' selected' : ''}${locked ? ' locked' : ''}`}
                 onClick={() => setSelectedId(isSel ? null : e.id)}
-                aria-label={`${i + 1}: ${t('restLabel')} ${durLabel(e.duration)}`}
+                aria-label={`${i + 1}: ${t('restLabel')} ${durLabel(e.duration)}${locked ? ` (${t('lockedNoteHint')})` : ''}`}
               >
+                {locked && <span className="phrase-block-lock" aria-hidden="true">🔒</span>}
                 <span className="phrase-block-name">𝄽 {t('restLabel')}</span>
                 <span className="phrase-block-dur">{DUR_GLYPH[e.duration]} {durLabel(e.duration)}</span>
               </button>
@@ -112,10 +119,11 @@ export function PhraseEditor({ lang, events, onChange, allowedPitches, rules, fl
             <button
               key={e.id}
               role="listitem"
-              className={`phrase-block${isSel ? ' selected' : ''}`}
+              className={`phrase-block${isSel ? ' selected' : ''}${locked ? ' locked' : ''}`}
               onClick={() => setSelectedId(isSel ? null : e.id)}
-              aria-label={`${i + 1}: ${name} ${degree} ${durLabel(e.duration)}`}
+              aria-label={`${i + 1}: ${name} ${degree} ${durLabel(e.duration)}${locked ? ` (${t('lockedNoteHint')})` : ''}`}
             >
+              {locked && <span className="phrase-block-lock" aria-hidden="true">🔒</span>}
               <span className="phrase-block-name">{name}</span>
               {degree && <span className="phrase-block-degree">{degree}</span>}
               <span className="phrase-block-dur">{DUR_GLYPH[e.duration]} {durLabel(e.duration)}</span>
@@ -123,52 +131,60 @@ export function PhraseEditor({ lang, events, onChange, allowedPitches, rules, fl
           );
         })}
         {rules.allowAdd && (
-          <button className="phrase-block add" onClick={add} aria-label={t('addNote')}>
+          <button className="phrase-block add" onClick={add} disabled={atMaxNotes} aria-label={t('addNote')}>
             + {t('addNote')}
           </button>
         )}
       </div>
+      {rules.maxNoteCount !== undefined && (
+        <p className="hint-text">{t('maxNotesHint').replace('{n}', String(rules.maxNoteCount))}</p>
+      )}
+      {rules.allowAdd && atMaxNotes && <p className="hint-text limit-hint">{t('maxNotesBlockedHint')}</p>}
       {!selected && <p className="hint-text">{t('selectBlockHint')}</p>}
 
       {selected && (
         <div className="phrase-edit-panel">
-          {/* 音の選択 */}
-          <div className="phrase-edit-row">
-            <span className="opt-label">{t('pitchLabel2')}:</span>
-            <div className="seg-group wrap">
-              {allowedPitches.map((p) => {
-                const active = selected.type === 'note' && selected.midi !== undefined && mod12(selected.midi) === mod12(p.midi);
-                return (
-                  <button
-                    key={p.midi}
-                    className={`seg${active ? ' on' : ''}`}
-                    aria-label={`${p.label} (${p.degree})`}
-                    onClick={() => {
-                      // オクターブ操作済みの場合は近いオクターブを保つ
-                      const cur = selected.type === 'note' && selected.midi !== undefined ? selected.midi : p.midi;
-                      let midi = p.midi;
-                      while (midi < cur - 6) midi += 12;
-                      while (midi > cur + 6) midi -= 12;
-                      if (midi < OCTAVE_RANGE.min || midi > OCTAVE_RANGE.max) midi = p.midi;
-                      update(selectedIndex, { type: 'note', midi });
-                    }}
-                  >
-                    {p.label}
-                    <small className="seg-sub">{p.degree}</small>
-                  </button>
-                );
-              })}
-              {rules.allowRests && (
-                <button
-                  className={`seg${selected.type === 'rest' ? ' on' : ''}`}
-                  aria-label={t('toRest')}
-                  onClick={() => update(selectedIndex, { type: 'rest', midi: undefined })}
-                >
-                  𝄽 {t('restLabel')}
-                </button>
-              )}
+          {/* 音の選択(固定位置は変更不可) */}
+          {selectedLocked ? (
+            <div className="phrase-edit-row">
+              <span className="opt-label">{t('pitchLabel2')}:</span>
+              <p className="hint-text locked-note-hint">🔒 {t('lockedNoteHint')}</p>
             </div>
-          </div>
+          ) : (
+            <div className="phrase-edit-row">
+              <span className="opt-label">{t('pitchLabel2')}:</span>
+              <div className="seg-group wrap">
+                {allowedPitches.map((p) => {
+                  const active = selected.type === 'note' && selected.midi === p.midi;
+                  const blocked = selected.type === 'rest' && atMaxNotes;
+                  return (
+                    <button
+                      key={p.midi}
+                      className={`seg${active ? ' on' : ''}`} aria-pressed={active}
+                      aria-label={`${p.label} (${p.degree})`}
+                      disabled={blocked}
+                      // ボタンに表示された音(オクターブ込み)をそのまま設定する。
+                      // オクターブを変えたい場合は下のオクターブ操作を使う。
+                      onClick={() => update(selectedIndex, { type: 'note', midi: p.midi })}
+                    >
+                      {p.label}
+                      <small className="seg-sub">{p.degree}</small>
+                    </button>
+                  );
+                })}
+                {rules.allowRests && (
+                  <button
+                    className={`seg${selected.type === 'rest' ? ' on' : ''}`} aria-pressed={selected.type === 'rest'}
+                    aria-label={t('toRest')}
+                    onClick={() => update(selectedIndex, { type: 'rest', midi: undefined })}
+                  >
+                    𝄽 {t('restLabel')}
+                  </button>
+                )}
+              </div>
+              {selected.type === 'rest' && atMaxNotes && <p className="hint-text limit-hint">{t('maxNotesBlockedHint')}</p>}
+            </div>
+          )}
 
           {/* 長さ */}
           {rules.allowedDurations.length > 1 && (
@@ -178,7 +194,7 @@ export function PhraseEditor({ lang, events, onChange, allowedPitches, rules, fl
                 {rules.allowedDurations.map((d) => (
                   <button
                     key={d}
-                    className={`seg${selected.duration === d ? ' on' : ''}`}
+                    className={`seg${selected.duration === d ? ' on' : ''}`} aria-pressed={selected.duration === d}
                     aria-label={`${durLabel(d)} (${DURATION_BEATS[d]}${t('beatsUnit')})`}
                     onClick={() => update(selectedIndex, { duration: d })}
                   >

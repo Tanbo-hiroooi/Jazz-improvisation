@@ -105,8 +105,8 @@ export function SessionSetupPanel({
             <div className="field">
               <label>{t('pitchLabel')}</label>
               <div className="seg-group">
-                <button className={`seg${session.pitchMode === 'concert' ? ' on' : ''}`} onClick={() => onPatch({ pitchMode: 'concert' })}>{t('concert')}</button>
-                <button className={`seg${session.pitchMode === 'written' ? ' on' : ''}`} onClick={() => onPatch({ pitchMode: 'written' })}>{t('written')}</button>
+                <button className={`seg${session.pitchMode === 'concert' ? ' on' : ''}`} aria-pressed={session.pitchMode === 'concert'} onClick={() => onPatch({ pitchMode: 'concert' })}>{t('concert')}</button>
+                <button className={`seg${session.pitchMode === 'written' ? ' on' : ''}`} aria-pressed={session.pitchMode === 'written'} onClick={() => onPatch({ pitchMode: 'written' })}>{t('written')}</button>
               </div>
             </div>
           </div>
@@ -116,7 +116,7 @@ export function SessionSetupPanel({
               <label>{t('clefLabel')}</label>
               <div className="seg-group">
                 {instrument.clefs.map((c) => (
-                  <button key={c} className={`seg${clef === c ? ' on' : ''}`} onClick={() => onPatch({ clefOverride: c })}>
+                  <button key={c} className={`seg${clef === c ? ' on' : ''}`} aria-pressed={clef === c} onClick={() => onPatch({ clefOverride: c })}>
                     {c === 'grand' ? 'Grand' : c === 'treble' ? 'Treble' : 'Bass'}
                   </button>
                 ))}
@@ -129,7 +129,7 @@ export function SessionSetupPanel({
               <label>{t('notationLabel')}</label>
               <div className="seg-group">
                 {notationModesOf(instrument).map((m) => (
-                  <button key={m} className={`seg${session.notationMode === m ? ' on' : ''}`} onClick={() => onPatch({ notationMode: m })}>
+                  <button key={m} className={`seg${session.notationMode === m ? ' on' : ''}`} aria-pressed={session.notationMode === m} onClick={() => onPatch({ notationMode: m })}>
                     {notationLabel(lang, m)}
                   </button>
                 ))}
@@ -139,7 +139,7 @@ export function SessionSetupPanel({
                   <label>{t('positionLabel')}</label>
                   <div className="seg-group wrap">
                     {GUITAR_POSITIONS.map((p) => (
-                      <button key={p} className={`seg${session.guitarPosition === p ? ' on' : ''}`} onClick={() => onPatch({ guitarPosition: p })}>
+                      <button key={p} className={`seg${session.guitarPosition === p ? ' on' : ''}`} aria-pressed={session.guitarPosition === p} onClick={() => onPatch({ guitarPosition: p })}>
                         {positionLabel(lang, p)}
                       </button>
                     ))}

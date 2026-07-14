@@ -53,8 +53,8 @@ export function SongPracticeScreen({ lang, session, onPatchSession, onChangeInst
   const [checks, setChecks] = useState<boolean[]>(() => SELF_CHECK.map(() => false));
   const [memo, setMemo] = useState('');
   const [saved, setSaved] = useState(false);
-  // 楽器・譜面の確認バー(変更を押すと全設定パネルを展開)
-  const [setupConfirmed, setSetupConfirmed] = useState(true);
+  // 楽器・譜面の確認バー(開いた直後は必ず表示し、「この内容で始める」で確定する)
+  const [setupConfirmed, setSetupConfirmed] = useState(false);
 
   const progression = getProgression(progressionId);
   const mission = PRACTICE_MISSIONS.find((m) => m.id === missionId)!;
@@ -215,14 +215,14 @@ export function SongPracticeScreen({ lang, session, onPatchSession, onChangeInst
         <div className="staff-head">
           <h2>{t('staffTitle')}</h2>
           <div className="seg-group">
-            <button className={`seg${content === 'guidetones' ? ' on' : ''}`} onClick={() => setContent('guidetones')}>{t('guideTones')}</button>
-            <button className={`seg${content === 'chordtones' ? ' on' : ''}`} onClick={() => setContent('chordtones')}>{t('chordTones')}</button>
-            <button className={`seg${content === 'scale' ? ' on' : ''}`} onClick={() => setContent('scale')}>{t('scaleTab')}</button>
+            <button className={`seg${content === 'guidetones' ? ' on' : ''}`} aria-pressed={content === 'guidetones'} onClick={() => setContent('guidetones')}>{t('guideTones')}</button>
+            <button className={`seg${content === 'chordtones' ? ' on' : ''}`} aria-pressed={content === 'chordtones'} onClick={() => setContent('chordtones')}>{t('chordTones')}</button>
+            <button className={`seg${content === 'scale' ? ' on' : ''}`} aria-pressed={content === 'scale'} onClick={() => setContent('scale')}>{t('scaleTab')}</button>
           </div>
           <div className="seg-group">
-            <button className={`seg${labelMode === 'none' ? ' on' : ''}`} onClick={() => setLabelMode('none')}>{t('labelNone')}</button>
-            <button className={`seg${labelMode === 'name' ? ' on' : ''}`} onClick={() => setLabelMode('name')}>C D E</button>
-            <button className={`seg${labelMode === 'degree' ? ' on' : ''}`} onClick={() => setLabelMode('degree')}>{t('labelDegree')}</button>
+            <button className={`seg${labelMode === 'none' ? ' on' : ''}`} aria-pressed={labelMode === 'none'} onClick={() => setLabelMode('none')}>{t('labelNone')}</button>
+            <button className={`seg${labelMode === 'name' ? ' on' : ''}`} aria-pressed={labelMode === 'name'} onClick={() => setLabelMode('name')}>C D E</button>
+            <button className={`seg${labelMode === 'degree' ? ' on' : ''}`} aria-pressed={labelMode === 'degree'} onClick={() => setLabelMode('degree')}>{t('labelDegree')}</button>
           </div>
         </div>
         <div className="staff-card">

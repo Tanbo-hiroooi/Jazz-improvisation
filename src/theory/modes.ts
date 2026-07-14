@@ -57,7 +57,7 @@ const GUIDES_EN: Record<StaffTab, PracticeGuide> = {
     title: 'Chord-Tone Practice',
     tips: [
       'Play the 1-3-5-7 of each chord with the selected rhythm pattern. First, learn where the notes live.',
-      'Then start each measure on a chord tone and rearrange the order freely.',
+      'Then start each bar on a chord tone and rearrange the order freely.',
       'With the metronome, staying in time matters more than avoiding wrong notes. Changing the rhythm pattern turns the same notes into a new exercise.',
     ],
   },

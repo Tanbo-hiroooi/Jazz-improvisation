@@ -54,9 +54,11 @@ export default function App() {
   };
 
   // ---- 楽器設定 ----
-  // 「マイ楽器」(基本設定・永続化)を初期値として読み込み、以降は「今回の練習設定」
-  // (セッション設定)として扱う。セッション中の変更はマイ楽器を上書きしない。
+  // 「マイ楽器」(基本設定・永続化)と「今回の練習設定」(セッション)はstate上でも分離する。
+  // セッション中の変更(自由練習などでの一時的な楽器変更)はマイ楽器を上書きせず、
+  // 明示的に保存したときだけ baseInstrument(ホームの表示)にも反映する。
   const [session, setSession] = useState<MyInstrumentSettings>(loadMyInstrument);
+  const [baseInstrument, setBaseInstrument] = useState<MyInstrumentSettings>(loadMyInstrument);
   const patchSession = (patch: Partial<MyInstrumentSettings>) => setSession((s) => ({ ...s, ...patch }));
 
   /** 楽器変更時の付随初期値(譜表・譜面表示・ギター設定) */
@@ -82,15 +84,19 @@ export default function App() {
   };
 
   /** 現在のセッション設定をマイ楽器として保存(ユーザーが明示的に選んだときだけ) */
-  const saveSessionAsBase = () => saveMyInstrument(session);
+  const saveSessionAsBase = () => {
+    saveMyInstrument(session);
+    setBaseInstrument(session);
+  };
 
   /** ホームのマイ楽器編集: 基本設定を更新し、セッションにも反映 */
   const updateBase = (patch: Partial<MyInstrumentSettings>) => {
-    setSession((s) => {
-      const next = { ...s, ...patch };
+    setBaseInstrument((b) => {
+      const next = { ...b, ...patch };
       saveMyInstrument(next);
       return next;
     });
+    setSession((s) => ({ ...s, ...patch }));
   };
   const changeBaseInstrument = (id: string) => updateBase(instrumentDefaults(id));
 
@@ -109,8 +115,8 @@ export default function App() {
             {screen !== 'home' && <span className="key-badge screen-badge">{t(SCREEN_TITLES[screen])}</span>}
           </div>
           <div className="seg-group lang-toggle">
-            <button className={`seg${lang === 'ja' ? ' on' : ''}`} onClick={() => changeLang('ja')}>日本語</button>
-            <button className={`seg${lang === 'en' ? ' on' : ''}`} onClick={() => changeLang('en')}>English</button>
+            <button className={`seg${lang === 'ja' ? ' on' : ''}`} aria-pressed={lang === 'ja'} onClick={() => changeLang('ja')}>日本語</button>
+            <button className={`seg${lang === 'en' ? ' on' : ''}`} aria-pressed={lang === 'en'} onClick={() => changeLang('en')}>English</button>
           </div>
         </div>
       </header>
@@ -120,7 +126,7 @@ export default function App() {
           lang={lang}
           onNavigate={navigate}
           lastScreen={lastScreen}
-          session={session}
+          baseInstrument={baseInstrument}
           onUpdateBase={updateBase}
           onChangeBaseInstrument={changeBaseInstrument}
         />

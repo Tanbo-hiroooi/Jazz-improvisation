@@ -38,6 +38,7 @@ export function CourseScreen({ lang, session, onPatchSession, onChangeInstrument
     if (lesson && course && chapter) {
       const allIds = courseLessonIds(course);
       const idx = allIds.indexOf(lesson.id);
+      const prevId = allIds[idx - 1];
       const nextId = allIds[idx + 1];
       return (
         <LessonScreen
@@ -49,8 +50,10 @@ export function CourseScreen({ lang, session, onPatchSession, onChangeInstrument
           lessonNumber={idx + 1}
           totalLessons={allIds.length}
           alreadyDone={progress.completedLessonIds.includes(lesson.id)}
+          hasPrev={idx > 0}
           hasNext={!!nextId}
           onComplete={markDone}
+          onPrev={() => onSelectLesson(prevId ?? null)}
           onNext={() => onSelectLesson(nextId ?? null)}
           onBack={() => onSelectLesson(null)}
           onReview={onReview}

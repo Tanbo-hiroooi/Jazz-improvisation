@@ -3,7 +3,7 @@
 import { chordSymbol } from '../theory/chords';
 import { mod12 } from '../theory/notes';
 import type { Progression } from '../theory/progressions';
-import { t, type Lang } from '../i18n';
+import { pick, t, type Lang } from '../i18n';
 
 interface Props {
   progression: Progression;
@@ -32,7 +32,7 @@ export function ChordProgressionView({
         key={m}
         className={`chord-cell${isCurrent ? ' current' : ''}${isSelected ? ' selected' : ''}`}
         onClick={() => onSelectMeasure(m)}
-        aria-label={`${m + 1} ${t(lang, 'measureAria')}`}
+        aria-label={pick(lang, `${m + 1}${t(lang, 'measureAria')}`, `Bar ${m + 1}`)}
       >
         <span className="chord-cell-num">{m + 1}</span>
         <span className="chord-cell-symbols">

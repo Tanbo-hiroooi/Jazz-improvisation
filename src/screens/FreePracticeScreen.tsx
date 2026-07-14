@@ -233,8 +233,8 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
           <div className="field">
             <label>{t('pitchLabel')}</label>
             <div className="seg-group">
-              <button className={`seg${pitchMode === 'concert' ? ' on' : ''}`} onClick={() => onPatchSession({ pitchMode: 'concert' })}>{t('concert')}</button>
-              <button className={`seg${pitchMode === 'written' ? ' on' : ''}`} onClick={() => onPatchSession({ pitchMode: 'written' })}>{t('written')}</button>
+              <button className={`seg${pitchMode === 'concert' ? ' on' : ''}`} aria-pressed={pitchMode === 'concert'} onClick={() => onPatchSession({ pitchMode: 'concert' })}>{t('concert')}</button>
+              <button className={`seg${pitchMode === 'written' ? ' on' : ''}`} aria-pressed={pitchMode === 'written'} onClick={() => onPatchSession({ pitchMode: 'written' })}>{t('written')}</button>
             </div>
             <p className="hint-text">{pick(lang, instrument.transposeLabel, instrument.transposeLabelEn)}</p>
           </div>
@@ -243,7 +243,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
               <label>{t('clefLabel')}</label>
               <div className="seg-group">
                 {instrument.clefs.map((c) => (
-                  <button key={c} className={`seg${clef === c ? ' on' : ''}`} onClick={() => onPatchSession({ clefOverride: c })}>
+                  <button key={c} className={`seg${clef === c ? ' on' : ''}`} aria-pressed={clef === c} onClick={() => onPatchSession({ clefOverride: c })}>
                     {c === 'grand' ? 'Grand' : c === 'treble' ? 'Treble' : 'Bass'}
                   </button>
                 ))}
@@ -257,7 +257,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
             <label>{t('notationLabel')}</label>
             <div className="seg-group">
               {notationModesOf(instrument).map((m) => (
-                <button key={m} className={`seg${session.notationMode === m ? ' on' : ''}`} onClick={() => onPatchSession({ notationMode: m })}>
+                <button key={m} className={`seg${session.notationMode === m ? ' on' : ''}`} aria-pressed={session.notationMode === m} onClick={() => onPatchSession({ notationMode: m })}>
                   {notationLabel(lang, m)}
                 </button>
               ))}
@@ -267,7 +267,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
                 <label>{t('positionLabel')}</label>
                 <div className="seg-group wrap">
                   {GUITAR_POSITIONS.map((p) => (
-                    <button key={p} className={`seg${session.guitarPosition === p ? ' on' : ''}`} onClick={() => onPatchSession({ guitarPosition: p })}>
+                    <button key={p} className={`seg${session.guitarPosition === p ? ' on' : ''}`} aria-pressed={session.guitarPosition === p} onClick={() => onPatchSession({ guitarPosition: p })}>
                       {positionLabel(lang, p)}
                     </button>
                   ))}
@@ -315,11 +315,11 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
         <div className="field">
           <label>{t('contentLabel')}</label>
           <div className="seg-group wrap">
-            <button className={`seg${tab === 'chordtones' ? ' on' : ''}`} onClick={() => setTab('chordtones')}>{t('chordTones')}</button>
-            <button className={`seg${tab === 'guidetones' ? ' on' : ''}`} onClick={() => setTab('guidetones')}>{t('guideTones')}</button>
-            <button className={`seg${tab === 'approach' ? ' on' : ''}`} onClick={() => setTab('approach')}>{t('approachTab')}</button>
-            <button className={`seg${tab === 'target' ? ' on' : ''}`} onClick={() => setTab('target')}>{t('targetTab')}</button>
-            <button className={`seg${tab === 'scale' ? ' on' : ''}`} onClick={() => setTab('scale')}>{t('scaleTab')}</button>
+            <button className={`seg${tab === 'chordtones' ? ' on' : ''}`} aria-pressed={tab === 'chordtones'} onClick={() => setTab('chordtones')}>{t('chordTones')}</button>
+            <button className={`seg${tab === 'guidetones' ? ' on' : ''}`} aria-pressed={tab === 'guidetones'} onClick={() => setTab('guidetones')}>{t('guideTones')}</button>
+            <button className={`seg${tab === 'approach' ? ' on' : ''}`} aria-pressed={tab === 'approach'} onClick={() => setTab('approach')}>{t('approachTab')}</button>
+            <button className={`seg${tab === 'target' ? ' on' : ''}`} aria-pressed={tab === 'target'} onClick={() => setTab('target')}>{t('targetTab')}</button>
+            <button className={`seg${tab === 'scale' ? ' on' : ''}`} aria-pressed={tab === 'scale'} onClick={() => setTab('scale')}>{t('scaleTab')}</button>
           </div>
         </div>
 
@@ -328,7 +328,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
             <label>{t('arpLabel')}</label>
             <div className="seg-group wrap">
               {ARP_PATTERNS.map((a) => (
-                <button key={a.id} className={`seg${arpPattern === a.id ? ' on' : ''}`} onClick={() => setArpPattern(a.id)}>
+                <button key={a.id} className={`seg${arpPattern === a.id ? ' on' : ''}`} aria-pressed={arpPattern === a.id} onClick={() => setArpPattern(a.id)}>
                   {pick(lang, a.label, a.labelEn)}
                 </button>
               ))}
@@ -340,8 +340,8 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
           <div className="field">
             <label>{t('scaleViewLabel')}</label>
             <div className="seg-group">
-              <button className={`seg${scaleView === 'scale' ? ' on' : ''}`} onClick={() => setScaleView('scale')}>{t('viewScale')}</button>
-              <button className={`seg${scaleView === 'tension' ? ' on' : ''}`} onClick={() => setScaleView('tension')}>{t('viewTension')}</button>
+              <button className={`seg${scaleView === 'scale' ? ' on' : ''}`} aria-pressed={scaleView === 'scale'} onClick={() => setScaleView('scale')}>{t('viewScale')}</button>
+              <button className={`seg${scaleView === 'tension' ? ' on' : ''}`} aria-pressed={scaleView === 'tension'} onClick={() => setScaleView('tension')}>{t('viewTension')}</button>
             </div>
           </div>
         )}
@@ -351,7 +351,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
             <label>{t('rhythmPatternLabel')}</label>
             <div className="seg-group wrap">
               {TONE_RHYTHMS.map((r) => (
-                <button key={r.id} className={`seg${toneRhythm === r.id ? ' on' : ''}`} onClick={() => setToneRhythm(r.id)}>
+                <button key={r.id} className={`seg${toneRhythm === r.id ? ' on' : ''}`} aria-pressed={toneRhythm === r.id} onClick={() => setToneRhythm(r.id)}>
                   {pick(lang, r.label, r.labelEn)}
                 </button>
               ))}
@@ -363,7 +363,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
                 {SWING_OPTIONS.map((s) => (
                   <button
                     key={s.id}
-                    className={`seg${swingId === s.id ? ' on' : ''}`}
+                    className={`seg${swingId === s.id ? ' on' : ''}`} aria-pressed={swingId === s.id}
                     onClick={() => setSwingId(s.id)}
                     disabled={rhythmNoSwing}
                   >
@@ -455,9 +455,9 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
             <div className="transport-opts">
               <span className="opt-label">{t('loopRangeLabel')}</span>
               <div className="seg-group">
-                <button className={`seg${loopRange === 'full' ? ' on' : ''}`} onClick={() => setLoopRange('full')}>{t('loopFull')}</button>
-                <button className={`seg${loopRange === '2' ? ' on' : ''}`} onClick={() => setLoopRange('2')}>{t('loop2')}</button>
-                <button className={`seg${loopRange === '1' ? ' on' : ''}`} onClick={() => setLoopRange('1')}>{t('loop1')}</button>
+                <button className={`seg${loopRange === 'full' ? ' on' : ''}`} aria-pressed={loopRange === 'full'} onClick={() => setLoopRange('full')}>{t('loopFull')}</button>
+                <button className={`seg${loopRange === '2' ? ' on' : ''}`} aria-pressed={loopRange === '2'} onClick={() => setLoopRange('2')}>{t('loop2')}</button>
+                <button className={`seg${loopRange === '1' ? ' on' : ''}`} aria-pressed={loopRange === '1'} onClick={() => setLoopRange('1')}>{t('loop1')}</button>
               </div>
             </div>
           </div>
@@ -479,10 +479,10 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
               })()}
             </span>
             <div className="seg-group">
-              <button className={`seg${labelMode === 'none' ? ' on' : ''}`} onClick={() => setLabelMode('none')}>{t('labelNone')}</button>
-              <button className={`seg${labelMode === 'name' ? ' on' : ''}`} onClick={() => setLabelMode('name')}>C D E</button>
-              <button className={`seg${labelMode === 'solfege' ? ' on' : ''}`} onClick={() => setLabelMode('solfege')}>{t('labelSolfege')}</button>
-              <button className={`seg${labelMode === 'degree' ? ' on' : ''}`} onClick={() => setLabelMode('degree')}>{t('labelDegree')}</button>
+              <button className={`seg${labelMode === 'none' ? ' on' : ''}`} aria-pressed={labelMode === 'none'} onClick={() => setLabelMode('none')}>{t('labelNone')}</button>
+              <button className={`seg${labelMode === 'name' ? ' on' : ''}`} aria-pressed={labelMode === 'name'} onClick={() => setLabelMode('name')}>C D E</button>
+              <button className={`seg${labelMode === 'solfege' ? ' on' : ''}`} aria-pressed={labelMode === 'solfege'} onClick={() => setLabelMode('solfege')}>{t('labelSolfege')}</button>
+              <button className={`seg${labelMode === 'degree' ? ' on' : ''}`} aria-pressed={labelMode === 'degree'} onClick={() => setLabelMode('degree')}>{t('labelDegree')}</button>
             </div>
           </div>
           <div className="staff-card">

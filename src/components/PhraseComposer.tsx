@@ -156,8 +156,8 @@ export function PhraseComposer({ lang, session, keyPc, chordOptions, material, s
             <div className="field">
               <label>{t('materialLabel')}</label>
               <div className="seg-group">
-                <button className={`seg${material === 'chord-tone' ? ' on' : ''}`} onClick={() => setMaterial('chord-tone')}>{t('materialChordTone')}</button>
-                <button className={`seg${material === 'guide-tone' ? ' on' : ''}`} onClick={() => setMaterial('guide-tone')}>{t('materialGuideTone')}</button>
+                <button className={`seg${material === 'chord-tone' ? ' on' : ''}`} aria-pressed={material === 'chord-tone'} onClick={() => setMaterial('chord-tone')}>{t('materialChordTone')}</button>
+                <button className={`seg${material === 'guide-tone' ? ' on' : ''}`} aria-pressed={material === 'guide-tone'} onClick={() => setMaterial('guide-tone')}>{t('materialGuideTone')}</button>
               </div>
             </div>
           )}
@@ -168,7 +168,7 @@ export function PhraseComposer({ lang, session, keyPc, chordOptions, material, s
             <label>{t('editLevelLabel')}</label>
             <div className="seg-group wrap">
               {([1, 2, 3, 4] as EditorLevel[]).map((l) => (
-                <button key={l} className={`seg${level === l ? ' on' : ''}`} onClick={() => setLevel(l)}>
+                <button key={l} className={`seg${level === l ? ' on' : ''}`} aria-pressed={level === l} onClick={() => setLevel(l)}>
                   {t(l === 1 ? 'editLevel1' : l === 2 ? 'editLevel2' : l === 3 ? 'editLevel3' : 'editLevel4')}
                 </button>
               ))}
@@ -187,9 +187,9 @@ export function PhraseComposer({ lang, session, keyPc, chordOptions, material, s
         <div className="staff-head">
           <h2>{t('staffTitle')}</h2>
           <div className="seg-group">
-            <button className={`seg${labelMode === 'none' ? ' on' : ''}`} onClick={() => setLabelMode('none')}>{t('labelNone')}</button>
-            <button className={`seg${labelMode === 'name' ? ' on' : ''}`} onClick={() => setLabelMode('name')}>C D E</button>
-            <button className={`seg${labelMode === 'degree' ? ' on' : ''}`} onClick={() => setLabelMode('degree')}>{t('labelDegree')}</button>
+            <button className={`seg${labelMode === 'none' ? ' on' : ''}`} aria-pressed={labelMode === 'none'} onClick={() => setLabelMode('none')}>{t('labelNone')}</button>
+            <button className={`seg${labelMode === 'name' ? ' on' : ''}`} aria-pressed={labelMode === 'name'} onClick={() => setLabelMode('name')}>C D E</button>
+            <button className={`seg${labelMode === 'degree' ? ' on' : ''}`} aria-pressed={labelMode === 'degree'} onClick={() => setLabelMode('degree')}>{t('labelDegree')}</button>
           </div>
         </div>
         <div className="staff-card">

@@ -4,7 +4,7 @@
 
 import { QUALITIES, type Quality } from '../theory/chords';
 import { KEYS, mod12 } from '../theory/notes';
-import { t, type Lang } from '../i18n';
+import { pick, t, type Lang } from '../i18n';
 
 export interface CustomChord {
   pc: number; // ルート(実音)
@@ -61,7 +61,7 @@ export function CustomProgressionEditor({ chords, onChange, shift, pitchLabel, l
             <select
               value={mod12(c.pc + shift)}
               onChange={(e) => update(i, { pc: mod12(Number(e.target.value) - shift) })}
-              aria-label={`${i + 1} ${t(lang, 'rootAria')}`}
+              aria-label={pick(lang, `${i + 1} ${t(lang, 'rootAria')}`, `Bar ${i + 1} root`)}
             >
               {KEYS.map((k) => (
                 <option key={k.pc} value={k.pc}>{k.name}</option>
@@ -70,7 +70,7 @@ export function CustomProgressionEditor({ chords, onChange, shift, pitchLabel, l
             <select
               value={c.q}
               onChange={(e) => update(i, { q: e.target.value as Quality })}
-              aria-label={`${i + 1} ${t(lang, 'qualityAria')}`}
+              aria-label={pick(lang, `${i + 1} ${t(lang, 'qualityAria')}`, `Bar ${i + 1} chord type`)}
             >
               {QUALITY_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>

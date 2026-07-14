@@ -13,13 +13,14 @@ interface Props {
   lang: Lang;
   onNavigate: (screen: Screen) => void;
   lastScreen: Screen | null;
-  session: MyInstrumentSettings;
+  /** マイ楽器(永続化された基本設定)。セッション中の一時変更は含まない */
+  baseInstrument: MyInstrumentSettings;
   /** マイ楽器(基本設定)の更新: 保存され、セッションにも反映される */
   onUpdateBase: (patch: Partial<MyInstrumentSettings>) => void;
   onChangeBaseInstrument: (id: string) => void;
 }
 
-export function HomeScreen({ lang, onNavigate, lastScreen, session, onUpdateBase, onChangeBaseInstrument }: Props) {
+export function HomeScreen({ lang, onNavigate, lastScreen, baseInstrument: session, onUpdateBase, onChangeBaseInstrument }: Props) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
   const [editing, setEditing] = useState(false);
 
@@ -89,8 +90,8 @@ export function HomeScreen({ lang, onNavigate, lastScreen, session, onUpdateBase
               <div className="field">
                 <label>{t('pitchLabel')}</label>
                 <div className="seg-group">
-                  <button className={`seg${session.pitchMode === 'concert' ? ' on' : ''}`} onClick={() => onUpdateBase({ pitchMode: 'concert' })}>{t('concert')}</button>
-                  <button className={`seg${session.pitchMode === 'written' ? ' on' : ''}`} onClick={() => onUpdateBase({ pitchMode: 'written' })}>{t('written')}</button>
+                  <button className={`seg${session.pitchMode === 'concert' ? ' on' : ''}`} aria-pressed={session.pitchMode === 'concert'} onClick={() => onUpdateBase({ pitchMode: 'concert' })}>{t('concert')}</button>
+                  <button className={`seg${session.pitchMode === 'written' ? ' on' : ''}`} aria-pressed={session.pitchMode === 'written'} onClick={() => onUpdateBase({ pitchMode: 'written' })}>{t('written')}</button>
                 </div>
               </div>
             </div>
@@ -100,7 +101,7 @@ export function HomeScreen({ lang, onNavigate, lastScreen, session, onUpdateBase
                 <label>{t('clefLabel')}</label>
                 <div className="seg-group">
                   {instrument.clefs.map((c) => (
-                    <button key={c} className={`seg${clef === c ? ' on' : ''}`} onClick={() => onUpdateBase({ clefOverride: c })}>
+                    <button key={c} className={`seg${clef === c ? ' on' : ''}`} aria-pressed={clef === c} onClick={() => onUpdateBase({ clefOverride: c })}>
                       {c === 'grand' ? 'Grand' : c === 'treble' ? 'Treble' : 'Bass'}
                     </button>
                   ))}
@@ -113,7 +114,7 @@ export function HomeScreen({ lang, onNavigate, lastScreen, session, onUpdateBase
                 <label>{t('notationLabel')}</label>
                 <div className="seg-group">
                   {notationModesOf(instrument).map((m) => (
-                    <button key={m} className={`seg${session.notationMode === m ? ' on' : ''}`} onClick={() => onUpdateBase({ notationMode: m })}>
+                    <button key={m} className={`seg${session.notationMode === m ? ' on' : ''}`} aria-pressed={session.notationMode === m} onClick={() => onUpdateBase({ notationMode: m })}>
                       {notationLabel(lang, m)}
                     </button>
                   ))}
@@ -123,7 +124,7 @@ export function HomeScreen({ lang, onNavigate, lastScreen, session, onUpdateBase
                     <label>{t('positionLabel')}</label>
                     <div className="seg-group wrap">
                       {GUITAR_POSITIONS.map((p) => (
-                        <button key={p} className={`seg${session.guitarPosition === p ? ' on' : ''}`} onClick={() => onUpdateBase({ guitarPosition: p })}>
+                        <button key={p} className={`seg${session.guitarPosition === p ? ' on' : ''}`} aria-pressed={session.guitarPosition === p} onClick={() => onUpdateBase({ guitarPosition: p })}>
                           {positionLabel(lang, p)}
                         </button>
                       ))}
