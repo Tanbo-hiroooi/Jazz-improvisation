@@ -157,14 +157,20 @@ export function initialGrid(
     if (startIdx < 0) startIdx = Math.max(0, pal.findIndex((p) => p.midi >= 58));
     const pick = (i: number) => pal[Math.min(startIdx + i, pal.length - 1)]?.midi ?? defaultPitch(pal);
     if (mode === 'quarters') {
+      // 各拍: 先頭セルがattack、残りのセルはhold(分割が8分でもちょうど4分音符になる)
       for (let beat = 0; beat < 4; beat++) {
-        grid.bars[b].beats[beat].cells[0] = { state: 'attack', midi: pick(beat) };
+        const cells = grid.bars[b].beats[beat].cells;
+        cells[0] = { state: 'attack', midi: pick(beat) };
+        for (let i = 1; i < cells.length; i++) cells[i] = { state: 'hold' };
       }
     } else {
-      grid.bars[b].beats[0].cells[0] = { state: 'attack', midi: pick(0) };
-      grid.bars[b].beats[1].cells[0] = { state: 'hold' };
-      grid.bars[b].beats[2].cells[0] = { state: 'attack', midi: pick(1) };
-      grid.bars[b].beats[3].cells[0] = { state: 'hold' };
+      // 2分音符×2: 1・3拍目でattack、続くセルはすべてhold
+      for (let beat = 0; beat < 4; beat++) {
+        const cells = grid.bars[b].beats[beat].cells;
+        const isAttackBeat = beat === 0 || beat === 2;
+        cells[0] = isAttackBeat ? { state: 'attack', midi: pick(beat === 0 ? 0 : 1) } : { state: 'hold' };
+        for (let i = 1; i < cells.length; i++) cells[i] = { state: 'hold' };
+      }
     }
   }
   return grid;

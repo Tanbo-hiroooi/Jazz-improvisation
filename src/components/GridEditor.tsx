@@ -105,12 +105,24 @@ function directPrevAttack(grid: GridPhrase, target: CellPos): CellPos | null {
   return prev;
 }
 
+/** 使い方ガイドを初回だけ自動で開くためのフラグ */
+const HELP_SEEN_KEY = 'fc-grid-help-seen-v1';
+
 export function GridEditor({
   lang, grid, onChange, progression, keyPc, flats, material, divisions,
   fixedRhythm, fixedPitch, allowArticulation, currentIndex = -1,
 }: GridEditorProps) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
   const [selected, setSelected] = useState<CellPos | null>(null);
+  const [helpOpen, setHelpOpen] = useState<boolean>(() => {
+    try { return !localStorage.getItem(HELP_SEEN_KEY); } catch { return true; }
+  });
+  const toggleHelp = (open: boolean) => {
+    setHelpOpen(open);
+    if (!open) {
+      try { localStorage.setItem(HELP_SEEN_KEY, '1'); } catch { /* 保存失敗は無視 */ }
+    }
+  };
 
   const bars = grid.bars.length;
   const palettes = palettesForGrid(progression, keyPc, bars, material, flats);
@@ -244,6 +256,23 @@ export function GridEditor({
 
   return (
     <div className="grid-editor">
+      {/* 使い方チュートリアル(初回は開いた状態。閉じると次回から折りたたみ) */}
+      <details
+        className="grid-help"
+        open={helpOpen}
+        onToggle={(e) => toggleHelp((e.target as HTMLDetailsElement).open)}
+      >
+        <summary>📖 {t('gridHelpTitle')}</summary>
+        <ol className="grid-help-list">
+          <li><span className="grid-help-icon">●</span>{fixedRhythm ? t('gridHelp1Fixed') : t('gridHelp1')}</li>
+          {!fixedPitch && <li><span className="grid-help-icon">▲▼</span>{t('gridHelp2')}</li>}
+          {!fixedRhythm && <li><span className="grid-help-icon">→</span>{t('gridHelp3')}</li>}
+          {divisions.length > 1 && !fixedRhythm && <li><span className="grid-help-icon">♪</span>{t('gridHelp4')}</li>}
+          {grid.bars.length > 1 && !fixedRhythm && <li><span className="grid-help-icon">⧉</span>{t('gridHelp5')}</li>}
+          <li><span className="grid-help-icon">🔊</span>{t('gridHelp6')}</li>
+        </ol>
+      </details>
+
       {grid.bars.map((bar, b) => (
         <div key={b} className="grid-bar">
           <div className="grid-bar-head">

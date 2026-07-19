@@ -419,8 +419,15 @@ export function degreePathAsNotes(prog: Progression, keyPc: number, path: StepDe
     } else if (rhythm === 'offbeat8' && beats >= 4) {
       hits = [0.5, 1.5, 2.5, 3.5].map((s) => n(0, s, 0.5, 0.85));
     } else if (rhythm === 'anticipation' && beats >= 4) {
-      // 4拍目のウラで「食って」次の小節の頭まで伸ばす(小節線をまたぐタイの見本)
-      hits = [n(0, 0, 1, 0.8), n(0, 2, 1, 0.8), n(0, 3.5, 1.5, 0.95)];
+      // 4拍目のウラで「食って」次の小節の頭まで伸ばす(小節線をまたぐタイの見本)。
+      // 食った音が次の小節の1拍目を「先取り」するので、2小節目以降は頭の音を置かない。
+      // 最後の小節の食いはフォーム内で終える。
+      const isFirstBar = chord.measure === 0;
+      const isLastBar = chord.measure >= prog.measures - 1;
+      hits = [];
+      if (isFirstBar) hits.push(n(0, 0, 1, 0.8));
+      hits.push(n(0, 2, 1, 0.8));
+      hits.push(isLastBar ? n(0, 3.5, 0.5, 0.95) : n(0, 3.5, 1.5, 0.95));
     } else if (rhythm === 'triplet' && beats >= 4) {
       const TP3 = 1 / 3;
       hits = [

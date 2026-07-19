@@ -439,11 +439,15 @@ export function StaffView({
         });
       }
 
-      // タイの描画(同じ行内のセグメント間のみ。行またぎは省略)
+      // タイの描画。行をまたぐ場合は、行末から出る半タイ+行頭へ入る半タイ(記譜の慣習)
       tieNotes.forEach((segs2) => {
         segs2.sort((a, b) => a.segIdx - b.segIdx);
         for (let i = 0; i + 1 < segs2.length; i++) {
-          if (segs2[i].line !== segs2[i + 1].line) continue;
+          if (segs2[i].line !== segs2[i + 1].line) {
+            new StaveTie({ first_note: segs2[i].sn, first_indices: [0], last_indices: [0] }).setContext(ctx).draw();
+            new StaveTie({ last_note: segs2[i + 1].sn, first_indices: [0], last_indices: [0] }).setContext(ctx).draw();
+            continue;
+          }
           new StaveTie({ first_note: segs2[i].sn, last_note: segs2[i + 1].sn, first_indices: [0], last_indices: [0] })
             .setContext(ctx)
             .draw();
