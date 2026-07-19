@@ -20,6 +20,8 @@ export interface StartOptions {
   /** リージョンの小節数 */
   regionBars: number;
   metronome: boolean;
+  /** クリックのパターン: all=毎拍 / backbeat=2・4拍のみ(ジャズの定番) */
+  clickPattern?: 'all' | 'backbeat';
   /** 譜面に表示中のノート(音の確認/リズムガイド用。リージョン先頭からの拍で正規化済み) */
   notes?: NoteEvent[];
   /** true なら音程なしでリズムのみ */
@@ -99,16 +101,27 @@ export class AudioEngine {
     const offsetBars = opts.countIn ? 1 : 0;
     const regionEnd = offsetBars + opts.regionBars;
 
-    // メトロノーム(カウントイン中は常に鳴らす)
+    // メトロノーム(カウントイン中は常に毎拍鳴らす)
+    // backbeat: 2・4拍のみクリック(ジャズの「チッ・チッ」)。1拍目は鳴らさない
     const clickId = transport.scheduleRepeat((time) => {
       const ticks = transport.getTicksAtTime(time);
       const beatIndex = Math.round(ticks / Tone.getTransport().PPQ);
       const bar = Math.floor(beatIndex / 4);
       const beat = beatIndex % 4;
       const inCountIn = opts.countIn && bar < offsetBars;
-      if (opts.metronome || inCountIn) {
+      if (inCountIn) {
         const synth = beat === 0 ? this.clickHi! : this.clickLo!;
-        synth.triggerAttackRelease(beat === 0 ? 1400 : 1000, 0.03, time, inCountIn ? 1 : 0.8);
+        synth.triggerAttackRelease(beat === 0 ? 1400 : 1000, 0.03, time, 1);
+        return;
+      }
+      if (!opts.metronome) return;
+      if (opts.clickPattern === 'backbeat') {
+        if (beat === 1 || beat === 3) {
+          this.clickLo!.triggerAttackRelease(1100, 0.03, time, 0.95);
+        }
+      } else {
+        const synth = beat === 0 ? this.clickHi! : this.clickLo!;
+        synth.triggerAttackRelease(beat === 0 ? 1400 : 1000, 0.03, time, 0.8);
       }
     }, '4n', 0);
     this.repeats.push(clickId);
@@ -131,7 +144,13 @@ export class AudioEngine {
           duration += sw;
         }
       }
-      return { midi: nt.midi, velocity: nt.velocity, start, duration };
+      // アーティキュレーション: アクセント=強く / スタッカート=半分に切る / テヌート=いっぱいに保つ
+      let velocity = nt.velocity;
+      let gate = 0.9;
+      if (nt.articulation === 'accent') velocity = Math.min(1, velocity * 1.25);
+      else if (nt.articulation === 'staccato') gate = 0.45;
+      else if (nt.articulation === 'tenuto') { gate = 1.0; velocity = Math.min(1, velocity * 1.05); }
+      return { midi: nt.midi, velocity, start, duration, gate };
     });
 
     // 再生位置の通知(16分音符ごと)
@@ -163,11 +182,12 @@ export class AudioEngine {
         midi: nt.midi,
         duration: nt.duration,
         velocity: nt.velocity,
+        gate: nt.gate,
       }));
       // 注意: Part.loop はPart開始時点からループ領域を鳴らすため、カウントイン中に
       // フレーズが鳴ってしまう。繰り返しは Transport.loop に任せる。
       const part = new Tone.Part((time, ev) => {
-        const durSec = (ev.duration * 60) / transport.bpm.value * 0.9;
+        const durSec = (ev.duration * 60) / transport.bpm.value * ev.gate;
         this.melody!.triggerAttackRelease(Tone.Frequency(ev.midi, 'midi').toFrequency(), durSec, time, ev.velocity);
       }, events);
       part.start(0);

@@ -58,13 +58,15 @@ export function saveMyInstrument(settings: MyInstrumentSettings): void {
   saveJSON(STORAGE_KEYS.myInstrument, settings);
 }
 
-/** コース進捗: 完了したレッスンIDの集合 */
+/** コース進捗: 完了したレッスンIDと、テンポ/キーはしごの達成トークン(例: 'bpm:80', 'key:5') */
 export interface CourseProgress {
   completedLessonIds: string[];
+  ladders?: Record<string, string[]>;
 }
 
 export function loadCourseProgress(): CourseProgress {
-  return loadJSON<CourseProgress>(STORAGE_KEYS.courseProgress, { completedLessonIds: [] });
+  const raw = loadJSON<CourseProgress>(STORAGE_KEYS.courseProgress, { completedLessonIds: [] });
+  return { completedLessonIds: raw.completedLessonIds ?? [], ladders: raw.ladders ?? {} };
 }
 
 export function saveCourseProgress(progress: CourseProgress): void {

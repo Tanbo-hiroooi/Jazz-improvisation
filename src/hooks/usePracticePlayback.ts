@@ -21,6 +21,8 @@ export interface PlaybackParams {
   countIn: boolean;
   loopEnabled: boolean;
   metronomeOn: boolean;
+  /** クリックパターン(省略時は毎拍) */
+  clickPattern?: 'all' | 'backbeat';
   compOn: boolean;
   /** スウィングのウラ拍オフセット(拍) */
   swing: number;
@@ -111,6 +113,7 @@ export function usePracticePlayback(p: PlaybackParams): PlaybackState {
         loop: p.loopEnabled,
         regionBars,
         metronome: p.metronomeOn,
+        clickPattern: p.clickPattern,
         notes: regionNotes,
         rhythmOnly: kind === 'rhythm',
         comp,
@@ -131,7 +134,7 @@ export function usePracticePlayback(p: PlaybackParams): PlaybackState {
       setPlaying(kind);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [p.progression, p.loopRange, p.selectedMeasure, p.displayedNotes, p.compOn, p.effKeyPc, p.bpm, p.countIn, p.loopEnabled, p.metronomeOn, p.swing],
+    [p.progression, p.loopRange, p.selectedMeasure, p.displayedNotes, p.compOn, p.effKeyPc, p.bpm, p.countIn, p.loopEnabled, p.metronomeOn, p.clickPattern, p.swing],
   );
 
   // BPMは再生中もライブ反映

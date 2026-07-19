@@ -8,9 +8,8 @@ import { PracticeLogPanel } from '../components/PracticeLogPanel';
 import { StaffView, type ChordDisplay, type LabelMode } from '../components/StaffView';
 import { EXERCISES, EXERCISE_CATEGORY_LABELS, type ExerciseCategory } from '../data/exercises';
 import { notationLabel, positionLabel } from '../components/SessionSetupPanel';
-import { PhraseComposer } from '../components/PhraseComposer';
+import { GridComposer } from '../components/GridComposer';
 import { usePracticePlayback, type LoopRange } from '../hooks/usePracticePlayback';
-import type { EditorLevel, PhraseMaterial } from '../theory/editablePhrase';
 import type { MyInstrumentSettings } from '../state/storage';
 import { chordSymbol } from '../theory/chords';
 import { GUITAR_POSITIONS } from '../theory/guitar';
@@ -73,8 +72,6 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
   const [exerciseId, setExerciseId] = useState('');
   // フレーズ作成モード
   const [composeMode, setComposeMode] = useState(false);
-  const [composeMaterial, setComposeMaterial] = useState<PhraseMaterial>('chord-tone');
-  const [composeLevel, setComposeLevel] = useState<EditorLevel>(1);
   // BPMの直接入力用テキスト(入力途中の値をクランプしないための分離)
   const [bpmText, setBpmText] = useState(String(initial?.bpm ?? 100));
   const [labelMode, setLabelMode] = useState<LabelMode>('none');
@@ -391,18 +388,14 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
         </div>
       </section>
 
-      {/* ===== フレーズ作成モード ===== */}
+      {/* ===== フレーズ作成モード(拍グリッド) ===== */}
       {composeMode && (
         <div className="main-col">
-          <PhraseComposer
+          <GridComposer
             lang={lang}
             session={session}
             keyPc={effKeyPc}
-            chordOptions={progression.chords.map((c) => ({ rootOffset: c.rootOffset, quality: c.quality }))}
-            material={composeMaterial}
-            setMaterial={setComposeMaterial}
-            level={composeLevel}
-            setLevel={setComposeLevel}
+            progression={progression}
             initialBpm={bpm}
           />
         </div>

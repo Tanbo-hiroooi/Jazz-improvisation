@@ -724,6 +724,90 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
 .req-checklist li.met { color: var(--green); }
 .req-checklist li.unmet { color: var(--text-dim); }
 .step-validation-warning { display: flex; flex-direction: column; gap: 4px; }
+
+/* ---- 拍グリッドエディタ ---- */
+.grid-editor { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.grid-bar {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.grid-bar-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.grid-bar-num {
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--bg); border: 1px solid var(--border);
+  font-size: 12px; font-weight: 700; color: var(--text-dim);
+}
+.grid-bar-chord { font-weight: 700; font-size: 14px; color: var(--accent); }
+.grid-copy-btn { margin-left: auto; }
+.grid-beats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.grid-beat { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.grid-div-toggle {
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 10.5px;
+  padding: 2px 4px;
+  cursor: pointer;
+  min-height: 22px;
+}
+.grid-cells { display: flex; gap: 3px; }
+.grid-cell {
+  flex: 1;
+  min-width: 0;
+  min-height: 52px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 2px 1px;
+  font-size: 12px;
+}
+.grid-cell.attack { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+.grid-cell.hold { background: rgba(245, 158, 11, 0.07); border-style: dashed; border-color: var(--accent); color: var(--accent); }
+.grid-cell.selected { outline: 2px solid var(--accent); outline-offset: 1px; }
+.grid-cell.playing { outline: 2px solid var(--red); outline-offset: 1px; }
+.grid-cell:active { transform: scale(0.96); }
+.grid-cell-body { font-weight: 700; font-size: 12px; line-height: 1.1; white-space: nowrap; }
+.grid-cell-degree { font-size: 9px; color: var(--accent); line-height: 1; }
+.grid-cell-artic { font-size: 10px; color: var(--red); line-height: 1; font-weight: 700; }
+.div-3 .grid-cell, .div-4 .grid-cell { font-size: 10px; }
+.div-4 .grid-cell-body { font-size: 9.5px; }
+.grid-edit-panel {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.grid-edit-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.grid-pitch-ctrl { display: flex; align-items: center; gap: 8px; }
+.grid-arrow { min-width: 52px; min-height: 44px; font-size: 16px; }
+.grid-pitch-label { display: flex; flex-direction: column; align-items: center; min-width: 64px; }
+.grid-pitch-label strong { font-size: 17px; }
+
+/* ---- テンポ/キーのはしご ---- */
+.ladder-panel {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ladder-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .step-footer-nav {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   flex-wrap: wrap; margin-top: 6px;

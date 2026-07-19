@@ -5,7 +5,6 @@ import { CHAPTERS, COURSES, courseLessonIds, getLesson, lessonsOfChapter } from 
 import { loadCourseProgress, saveCourseProgress, type MyInstrumentSettings } from '../state/storage';
 import { pick, t as tr, type Lang } from '../i18n';
 import { LessonScreen } from './LessonScreen';
-import type { FreePracticeInit } from './FreePracticeScreen';
 
 interface Props {
   lang: Lang;
@@ -13,13 +12,12 @@ interface Props {
   onPatchSession: (patch: Partial<MyInstrumentSettings>) => void;
   onChangeInstrument: (id: string) => void;
   onSaveBase: () => void;
-  /** 選択中レッスン(自由練習からの復帰に備えてApp側で保持) */
+  /** 選択中レッスン(App側で保持) */
   selectedLessonId: string | null;
   onSelectLesson: (id: string | null) => void;
-  onReview: (init: FreePracticeInit) => void;
 }
 
-export function CourseScreen({ lang, session, onPatchSession, onChangeInstrument, onSaveBase, selectedLessonId, onSelectLesson, onReview }: Props) {
+export function CourseScreen({ lang, session, onPatchSession, onChangeInstrument, onSaveBase, selectedLessonId, onSelectLesson }: Props) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
   const [progress, setProgress] = useState(loadCourseProgress);
 
@@ -33,7 +31,7 @@ export function CourseScreen({ lang, session, onPatchSession, onChangeInstrument
 
   if (selectedLessonId) {
     const lesson = getLesson(selectedLessonId);
-    const course = COURSES.find((c) => c.id === lesson?.courseId);
+    const course = COURSES[0];
     const chapter = CHAPTERS.find((c) => c.id === lesson?.chapterId);
     if (lesson && course && chapter) {
       const allIds = courseLessonIds(course);
@@ -56,7 +54,6 @@ export function CourseScreen({ lang, session, onPatchSession, onChangeInstrument
           onPrev={() => onSelectLesson(prevId ?? null)}
           onNext={() => onSelectLesson(nextId ?? null)}
           onBack={() => onSelectLesson(null)}
-          onReview={onReview}
           session={session}
           onPatchSession={onPatchSession}
           onChangeInstrument={onChangeInstrument}

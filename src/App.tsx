@@ -43,11 +43,7 @@ export default function App() {
     }
   };
 
-  // レッスン→自由練習(設定引き継ぎ・復帰導線あり)
-  const startReview = (init: FreePracticeInit) => {
-    setFreeInit(init);
-    setScreen('free');
-  };
+  // 自由練習からレッスンへ戻る導線(設定引き継ぎで開いた場合)
   const returnToLesson = () => {
     setFreeInit(null);
     setScreen('course'); // courseLessonId が保持されているので同じレッスンに戻る
@@ -152,7 +148,6 @@ export default function App() {
           onSaveBase={saveSessionAsBase}
           selectedLessonId={courseLessonId}
           onSelectLesson={setCourseLessonId}
-          onReview={startReview}
         />
       )}
       {screen === 'song' && (

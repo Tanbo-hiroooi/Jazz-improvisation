@@ -14,6 +14,8 @@ export interface NoteEvent {
   velocity: number;
   /** どのコードイベントに属するか(progression.chords のインデックス) */
   chordIndex: number;
+  /** アーティキュレーション(省略=普通) */
+  articulation?: 'accent' | 'staccato' | 'tenuto';
 }
 
 /** リックの1音: o=ルートからの半音, s=開始拍(小節内), d=拍数, v=ベロシティ */
@@ -385,7 +387,9 @@ const DEGREE_TONE_INDEX: Record<StepDegree, number> = { root: 0, third: 1, fifth
  * path が1要素なら全コードで同じ度数(ルート練習・3度練習など)、
  * 複数要素ならコードを跨いで循環し(ガイドトーンの経路など)、直前の音から近いオクターブへ配置する。
  */
-export function degreePathAsNotes(prog: Progression, keyPc: number, path: StepDegree[], rhythm: ToneRhythmId = 'basic'): NoteEvent[] {
+export type DegreePathRhythm = ToneRhythmId | 'offbeat8';
+
+export function degreePathAsNotes(prog: Progression, keyPc: number, path: StepDegree[], rhythm: DegreePathRhythm = 'basic'): NoteEvent[] {
   const events: NoteEvent[] = [];
   let prevMidi: number | null = null;
   prog.chords.forEach((chord, chordIndex) => {
@@ -410,6 +414,21 @@ export function degreePathAsNotes(prog: Progression, keyPc: number, path: StepDe
       hits = [n(0, s, beats - s, 0.85)];
     } else if (rhythm === 'charleston' && beats >= 4) {
       hits = [n(0, 0, 1.5, 0.9), n(0, 2.5, 1.5, 0.8)];
+    } else if (rhythm === 'swing8' && beats >= 4) {
+      hits = Array.from({ length: 8 }, (_, i) => n(0, i * 0.5, 0.5, i % 2 ? 0.65 : 0.85));
+    } else if (rhythm === 'offbeat8' && beats >= 4) {
+      hits = [0.5, 1.5, 2.5, 3.5].map((s) => n(0, s, 0.5, 0.85));
+    } else if (rhythm === 'anticipation' && beats >= 4) {
+      // 4拍目のウラで「食って」次の小節の頭まで伸ばす(小節線をまたぐタイの見本)
+      hits = [n(0, 0, 1, 0.8), n(0, 2, 1, 0.8), n(0, 3.5, 1.5, 0.95)];
+    } else if (rhythm === 'triplet' && beats >= 4) {
+      const TP3 = 1 / 3;
+      hits = [
+        n(0, 0, TP3, 0.85), n(0, TP3, TP3, 0.7), n(0, 2 * TP3, TP3, 0.7),
+        n(0, 1, 1, 0.85),
+        n(0, 2, TP3, 0.85), n(0, 2 + TP3, TP3, 0.7), n(0, 2 + 2 * TP3, TP3, 0.7),
+        n(0, 3, 1, 0.85),
+      ];
     } else {
       hits = [n(0, 0, beats, 0.85)];
     }
@@ -550,6 +569,53 @@ export function sampleMotifAsNotes(prog: Progression, keyPc: number, variant: Mo
     rhythm.forEach((r, i) => {
       events.push({ midi: pitches[i], start: measureStart + r.s, duration: r.d, velocity: r.v, chordIndex });
     });
+  });
+  return events;
+}
+
+/**
+ * ブルースリフの固定譜例: ルート→♭3→4→♭5→5→♭7 を使った1小節リフを各小節で反復。
+ * 「3度と5度を少し下げるとブルースになる」を音で体験するための教材。
+ */
+export function bluesRiffAsNotes(prog: Progression, keyPc: number): NoteEvent[] {
+  const events: NoteEvent[] = [];
+  prog.chords.forEach((chord, chordIndex) => {
+    if (chord.beats < 4) return;
+    const rootPc = mod12(keyPc + chord.rootOffset);
+    let rootMidi = 60 + rootPc;
+    if (rootMidi > 65) rootMidi -= 12;
+    const measureStart = chord.measure * 4 + chord.beat;
+    // リフ: ルート(1拍) ♭3→4(8分×2) 5(1拍) ♭7→5(8分×2)
+    const riff: { o: number; s: number; d: number; v: number }[] = [
+      { o: 0, s: 0, d: 1, v: 0.9 },
+      { o: 3, s: 1, d: 0.5, v: 0.8 },
+      { o: 5, s: 1.5, d: 0.5, v: 0.75 },
+      { o: 7, s: 2, d: 1, v: 0.85 },
+      { o: 10, s: 3, d: 0.5, v: 0.8 },
+      { o: 7, s: 3.5, d: 0.5, v: 0.75 },
+    ];
+    for (const n2 of riff) {
+      events.push({ midi: rootMidi + n2.o, start: measureStart + n2.s, duration: n2.d, velocity: n2.v, chordIndex });
+    }
+  });
+  return events;
+}
+
+/** ブルーノート紹介用: ルート→3度→♭3→ルートを長めに(明→暗の変化を聴く) */
+export function blueNoteDemoAsNotes(prog: Progression, keyPc: number): NoteEvent[] {
+  const events: NoteEvent[] = [];
+  prog.chords.forEach((chord, chordIndex) => {
+    if (chord.beats < 4) return;
+    const def = QUALITIES[chord.quality];
+    const rootPc = mod12(keyPc + chord.rootOffset);
+    let rootMidi = 60 + rootPc;
+    if (rootMidi > 65) rootMidi -= 12;
+    const measureStart = chord.measure * 4 + chord.beat;
+    events.push(
+      { midi: rootMidi, start: measureStart, duration: 1, velocity: 0.85, chordIndex },
+      { midi: rootMidi + def.tones[1], start: measureStart + 1, duration: 1, velocity: 0.85, chordIndex },
+      { midi: rootMidi + 3, start: measureStart + 2, duration: 2, velocity: 0.9, chordIndex },
+    );
   });
   return events;
 }
