@@ -835,6 +835,32 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
 .grid-pitch-label { display: flex; flex-direction: column; align-items: center; min-width: 64px; }
 .grid-pitch-label strong { font-size: 17px; }
 
+/* ---- 音量パネル ---- */
+.volume-panel {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-top: 8px;
+}
+.volume-panel summary {
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  list-style-position: inside;
+}
+.volume-body {
+  padding: 4px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.volume-row { display: flex; flex-direction: column; gap: 4px; }
+.volume-row label { font-size: 13px; color: var(--text); }
+.volume-row label strong { color: var(--accent); }
+.volume-row input[type='range'] { width: 100%; max-width: 320px; accent-color: var(--accent); height: 28px; }
+
 /* ---- テンポ/キーのはしご ---- */
 .ladder-panel {
   background: var(--bg-panel-2);

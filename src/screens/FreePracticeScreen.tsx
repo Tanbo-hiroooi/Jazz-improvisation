@@ -9,6 +9,7 @@ import { StaffView, type ChordDisplay, type LabelMode } from '../components/Staf
 import { EXERCISES, EXERCISE_CATEGORY_LABELS, type ExerciseCategory } from '../data/exercises';
 import { notationLabel, positionLabel } from '../components/SessionSetupPanel';
 import { GridComposer } from '../components/GridComposer';
+import { VolumeControls } from '../components/VolumeControls';
 import { usePracticePlayback, type LoopRange } from '../hooks/usePracticePlayback';
 import type { MyInstrumentSettings } from '../state/storage';
 import { chordSymbol } from '../theory/chords';
@@ -453,6 +454,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
                 <button className={`seg${loopRange === '1' ? ' on' : ''}`} aria-pressed={loopRange === '1'} onClick={() => setLoopRange('1')}>{t('loop1')}</button>
               </div>
             </div>
+            <VolumeControls lang={lang} />
           </div>
         </section>
 

@@ -44,6 +44,30 @@ function beatsToTime(beats: number): string {
   return `${bar}:${quarter}:${sixteenth}`;
 }
 
+/** チャンネル別の音量(0〜1)。velocityに乗算して適用する */
+export interface ChannelVolumes {
+  /** 毎拍メトロノーム(カウントインにも適用) */
+  metronome: number;
+  /** 2・4拍クリック */
+  backbeat: number;
+  /** コード伴奏 */
+  comp: number;
+}
+
+const VOLUMES_KEY = 'fc-volumes-v1';
+
+function loadVolumes(): ChannelVolumes {
+  try {
+    const raw = localStorage.getItem(VOLUMES_KEY);
+    if (raw) {
+      const v = JSON.parse(raw) as Partial<ChannelVolumes>;
+      const clamp = (x: unknown, d: number) => (typeof x === 'number' && x >= 0 && x <= 1 ? x : d);
+      return { metronome: clamp(v.metronome, 1), backbeat: clamp(v.backbeat, 1), comp: clamp(v.comp, 1) };
+    }
+  } catch { /* 読み込み失敗時は既定値 */ }
+  return { metronome: 1, backbeat: 1, comp: 1 };
+}
+
 export class AudioEngine {
   private melody: Tone.Synth | null = null;
   private clickHi: Tone.Synth | null = null;
@@ -53,6 +77,15 @@ export class AudioEngine {
   private repeats: number[] = [];
   private started = false;
   private running = false;
+  /** チャンネル別音量。再生中の変更も次の発音からライブ反映される */
+  volumes: ChannelVolumes = loadVolumes();
+
+  setVolumes(patch: Partial<ChannelVolumes>): void {
+    this.volumes = { ...this.volumes, ...patch };
+    try {
+      localStorage.setItem(VOLUMES_KEY, JSON.stringify(this.volumes));
+    } catch { /* 保存失敗は無視 */ }
+  }
 
   async ensureStarted(): Promise<void> {
     if (!this.started) {
@@ -111,17 +144,17 @@ export class AudioEngine {
       const inCountIn = opts.countIn && bar < offsetBars;
       if (inCountIn) {
         const synth = beat === 0 ? this.clickHi! : this.clickLo!;
-        synth.triggerAttackRelease(beat === 0 ? 1400 : 1000, 0.03, time, 1);
+        synth.triggerAttackRelease(beat === 0 ? 1400 : 1000, 0.03, time, 1 * this.volumes.metronome);
         return;
       }
       if (!opts.metronome) return;
       if (opts.clickPattern === 'backbeat') {
         if (beat === 1 || beat === 3) {
-          this.clickLo!.triggerAttackRelease(1100, 0.03, time, 0.95);
+          this.clickLo!.triggerAttackRelease(1100, 0.03, time, 0.95 * this.volumes.backbeat);
         }
       } else {
         const synth = beat === 0 ? this.clickHi! : this.clickLo!;
-        synth.triggerAttackRelease(beat === 0 ? 1400 : 1000, 0.03, time, 0.8);
+        synth.triggerAttackRelease(beat === 0 ? 1400 : 1000, 0.03, time, 0.8 * this.volumes.metronome);
       }
     }, '4n', 0);
     this.repeats.push(clickId);
@@ -204,7 +237,7 @@ export class AudioEngine {
       const compPart = new Tone.Part((time, ev) => {
         const durSec = (ev.duration * 60) / transport.bpm.value * 0.85;
         const freqs = ev.midis.map((m) => Tone.Frequency(m, 'midi').toFrequency());
-        this.comp!.triggerAttackRelease(freqs, durSec, time, 0.75);
+        this.comp!.triggerAttackRelease(freqs, durSec, time, 0.75 * this.volumes.comp);
       }, compEvents);
       compPart.start(0);
       this.parts.push(compPart);

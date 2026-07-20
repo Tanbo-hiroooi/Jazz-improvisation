@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { GridEditor } from './GridEditor';
 import { StaffView, type ChordDisplay, type LabelMode } from './StaffView';
+import { VolumeControls } from './VolumeControls';
 import { usePracticePlayback, type PlaybackOverrides } from '../hooks/usePracticePlayback';
 import type { MyInstrumentSettings } from '../state/storage';
 import { chordSymbol } from '../theory/chords';
@@ -172,6 +173,7 @@ export function GridComposer({ lang, session, keyPc, progression, initialBpm = 8
           <label className="toggle"><input type="checkbox" checked={metronomeOn} onChange={(e) => setMetronomeOn(e.target.checked)} /> {t('metronome')}</label>
           <label className="toggle"><input type="checkbox" checked={backbeat} onChange={(e) => setBackbeat(e.target.checked)} /> {t('backbeatClick')}</label>
         </div>
+        <VolumeControls lang={lang} />
         <p className="hint-text">{t('playSelfHint')}</p>
       </section>
     </div>

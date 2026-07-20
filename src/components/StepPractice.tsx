@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { GridEditor } from './GridEditor';
 import { StaffView, type ChordDisplay, type LabelMode } from './StaffView';
+import { VolumeControls } from './VolumeControls';
 import type { Bi, Lesson, StepContent, StepEditable } from '../data/courses';
 import { usePracticePlayback, type PlaybackOverrides } from '../hooks/usePracticePlayback';
 import { chordSymbol } from '../theory/chords';
@@ -597,6 +598,8 @@ export function StepPractice({
         </label>
         <label className="toggle"><input type="checkbox" checked={compOn} onChange={(e) => setCompOn(e.target.checked)} /> {t('compSound')}</label>
       </div>
+
+      <VolumeControls lang={lang} />
 
       <div className="step-footer-nav">
         <button className="btn" onClick={() => goToStep(Math.max(0, currentStep - 1))} disabled={currentStep === 0}>

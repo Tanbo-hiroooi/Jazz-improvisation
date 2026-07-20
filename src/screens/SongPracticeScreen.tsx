@@ -6,6 +6,7 @@ import { ChordProgressionView } from '../components/ChordProgressionView';
 import { StaffView, type ChordDisplay, type LabelMode } from '../components/StaffView';
 import { PRACTICE_MISSIONS } from '../data/missions';
 import { SessionSetupPanel } from '../components/SessionSetupPanel';
+import { VolumeControls } from '../components/VolumeControls';
 import type { MyInstrumentSettings } from '../state/storage';
 import { usePracticePlayback } from '../hooks/usePracticePlayback';
 import { chordSymbol } from '../theory/chords';
@@ -209,6 +210,7 @@ export function SongPracticeScreen({ lang, session, onPatchSession, onChangeInst
           <label className="toggle"><input type="checkbox" checked={metronomeOn} onChange={(e) => setMetronomeOn(e.target.checked)} /> {t('metronome')}</label>
           <label className="toggle"><input type="checkbox" checked={compOn} onChange={(e) => setCompOn(e.target.checked)} /> {t('compSound')}</label>
         </div>
+        <VolumeControls lang={lang} />
       </section>
 
       <section className="panel">
