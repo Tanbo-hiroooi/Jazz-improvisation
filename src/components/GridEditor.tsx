@@ -4,7 +4,7 @@
 // - 拍ごとの分割切替(4分/8分/3連/16分)。「のばす」は分割の異なる拍を越えない
 // - 合計は構造上つねに4拍×小節数: 拍数計算・超過は起きない
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Progression } from '../theory/progressions';
 import { chordSymbol } from '../theory/chords';
 import { mod12 } from '../theory/notes';
@@ -42,6 +42,8 @@ export interface GridEditorProps {
   allowArticulation?: boolean;
   /** 再生中のattack通し番号(-1: なし) */
   currentIndex?: number;
+  /** 選択中の音のattack通し番号を親へ通知(譜面のハイライト用。-1: なし) */
+  onSelectedIndexChange?: (index: number) => void;
 }
 
 interface CellPos { bar: number; beat: number; cell: number }
@@ -110,7 +112,7 @@ const HELP_SEEN_KEY = 'fc-grid-help-seen-v1';
 
 export function GridEditor({
   lang, grid, onChange, progression, keyPc, flats, material, divisions,
-  fixedRhythm, fixedPitch, allowArticulation, currentIndex = -1,
+  fixedRhythm, fixedPitch, allowArticulation, currentIndex = -1, onSelectedIndexChange,
 }: GridEditorProps) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
   const [selected, setSelected] = useState<CellPos | null>(null);
@@ -133,6 +135,14 @@ export function GridEditor({
   const sel = selected && cellAt(grid, selected).state === 'attack' ? selected : null;
   const selCell = sel ? cellAt(grid, sel) : null;
   const selPalette = sel ? palettes[sel.bar] : [];
+
+  // 選択中の音が譜面上の何番目のノートかを親へ通知(譜面ハイライト用)
+  const selectedAttackIndex = sel
+    ? attacks.findIndex(([b, bt, c]) => b === sel.bar && bt === sel.beat && c === sel.cell)
+    : -1;
+  useEffect(() => {
+    onSelectedIndexChange?.(selectedAttackIndex);
+  }, [selectedAttackIndex, onSelectedIndexChange]);
 
   const commit = (next: GridPhrase) => onChange(next);
 
@@ -341,7 +351,15 @@ export function GridEditor({
       {!sel && <p className="hint-text">{t('gridTapHint')}</p>}
 
       {sel && selCell && (
-        <div className="grid-edit-panel">
+        <div className="grid-edit-panel" role="group" aria-label={t('phraseEditTitle')}>
+          <div className="grid-edit-target">
+            <span className="grid-edit-target-pos">
+              {pick(lang, `${sel.bar + 1}小節 ${sel.beat + 1}拍`, `Bar ${sel.bar + 1}, beat ${sel.beat + 1}`)}
+            </span>
+            {!fixedPitch && selLabel && (
+              <span className="grid-edit-target-note">{selLabel.label}<small>{selLabel.degree}</small></span>
+            )}
+          </div>
           {!fixedPitch && (
             <div className="grid-edit-row">
               <span className="opt-label">{t('pitchLabel2')}:</span>

@@ -54,6 +54,8 @@ interface Props {
   chords: ChordDisplay[];
   /** 再生中のノートインデックス(-1: なし) */
   currentIndex: number;
+  /** 編集で選択中のノートインデックス(-1: なし)。編集中どの音を触っているか示す */
+  selectedIndex?: number;
   /** 譜面表示(TABはギター用。既定は五線譜のみ) */
   notation?: NotationMode;
   guitarPosition?: GuitarPosition;
@@ -142,16 +144,19 @@ function restSegments(gapStart: number, gapEnd: number): { dur: string; dots: nu
 const ARTIC_CODE: Record<string, string> = { accent: 'a>', staccato: 'a.', tenuto: 'a-' };
 
 export function StaffView({
-  notes, measures, clef, shift, flats, labelMode, chords, currentIndex,
+  notes, measures, clef, shift, flats, labelMode, chords, currentIndex, selectedIndex = -1,
   notation = 'staff', guitarPosition = 'auto', guitarOpenStrings = true,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   // 1つのノートに複数のセグメント(タイ)×五線譜/TABの要素が対応する
   const noteElsRef = useRef<SVGElement[][]>([]);
   const prevHighlight = useRef<SVGElement[]>([]);
+  const prevSelected = useRef<SVGElement[]>([]);
   // 再描画でSVGが作り直されてもハイライトを復元できるよう、現在位置をrefにも保持
   const currentIndexRef = useRef(currentIndex);
   currentIndexRef.current = currentIndex;
+  const selectedIndexRef = useRef(selectedIndex);
+  selectedIndexRef.current = selectedIndex;
 
   // 表示用MIDI: 原則「鳴っている音 + 記譜シフト」をそのまま描画し、
   // 譜表から大きく外れる場合のみオクターブ単位で寄せる。
@@ -177,6 +182,7 @@ export function StaffView({
       container.innerHTML = '';
       noteElsRef.current = [];
       prevHighlight.current = [];
+      prevSelected.current = [];
 
       const width = container.clientWidth || 600;
       const noteClef = clef === 'bass' ? 'bass' : 'treble';
@@ -454,12 +460,18 @@ export function StaffView({
         }
       });
 
-      // 再描画後にハイライトを復元
+      // 再描画後にハイライト(再生位置・編集の選択)を復元
       const ci = currentIndexRef.current;
       if (ci >= 0) {
         const els = noteElsRef.current[ci] ?? [];
         els.forEach((el) => el.classList.add('vf-current'));
         prevHighlight.current = els;
+      }
+      const si = selectedIndexRef.current;
+      if (si >= 0) {
+        const els = noteElsRef.current[si] ?? [];
+        els.forEach((el) => el.classList.add('vf-selected'));
+        prevSelected.current = els;
       }
     };
 
@@ -479,6 +491,36 @@ export function StaffView({
       prevHighlight.current = els;
     }
   }, [currentIndex]);
+
+  // 編集で選択中のノートのハイライト(どの音を触っているか譜面上で分かるように)。
+  // 譜面が縦に長い場合は、選択音が見えるよう「譜面の枠内だけ」スクロールする(ページは動かさない)
+  useEffect(() => {
+    prevSelected.current.forEach((el) => el.classList.remove('vf-selected'));
+    prevSelected.current = [];
+    if (selectedIndex < 0) return;
+    const els = noteElsRef.current[selectedIndex] ?? [];
+    els.forEach((el) => el.classList.add('vf-selected'));
+    prevSelected.current = els;
+
+    const target = els[0];
+    if (!target) return;
+    // 「実際に縦スクロールできる」祖先を探す(overflow-x:hidden で overflow-y が
+    // auto と計算されるだけの要素は対象外)
+    let box: HTMLElement | null = containerRef.current?.parentElement ?? null;
+    while (box && box.scrollHeight <= box.clientHeight + 1) {
+      box = box.parentElement;
+      if (box === document.body || box === document.documentElement) return; // ページ自体は動かさない
+    }
+    if (!box) return;
+    const boxRect = box.getBoundingClientRect();
+    const elRect = target.getBoundingClientRect();
+    const margin = 24;
+    if (elRect.top < boxRect.top + margin) {
+      box.scrollTop -= boxRect.top + margin - elRect.top;
+    } else if (elRect.bottom > boxRect.bottom - margin) {
+      box.scrollTop += elRect.bottom - (boxRect.bottom - margin);
+    }
+  }, [selectedIndex]);
 
   return <div ref={containerRef} className="staff-container" />;
 }

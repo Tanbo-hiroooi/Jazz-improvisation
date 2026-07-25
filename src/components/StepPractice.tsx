@@ -269,6 +269,9 @@ function EditableStepBody({
 
   const check = (overrides: PlaybackOverrides) => startPlayback('example', overrides);
 
+  // 編集で選択中の音(譜面上でハイライトして「今どれを触っているか」を示す)
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+
   // 達成チェックリスト(操作課題+形式条件)
   const reqItems: { key: string; label: string; met: boolean }[] = [];
   if (editable.requiredAction) {
@@ -292,16 +295,20 @@ function EditableStepBody({
 
   return (
     <>
-      <div className="staff-head">
-        <h4>{t('staffTitle')}</h4>
-        <LabelModeToggle lang={lang} labelMode={labelMode} setLabelMode={setLabelMode} />
-      </div>
-      <div className="staff-card">
-        <StaffView
-          notes={displayedNotes} measures={prog.measures} clef={clef} shift={shift} flats={flats}
-          labelMode={labelMode} chords={chordDisplays} currentIndex={currentNoteIndex}
-          notation={notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings}
-        />
+      {/* 編集中も譜面が見えるよう、画面上部に貼り付ける(sticky) */}
+      <div className="staff-sticky">
+        <div className="staff-head">
+          <h4>{t('staffTitle')}</h4>
+          <LabelModeToggle lang={lang} labelMode={labelMode} setLabelMode={setLabelMode} />
+        </div>
+        <div className="staff-card">
+          <StaffView
+            notes={displayedNotes} measures={prog.measures} clef={clef} shift={shift} flats={flats}
+            labelMode={labelMode} chords={chordDisplays} currentIndex={currentNoteIndex}
+            selectedIndex={selectedIndex}
+            notation={notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings}
+          />
+        </div>
       </div>
 
       <GridEditor
@@ -317,6 +324,7 @@ function EditableStepBody({
         fixedPitch={editable.fixedPitch}
         allowArticulation={editable.allowArticulation}
         currentIndex={currentNoteIndex >= 0 && currentNoteIndex < attackPositions(grid).length ? currentNoteIndex : -1}
+        onSelectedIndexChange={setSelectedIndex}
       />
 
       {reqItems.length > 0 && (

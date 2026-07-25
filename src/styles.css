@@ -274,6 +274,11 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
 }
 .staff-container { width: 100%; }
 .staff-container svg { display: block; }
+/* 編集で選択中の音のハイライト(青。再生中の赤より優先度は低い) */
+.vf-selected * {
+  fill: #2563eb !important;
+  stroke: #2563eb !important;
+}
 /* 再生中の音のハイライト */
 .vf-current * {
   fill: #e11d48 !important;
@@ -725,6 +730,26 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
 .req-checklist li.unmet { color: var(--text-dim); }
 .step-validation-warning { display: flex; flex-direction: column; gap: 4px; }
 
+/* ---- 編集中も見える譜面(上部に貼り付け) ---- */
+/* 高さを制限して内部スクロールにする(画面いっぱいになってページが動かせなくなるのを防ぐ) */
+.staff-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg-panel);
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+  max-height: 46vh;
+  overflow-y: auto;
+  box-shadow: 0 6px 10px -8px rgba(0, 0, 0, 0.8);
+}
+/* 画面が狭いときは譜面の占有を抑え、グリッドの操作領域を確保する
+   (選択した音は譜面枠内へ自動スクロールされるので、全体が見えていなくても迷わない) */
+@media (max-width: 640px) {
+  .staff-sticky { max-height: 40vh; }
+}
+.composer-edit-title { margin-top: 12px; }
+
 /* ---- 拍グリッドエディタ ---- */
 .grid-editor { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
 .grid-help {
@@ -820,15 +845,24 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
 .grid-cell-artic { font-size: 10px; color: var(--red); line-height: 1; font-weight: 700; }
 .div-3 .grid-cell, .div-4 .grid-cell { font-size: 10px; }
 .div-4 .grid-cell-body { font-size: 9.5px; }
+/* 選択した音の編集パネルは画面下部に貼り付け、譜面を見ながら操作できるようにする */
 .grid-edit-panel {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
   background: var(--bg-panel-2);
-  border: 1px solid var(--accent);
+  border: 1.5px solid var(--accent);
   border-radius: 10px;
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  box-shadow: 0 -6px 14px -8px rgba(0, 0, 0, 0.9);
 }
+.grid-edit-target { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.grid-edit-target-pos { font-size: 12px; color: var(--text-dim); }
+.grid-edit-target-note { font-size: 15px; font-weight: 700; color: var(--accent); }
+.grid-edit-target-note small { margin-left: 4px; font-size: 11px; font-weight: 400; }
 .grid-edit-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .grid-pitch-ctrl { display: flex; align-items: center; gap: 8px; }
 .grid-arrow { min-width: 52px; min-height: 44px; font-size: 16px; }

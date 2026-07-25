@@ -35,6 +35,8 @@ export function GridComposer({ lang, session, keyPc, progression, initialBpm = 8
   const [metronomeOn, setMetronomeOn] = useState(true);
   const [backbeat, setBackbeat] = useState(true);
   const [labelMode, setLabelMode] = useState<LabelMode>('degree');
+  // 編集で選択中の音(譜面上でハイライトする)
+  const [selectedIndex, setSelectedIndex] = useState(-1);
 
   const instrument = getInstrument(session.instrumentId);
   const clef: Clef = session.clefOverride && instrument.clefs.includes(session.clefOverride) ? session.clefOverride : instrument.defaultClef;
@@ -110,25 +112,27 @@ export function GridComposer({ lang, session, keyPc, progression, initialBpm = 8
       </section>
 
       <section className="panel">
-        <div className="staff-head">
-          <h2>{t('staffTitle')}</h2>
-          <div className="seg-group">
-            <button className={`seg${labelMode === 'none' ? ' on' : ''}`} aria-pressed={labelMode === 'none'} onClick={() => setLabelMode('none')}>{t('labelNone')}</button>
-            <button className={`seg${labelMode === 'name' ? ' on' : ''}`} aria-pressed={labelMode === 'name'} onClick={() => setLabelMode('name')}>C D E</button>
-            <button className={`seg${labelMode === 'degree' ? ' on' : ''}`} aria-pressed={labelMode === 'degree'} onClick={() => setLabelMode('degree')}>{t('labelDegree')}</button>
+        {/* 編集中も譜面が見えるよう、譜面と編集を同じパネルに置き上部へ貼り付ける */}
+        <div className="staff-sticky">
+          <div className="staff-head">
+            <h2>{t('staffTitle')}</h2>
+            <div className="seg-group">
+              <button className={`seg${labelMode === 'none' ? ' on' : ''}`} aria-pressed={labelMode === 'none'} onClick={() => setLabelMode('none')}>{t('labelNone')}</button>
+              <button className={`seg${labelMode === 'name' ? ' on' : ''}`} aria-pressed={labelMode === 'name'} onClick={() => setLabelMode('name')}>C D E</button>
+              <button className={`seg${labelMode === 'degree' ? ' on' : ''}`} aria-pressed={labelMode === 'degree'} onClick={() => setLabelMode('degree')}>{t('labelDegree')}</button>
+            </div>
+          </div>
+          <div className="staff-card">
+            <StaffView
+              notes={displayedNotes} measures={prog.measures} clef={clef} shift={shift} flats={flats}
+              labelMode={labelMode} chords={chordDisplays} currentIndex={currentNoteIndex}
+              selectedIndex={selectedIndex}
+              notation={effNotation} guitarPosition={session.guitarPosition} guitarOpenStrings={session.guitarOpenStrings}
+            />
           </div>
         </div>
-        <div className="staff-card">
-          <StaffView
-            notes={displayedNotes} measures={prog.measures} clef={clef} shift={shift} flats={flats}
-            labelMode={labelMode} chords={chordDisplays} currentIndex={currentNoteIndex}
-            notation={effNotation} guitarPosition={session.guitarPosition} guitarOpenStrings={session.guitarOpenStrings}
-          />
-        </div>
-      </section>
 
-      <section className="panel">
-        <h2>{t('phraseEditTitle')}</h2>
+        <h2 className="composer-edit-title">{t('phraseEditTitle')}</h2>
         <GridEditor
           lang={lang}
           grid={grid}
@@ -140,6 +144,7 @@ export function GridComposer({ lang, session, keyPc, progression, initialBpm = 8
           divisions={[1, 2, 3, 4]}
           allowArticulation
           currentIndex={currentNoteIndex}
+          onSelectedIndexChange={setSelectedIndex}
         />
         <div className="transport-opts composer-undo-row">
           <div className="seg-group">
