@@ -8,7 +8,7 @@ import { PracticeLogPanel } from '../components/PracticeLogPanel';
 import { StaffView, type ChordDisplay, type LabelMode } from '../components/StaffView';
 import { EXERCISES, EXERCISE_CATEGORY_LABELS, type ExerciseCategory } from '../data/exercises';
 import { notationLabel, positionLabel } from '../components/SessionSetupPanel';
-import { GridComposer } from '../components/GridComposer';
+import { GridComposer, COMPOSER_BARS } from '../components/GridComposer';
 import { VolumeControls } from '../components/VolumeControls';
 import { usePracticePlayback, type LoopRange } from '../hooks/usePracticePlayback';
 import type { MyInstrumentSettings } from '../state/storage';
@@ -30,6 +30,7 @@ import {
   type NoteEvent,
   type ToneRhythmId,
 } from '../theory/phrases';
+import { emptyGrid, type GridMaterial, type GridPhrase } from '../theory/grid';
 import { PROGRESSIONS, chordAt, getProgression, type Progression, type ProgressionId } from '../theory/progressions';
 import { SWING_OPTIONS } from '../theory/rhythms';
 import { pick, t as tr, type Lang } from '../i18n';
@@ -71,8 +72,14 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
   const [arpPattern, setArpPattern] = useState<ArpPatternId>(initial?.arpPattern ?? 'up');
   const [scaleView, setScaleView] = useState<'scale' | 'tension'>(initial?.scaleView ?? 'scale');
   const [exerciseId, setExerciseId] = useState('');
-  // フレーズ作成モード
+  // やること: 譜面をなぞる(false) / フレーズを作る(true)
   const [composeMode, setComposeMode] = useState(false);
+  // 作成中のフレーズは親が保持する。タブを行き来しても作りかけが消えないようにするため。
+  const [composerMaterial, setComposerMaterial] = useState<GridMaterial>('chord-tone');
+  const [composerHistory, setComposerHistory] = useState<GridPhrase[]>(
+    () => [emptyGrid(Math.min(COMPOSER_BARS, getProgression(initial?.progressionId ?? 'ii-V-I').measures), 2)],
+  );
+  const [composerHIdx, setComposerHIdx] = useState(0);
   // BPMの直接入力用テキスト(入力途中の値をクランプしないための分離)
   const [bpmText, setBpmText] = useState(String(initial?.bpm ?? 100));
   const [labelMode, setLabelMode] = useState<LabelMode>('none');
@@ -87,7 +94,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
   const [swingId, setSwingId] = useState('standard');
 
   const isCustom = menuId === 'custom';
-  // 実践モードではコードを直接指定するため、キーは 0(オフセット=実音)として扱う
+  // 自分でコードを決めるときはコードを直接指定するため、キーは 0(オフセット=実音)として扱う
   const effKeyPc = isCustom ? 0 : keyPc;
   const progression = useMemo<Progression>(() => {
     if (!isCustom) return getProgression(menuId);
@@ -139,6 +146,13 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
     swing: effectiveSwing, loopRange, selectedMeasure,
   });
 
+  // やることを切り替えるときは、鳴りっぱなしを避けるため必ず再生を止める
+  const changeMode = (compose: boolean) => {
+    if (compose === composeMode) return;
+    stopAll();
+    setComposeMode(compose);
+  };
+
   // ---- 現在のコード(情報パネル用) ----
   const infoMeasure = position && position.measure >= 0 ? position.measure : selectedMeasure;
   const infoBeat = position && position.measure >= 0 ? position.beat : 0;
@@ -162,16 +176,28 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
           <button className="btn" onClick={onReturnToLesson}>← {t('backToLesson')}</button>
         </div>
       )}
+      {/* ===== やること(モード)タブ ===== */}
+      <div className="mode-tabs" role="tablist" aria-label={t('modeTabLabel')}>
+        <button
+          role="tab" aria-selected={!composeMode}
+          className={`mode-tab${!composeMode ? ' on' : ''}`}
+          onClick={() => changeMode(false)}
+        >
+          {t('modeFollow')}
+        </button>
+        <button
+          role="tab" aria-selected={composeMode}
+          className={`mode-tab${composeMode ? ' on' : ''}`}
+          onClick={() => changeMode(true)}
+        >
+          {t('modeBuild')}
+        </button>
+      </div>
+      <p className="hint-text mode-tab-hint">{composeMode ? t('modeBuildHint') : t('modeFollowHint')}</p>
+
       {/* ===== 設定パネル ===== */}
       <section className="panel settings-panel">
         <h2>{t('setupTitle')}</h2>
-
-        <button
-          className={`btn compose-toggle${composeMode ? ' active-compose' : ''}`}
-          onClick={() => setComposeMode(!composeMode)}
-        >
-          {composeMode ? `← ${t('composeExit')}` : t('composeEntry')}
-        </button>
 
         <div className="field">
           <label htmlFor="menu-select">{t('menuLabel')}</label>
@@ -185,10 +211,14 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
               if (id === 'custom') setTab('scale');
             }}
           >
-            {PROGRESSIONS.map((p) => (
-              <option key={p.id} value={p.id}>{pick(lang, p.label, p.labelEn)}</option>
-            ))}
-            <option value="custom">{t('customMenuOption')}</option>
+            <optgroup label={t('menuGroupPreset')}>
+              {PROGRESSIONS.map((p) => (
+                <option key={p.id} value={p.id}>{pick(lang, p.label, p.labelEn)}</option>
+              ))}
+            </optgroup>
+            <optgroup label={t('menuGroupCustom')}>
+              <option value="custom">{t('customMenuOption')}</option>
+            </optgroup>
           </select>
           <p className="hint-text">{pick(lang, progression.description, progression.descriptionEn)}</p>
         </div>
@@ -285,6 +315,8 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
           </div>
         )}
 
+        {/* 以下は「譜面をなぞる」用の設定。フレーズ作成にはテンポも内容も専用UIがある */}
+        {!composeMode && (
         <div className="field">
           <label htmlFor="bpm-slider">{t('tempoLabel')}: <strong>{bpm} BPM</strong></label>
           <div className="bpm-row">
@@ -309,7 +341,9 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
             />
           </div>
         </div>
+        )}
 
+        {!composeMode && (
         <div className="field">
           <label>{t('contentLabel')}</label>
           <div className="seg-group wrap">
@@ -320,8 +354,9 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
             <button className={`seg${tab === 'scale' ? ' on' : ''}`} aria-pressed={tab === 'scale'} onClick={() => setTab('scale')}>{t('scaleTab')}</button>
           </div>
         </div>
+        )}
 
-        {tab === 'chordtones' && (
+        {!composeMode && tab === 'chordtones' && (
           <div className="field">
             <label>{t('arpLabel')}</label>
             <div className="seg-group wrap">
@@ -334,7 +369,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
           </div>
         )}
 
-        {tab === 'scale' && (
+        {!composeMode && tab === 'scale' && (
           <div className="field">
             <label>{t('scaleViewLabel')}</label>
             <div className="seg-group">
@@ -344,7 +379,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
           </div>
         )}
 
-        {(tab === 'chordtones' || tab === 'guidetones') && (
+        {!composeMode && (tab === 'chordtones' || tab === 'guidetones') && (
           <div className="field">
             <label>{t('rhythmPatternLabel')}</label>
             <div className="seg-group wrap">
@@ -374,6 +409,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
           </div>
         )}
 
+        {!composeMode && (
         <div className="field">
           <label htmlFor="exercise-select">{t('exerciseLabel')}</label>
           <select id="exercise-select" value={exerciseId} onChange={(e) => setExerciseId(e.target.value)}>
@@ -387,6 +423,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
             ))}
           </select>
         </div>
+        )}
       </section>
 
       {/* ===== フレーズ作成モード(拍グリッド) ===== */}
@@ -398,6 +435,11 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
             keyPc={effKeyPc}
             progression={progression}
             initialBpm={bpm}
+            material={composerMaterial}
+            onMaterialChange={setComposerMaterial}
+            history={composerHistory}
+            hIdx={composerHIdx}
+            onHistoryChange={(h, i) => { setComposerHistory(h); setComposerHIdx(i); }}
           />
         </div>
       )}

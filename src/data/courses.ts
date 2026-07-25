@@ -928,10 +928,10 @@ export const LESSONS: Lesson[] = [
     selfCheck: [
       b('ソロに始まり・中間・終わりを感じた', 'The solo had a beginning, middle and end'),
       b('作った1コーラスを自分の楽器で最後まで演奏できた', 'I played my chorus through on my instrument'),
-      b('次は「曲で実践」で別の進行にも挑戦したい', 'I’m ready to try other forms in Play a Tune'),
+      b('次は「1コーラス挑戦」で別の進行にも挑戦したい', 'I’m ready to try other forms in Take a Solo'),
     ],
     trivia: {
-      why: b('コース修了です!ここで作った1コーラスがあなたの最初の「持ちネタ」。「曲で実践」でミッションを選び、別の進行・別のキーでも試してみましょう。', 'Course complete! This chorus is your first keeper. Head to Play a Tune and try your blueprint on other forms and keys.'),
+      why: b('コース修了です!ここで作った1コーラスがあなたの最初の「持ちネタ」。「1コーラス挑戦」でミッションを選び、別の進行・別のキーでも試してみましょう。', 'Course complete! This chorus is your first keeper. Head to Take a Solo and try your blueprint on other forms and keys.'),
     },
     estimatedMinutes: 15,
   },

@@ -1,4 +1,4 @@
-// 曲で実践: 長いコード進行の中で、ミッションを決めて1コーラスのアドリブに挑戦する
+// 1コーラス挑戦: 長いコード進行の中で、ミッションを決めて1コーラスのアドリブに挑戦する
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { appendLog } from '../components/PracticeLogPanel';

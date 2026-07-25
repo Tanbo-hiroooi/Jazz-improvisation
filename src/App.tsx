@@ -1,4 +1,4 @@
-// アプリシェル: ホーム / 自由練習 / 練習コース / 曲で実践 の画面切替と共通設定
+// アプリシェル: ホーム / 自由練習 / 練習コース / 1コーラス挑戦 の画面切替と共通設定
 
 import { useCallback, useState } from 'react';
 import { CourseScreen } from './screens/CourseScreen';

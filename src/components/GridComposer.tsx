@@ -22,14 +22,22 @@ interface Props {
   keyPc: number;
   progression: Progression;
   initialBpm?: number;
+  /** 素材と編集履歴は親が保持する(「やること」タブを切り替えても作りかけが消えないように) */
+  material: GridMaterial;
+  onMaterialChange: (m: GridMaterial) => void;
+  history: GridPhrase[];
+  hIdx: number;
+  onHistoryChange: (history: GridPhrase[], hIdx: number) => void;
 }
 
-const BARS = 4;
+export const COMPOSER_BARS = 4;
 
-export function GridComposer({ lang, session, keyPc, progression, initialBpm = 80 }: Props) {
+export function GridComposer({
+  lang, session, keyPc, progression, initialBpm = 80,
+  material, onMaterialChange, history, hIdx, onHistoryChange,
+}: Props) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
 
-  const [material, setMaterial] = useState<GridMaterial>('chord-tone');
   const [bpm, setBpm] = useState(initialBpm);
   const [countIn, setCountIn] = useState(true);
   const [metronomeOn, setMetronomeOn] = useState(true);
@@ -46,13 +54,11 @@ export function GridComposer({ lang, session, keyPc, progression, initialBpm = 8
 
   const prog = useMemo<Progression>(() => ({
     ...progression,
-    measures: Math.min(BARS, progression.measures),
-    chords: progression.chords.filter((c) => c.measure < Math.min(BARS, progression.measures)),
+    measures: Math.min(COMPOSER_BARS, progression.measures),
+    chords: progression.chords.filter((c) => c.measure < Math.min(COMPOSER_BARS, progression.measures)),
   }), [progression]);
   const bars = prog.measures;
 
-  const [history, setHistory] = useState<GridPhrase[]>(() => [emptyGrid(bars, 2)]);
-  const [hIdx, setHIdx] = useState(0);
   const grid = history[hIdx];
 
   // キー・進行・素材が変わったら、パレット外の音が残らないよう作り直す
@@ -60,23 +66,20 @@ export function GridComposer({ lang, session, keyPc, progression, initialBpm = 8
     const palettes = palettesForGrid(prog, keyPc, bars, material, flats);
     const cur = history[hIdx];
     if (cur.bars.length !== bars || !gridMatchesPalettes(cur, palettes)) {
-      setHistory([emptyGrid(bars, 2)]);
-      setHIdx(0);
+      onHistoryChange([emptyGrid(bars, 2)], 0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keyPc, prog, material]);
 
   const changeGrid = (next: GridPhrase) => {
     const trimmed = history.slice(0, hIdx + 1);
-    setHistory([...trimmed, next]);
-    setHIdx(trimmed.length);
+    onHistoryChange([...trimmed, next], trimmed.length);
   };
-  const undo = () => setHIdx((i) => Math.max(0, i - 1));
-  const redo = () => setHIdx((i) => Math.min(history.length - 1, i + 1));
+  const undo = () => onHistoryChange(history, Math.max(0, hIdx - 1));
+  const redo = () => onHistoryChange(history, Math.min(history.length - 1, hIdx + 1));
   const reset = () => {
     if (window.confirm(t('resetConfirm'))) {
-      setHistory([emptyGrid(bars, 2)]);
-      setHIdx(0);
+      onHistoryChange([emptyGrid(bars, 2)], 0);
     }
   };
 
@@ -99,14 +102,14 @@ export function GridComposer({ lang, session, keyPc, progression, initialBpm = 8
   return (
     <div className="composer">
       <section className="panel">
-        <h2>🎼 {t('composeTitle')}</h2>
+        <h2>{t('composeTitle')}</h2>
         <p className="hint-text">{t('gridComposeIntro')}</p>
         <div className="field">
           <label>{t('materialLabel')}</label>
           <div className="seg-group">
-            <button className={`seg${material === 'chord-tone' ? ' on' : ''}`} aria-pressed={material === 'chord-tone'} onClick={() => setMaterial('chord-tone')}>{t('materialChordTone')}</button>
-            <button className={`seg${material === 'guide-tone' ? ' on' : ''}`} aria-pressed={material === 'guide-tone'} onClick={() => setMaterial('guide-tone')}>{t('materialGuideTone')}</button>
-            <button className={`seg${material === 'blues' ? ' on' : ''}`} aria-pressed={material === 'blues'} onClick={() => setMaterial('blues')}>{t('materialBlues')}</button>
+            <button className={`seg${material === 'chord-tone' ? ' on' : ''}`} aria-pressed={material === 'chord-tone'} onClick={() => onMaterialChange('chord-tone')}>{t('materialChordTone')}</button>
+            <button className={`seg${material === 'guide-tone' ? ' on' : ''}`} aria-pressed={material === 'guide-tone'} onClick={() => onMaterialChange('guide-tone')}>{t('materialGuideTone')}</button>
+            <button className={`seg${material === 'blues' ? ' on' : ''}`} aria-pressed={material === 'blues'} onClick={() => onMaterialChange('blues')}>{t('materialBlues')}</button>
           </div>
         </div>
       </section>

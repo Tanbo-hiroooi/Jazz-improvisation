@@ -49,7 +49,7 @@ src/
 ├── data/
 │   ├── courses.ts      # ★コースデータ(6章23レッスン)。純データ、UI非依存 ※§5
 │   ├── exercises.ts    # 自由練習の課題
-│   └── missions.ts     # 曲で実践のミッション
+│   └── missions.ts     # 1コーラス挑戦のミッション
 ├── components/
 │   ├── StaffView.tsx      # VexFlow描画(タイ分割・3連・アーティキュレーション・TAB)※§9
 │   ├── GridEditor.tsx     # ★拍グリッド編集UI(チュートリアル内蔵)
@@ -141,7 +141,7 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
 ## 11. その他の画面・機能
 
 - **マイ楽器 vs 今回の練習設定**: App.tsxで`baseInstrument`(永続)と`session`(一時)を別stateで管理。Homeはbaseのみ表示。「この設定をマイ楽器に保存」で明示保存した時だけbase更新。
-- 曲で実践: 開いた直後は設定確認パネル(setupConfirmed初期値false)。
+- 1コーラス挑戦: 開いた直後は設定確認パネル(setupConfirmed初期値false)。
 - テンポ/キーはしご: CourseProgress.ladders にトークン('bpm:80','key:5')で保存。自己申告の「クリアした!」ボタン。
 - グリッドのチュートリアル: GridEditor内蔵。初回自動オープン、閉じたらlocalStorage('fc-grid-help-seen-v1')に記憶。STEP種別で項目を出し分け。
 - アクセシビリティ: トグルはaria-pressed、STEPタブはrole=tablist/aria-selected。維持すること。

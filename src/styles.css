@@ -329,7 +329,7 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
 .scale-note.chord-tone { color: var(--text); border-style: solid; border-color: var(--blue); }
 .scale-note small { font-size: 9px; }
 
-/* ---- 実践モードエディタ ---- */
+/* ---- 自分でコードを決めるエディタ ---- */
 .custom-editor {
   background: var(--bg-panel-2);
   border: 1px solid var(--border);
@@ -391,8 +391,31 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
 
 /* ---- フレーズ作成モード ---- */
 .composer { display: flex; flex-direction: column; gap: 12px; }
-.compose-toggle { width: 100%; margin-bottom: 12px; font-weight: 600; }
-.compose-toggle.active-compose { border-color: var(--accent); color: var(--accent); }
+/* ---- やること(モード)タブ ---- */
+.mode-tabs {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.mode-tab {
+  flex: 1 1 180px;
+  padding: 12px 14px;
+  background: var(--bg-panel);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  color: var(--text-dim);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mode-tab:hover { border-color: var(--accent); }
+.mode-tab.on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.mode-tab-hint { grid-column: 1 / -1; margin: -4px 0 0; }
 .composer-task { margin-top: 10px; }
 .phrase-blocks { display: flex; flex-wrap: wrap; gap: 8px; }
 .phrase-block {

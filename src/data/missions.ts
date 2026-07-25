@@ -1,4 +1,4 @@
-// 曲で実践: 実践ミッションのデータ
+// 1コーラス挑戦: ミッションのデータ
 
 export interface PracticeMission {
   id: string;
