@@ -37,9 +37,10 @@ const GUIDES_JA: Record<StaffTab, PracticeGuide> = {
   target: {
     title: 'ターゲット(着地)練習',
     tips: [
-      '4拍目の音は「次のコードの3度への半音アプローチ」。小節線を越えて着地する瞬間を意識します。',
+      '小節の最後の音は「次のコードの3度へ半音で入る音」。小節線を越えて着地する瞬間を意識します。',
+      '7度がすでに半音でつながっているとき(ii-V-Iの7→3など)は、余計な音を足さず7度を伸ばします。',
       'コードが変わる瞬間に正しい音に居ること — これがコード感のあるアドリブの正体です。',
-      '慣れたら前半を自由に弾き、4拍目のアプローチ→次の頭の着地だけ守ってみましょう。',
+      '慣れたら前半を自由に弾き、小節の最後のアプローチ→次の頭の着地だけ守ってみましょう。',
     ],
   },
   scale: {
@@ -80,9 +81,10 @@ const GUIDES_EN: Record<StaffTab, PracticeGuide> = {
   target: {
     title: 'Target-Note (Landing) Practice',
     tips: [
-      'The note on beat 4 is a half-step approach to the NEXT chord’s 3rd. Feel the landing across the barline.',
+      'The last note of each bar steps by a half step into the NEXT chord’s 3rd. Feel the landing across the barline.',
+      'When the 7th already leads there by a half step (the 7→3 move in a ii-V-I), it is simply held — no extra note.',
       'Being on the right note at the moment the chord changes — that is what “playing the changes” means.',
-      'Once comfortable, improvise freely for the first half of the bar and keep only the beat-4 approach and downbeat landing.',
+      'Once comfortable, improvise freely for the first half of the bar and keep only the closing approach and the downbeat landing.',
     ],
   },
   scale: {

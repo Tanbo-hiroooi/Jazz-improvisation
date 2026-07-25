@@ -311,41 +311,71 @@ export function approachAsNotes(prog: Progression, keyPc: number): NoteEvent[] {
   return events;
 }
 
+/** ピッチクラスを target に最も近いオクターブへ置く(target±6の範囲に収まる) */
+function nearestPitch(pc: number, target: number): number {
+  let midi = 60 + mod12(pc);
+  while (midi - target > 6) midi -= 12;
+  while (target - midi > 6) midi += 12;
+  return midi;
+}
+
 /**
  * ターゲット(ボイスリーディング)練習: 各コードで3度→7度と置き、
- * 4拍目に「次のコードの3度への半音アプローチ」を置いて着地の瞬間を体で覚える。
+ * 小節の最後に「次のコードの3度へ半音で入る音」を置いて着地の瞬間を体で覚える。
+ *
+ * 重要: アプローチ音は「次の小節で実際に鳴る3度」の半音隣でなければ意味がない。
+ * そのため各コードの3度・7度をまず前のコードから滑らかにつながるオクターブへ並べ、
+ * そのうえで確定した次の3度を基準にアプローチ音を決める。
+ * 7度がすでに半音でつながっている場合(ii-V-Iの7→3など)は、
+ * 余計な音を足さず7度を最後まで伸ばす。
  */
 export function targetAsNotes(prog: Progression, keyPc: number): NoteEvent[] {
+  const count = prog.chords.length;
+  if (count === 0) return [];
+
+  // 1) まず全コードの3度・7度のオクターブを確定する(前のコードの7度に近い側へ寄せる)
+  //    12小節などで下がり続けないよう、3度は読みやすい音域に収める。
+  //    アプローチ音は「確定後の次の3度」から決めるので、ここで跳んでも着地は半音のまま。
+  const LOW = 55;  // G3
+  const HIGH = 74; // D5
+  const thirds: number[] = [];
+  const sevenths: number[] = [];
+  for (let i = 0; i < count; i++) {
+    const def = QUALITIES[prog.chords[i].quality];
+    const rootPc = mod12(keyPc + prog.chords[i].rootOffset);
+    let third = nearestPitch(rootPc + def.tones[1], i === 0 ? 64 : sevenths[i - 1]);
+    while (third < LOW) third += 12;
+    while (third > HIGH) third -= 12;
+    thirds.push(third);
+    sevenths.push(nearestPitch(rootPc + def.tones[3], third));
+  }
+
+  // 2) 各コードに 3度 → 7度 → (必要なら)アプローチ音 を置く
   const events: NoteEvent[] = [];
   prog.chords.forEach((chord, chordIndex) => {
-    const def = QUALITIES[chord.quality];
-    const rootPc = mod12(keyPc + chord.rootOffset);
-    let rootMidi = 60 + rootPc;
-    if (rootMidi > 65) rootMidi -= 12;
     const measureStart = chord.measure * 4 + chord.beat;
-    const cur3 = rootMidi + def.tones[1];
-    const cur7 = rootMidi + def.tones[3];
-
-    // 次のコード(最後はループして先頭)の3度を、現在の7度の近くのオクターブに置く
-    const next = prog.chords[(chordIndex + 1) % prog.chords.length];
-    const nextDef = QUALITIES[next.quality];
-    const next3pc = mod12(keyPc + next.rootOffset + nextDef.tones[1]);
-    let next3 = 60 + next3pc;
-    while (next3 - cur7 > 6) next3 -= 12;
-    while (cur7 - next3 > 6) next3 += 12;
+    const cur3 = thirds[chordIndex];
+    const cur7 = sevenths[chordIndex];
+    const nextThird = thirds[(chordIndex + 1) % count];
     // 7度がターゲットより上なら半音上から、下なら半音下から入る
-    const approach = next3 + (cur7 >= next3 ? 1 : -1);
+    const approach = nextThird + (cur7 >= nextThird ? 1 : -1);
+    // 7度そのものが半音アプローチになっている場合は音を足さず伸ばす
+    const seventhLeads = approach === cur7;
 
     if (chord.beats >= 4) {
-      events.push(
-        { midi: cur3, start: measureStart, duration: 2, velocity: 0.85, chordIndex },
-        { midi: cur7, start: measureStart + 2, duration: 1, velocity: 0.8, chordIndex },
-        { midi: approach, start: measureStart + 3, duration: 1, velocity: 0.75, chordIndex },
-      );
+      events.push({ midi: cur3, start: measureStart, duration: 2, velocity: 0.85, chordIndex });
+      if (seventhLeads) {
+        events.push({ midi: cur7, start: measureStart + 2, duration: 2, velocity: 0.8, chordIndex });
+      } else {
+        events.push(
+          { midi: cur7, start: measureStart + 2, duration: 1, velocity: 0.8, chordIndex },
+          { midi: approach, start: measureStart + 3, duration: 1, velocity: 0.75, chordIndex },
+        );
+      }
     } else {
       events.push(
         { midi: cur3, start: measureStart, duration: 1, velocity: 0.85, chordIndex },
-        { midi: approach, start: measureStart + 1, duration: 1, velocity: 0.75, chordIndex },
+        { midi: seventhLeads ? cur7 : approach, start: measureStart + 1, duration: 1, velocity: 0.75, chordIndex },
       );
     }
   });

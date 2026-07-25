@@ -1,5 +1,5 @@
 // 自由練習のフレーズ作成モード(拍グリッド版)
-// 素材(コードトーン/ガイドトーン/ブルース)を選び、4小節を自由に作って音で確認する。
+// 素材(コードトーン/ガイドトーン/ブルース)と小節数を選び、自由に作って音で確認する。
 // 「音を確認」はユーザー自身が編集した楽譜の再生であり、見本演奏ではない。
 
 import { useEffect, useMemo, useState } from 'react';
@@ -22,19 +22,20 @@ interface Props {
   keyPc: number;
   progression: Progression;
   initialBpm?: number;
-  /** 素材と編集履歴は親が保持する(「やること」タブを切り替えても作りかけが消えないように) */
+  /** 素材・小節数・編集履歴は親が保持する(「やること」タブを切り替えても作りかけが消えないように) */
   material: GridMaterial;
   onMaterialChange: (m: GridMaterial) => void;
+  /** 作る小節数(1〜progression.measures) */
+  bars: number;
+  onBarsChange: (bars: number) => void;
   history: GridPhrase[];
   hIdx: number;
   onHistoryChange: (history: GridPhrase[], hIdx: number) => void;
 }
 
-export const COMPOSER_BARS = 4;
-
 export function GridComposer({
   lang, session, keyPc, progression, initialBpm = 80,
-  material, onMaterialChange, history, hIdx, onHistoryChange,
+  material, onMaterialChange, bars, onBarsChange, history, hIdx, onHistoryChange,
 }: Props) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
 
@@ -52,16 +53,16 @@ export function GridComposer({
   const shift = displayShift(instrument, pitchModeOf(session));
   const flats = useFlatsForKey(mod12(keyPc + shift));
 
+  // 選んだ小節数だけを切り出した進行(コードは元の進行のまま先頭から使う)
   const prog = useMemo<Progression>(() => ({
     ...progression,
-    measures: Math.min(COMPOSER_BARS, progression.measures),
-    chords: progression.chords.filter((c) => c.measure < Math.min(COMPOSER_BARS, progression.measures)),
-  }), [progression]);
-  const bars = prog.measures;
+    measures: bars,
+    chords: progression.chords.filter((c) => c.measure < bars),
+  }), [progression, bars]);
 
   const grid = history[hIdx];
 
-  // キー・進行・素材が変わったら、パレット外の音が残らないよう作り直す
+  // キー・進行・素材・小節数が変わったら、パレット外の音が残らないよう作り直す
   useEffect(() => {
     const palettes = palettesForGrid(prog, keyPc, bars, material, flats);
     const cur = history[hIdx];
@@ -69,7 +70,7 @@ export function GridComposer({
       onHistoryChange([emptyGrid(bars, 2)], 0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyPc, prog, material]);
+  }, [keyPc, prog, material, bars]);
 
   const changeGrid = (next: GridPhrase) => {
     const trimmed = history.slice(0, hIdx + 1);
@@ -112,6 +113,23 @@ export function GridComposer({
             <button className={`seg${material === 'blues' ? ' on' : ''}`} aria-pressed={material === 'blues'} onClick={() => onMaterialChange('blues')}>{t('materialBlues')}</button>
           </div>
         </div>
+        {progression.measures > 1 && (
+          <div className="field">
+            <label htmlFor="composer-bars">{t('composerBarsLabel')}</label>
+            <select
+              id="composer-bars"
+              value={bars}
+              onChange={(e) => onBarsChange(Number(e.target.value))}
+            >
+              {Array.from({ length: progression.measures }, (_, i) => i + 1).map((b) => (
+                <option key={b} value={b}>{b}{t('measuresUnit')}</option>
+              ))}
+            </select>
+            <p className="hint-text">
+              {pick(lang, progression.label, progression.labelEn)} = {progression.measures}{t('measuresUnit')} / {t('composerBarsHint')}
+            </p>
+          </div>
+        )}
       </section>
 
       <section className="panel">

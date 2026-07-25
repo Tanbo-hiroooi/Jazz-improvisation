@@ -1,14 +1,13 @@
 // 自由練習: 練習したい技術を自分で選び、個別に反復するモード
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChordInfoPanel } from '../components/ChordInfoPanel';
 import { ChordProgressionView } from '../components/ChordProgressionView';
 import { CustomProgressionEditor, DEFAULT_CUSTOM, type CustomChord } from '../components/CustomProgressionEditor';
 import { PracticeLogPanel } from '../components/PracticeLogPanel';
 import { StaffView, type ChordDisplay, type LabelMode } from '../components/StaffView';
-import { EXERCISES, EXERCISE_CATEGORY_LABELS, type ExerciseCategory } from '../data/exercises';
 import { notationLabel, positionLabel } from '../components/SessionSetupPanel';
-import { GridComposer, COMPOSER_BARS } from '../components/GridComposer';
+import { GridComposer } from '../components/GridComposer';
 import { VolumeControls } from '../components/VolumeControls';
 import { usePracticePlayback, type LoopRange } from '../hooks/usePracticePlayback';
 import type { MyInstrumentSettings } from '../state/storage';
@@ -71,13 +70,13 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
   const [toneRhythm, setToneRhythm] = useState<ToneRhythmId>(initial?.toneRhythm ?? 'basic');
   const [arpPattern, setArpPattern] = useState<ArpPatternId>(initial?.arpPattern ?? 'up');
   const [scaleView, setScaleView] = useState<'scale' | 'tension'>(initial?.scaleView ?? 'scale');
-  const [exerciseId, setExerciseId] = useState('');
   // やること: 譜面をなぞる(false) / フレーズを作る(true)
   const [composeMode, setComposeMode] = useState(false);
   // 作成中のフレーズは親が保持する。タブを行き来しても作りかけが消えないようにするため。
   const [composerMaterial, setComposerMaterial] = useState<GridMaterial>('chord-tone');
+  const [composerBars, setComposerBars] = useState(() => getProgression(initial?.progressionId ?? 'ii-V-I').measures);
   const [composerHistory, setComposerHistory] = useState<GridPhrase[]>(
-    () => [emptyGrid(Math.min(COMPOSER_BARS, getProgression(initial?.progressionId ?? 'ii-V-I').measures), 2)],
+    () => [emptyGrid(getProgression(initial?.progressionId ?? 'ii-V-I').measures, 2)],
   );
   const [composerHIdx, setComposerHIdx] = useState(0);
   // BPMの直接入力用テキスト(入力途中の値をクランプしないための分離)
@@ -121,7 +120,6 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
   // 16分パターンはスウィングせずイーブンで再生する
   const rhythmNoSwing = (tab === 'chordtones' || tab === 'guidetones') && !!TONE_RHYTHMS.find((r) => r.id === toneRhythm)?.noSwing;
   const effectiveSwing = rhythmNoSwing ? 0 : swingOffset;
-  const exercise = EXERCISES.find((e) => e.id === exerciseId);
 
   const displayedNotes: NoteEvent[] = useMemo(() => {
     if (tab === 'guidetones') return guideTonesAsNotes(progression, effKeyPc, toneRhythm);
@@ -146,6 +144,12 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
     swing: effectiveSwing, loopRange, selectedMeasure,
   });
 
+  // 練習メニューを変えたら、作る小節数はその進行の長さに合わせ直す
+  // (枯葉=8小節を選んだのに4小節しか作れない、という食い違いを避ける)
+  useEffect(() => {
+    setComposerBars(progression.measures);
+  }, [progression.measures]);
+
   // やることを切り替えるときは、鳴りっぱなしを避けるため必ず再生を止める
   const changeMode = (compose: boolean) => {
     if (compose === composeMode) return;
@@ -165,8 +169,6 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
 
   const keyName = KEYS.find((k) => k.pc === keyPc)!.name;
 
-  // 課題セレクタ用: カテゴリーごとにグループ化
-  const categories = Object.keys(EXERCISE_CATEGORY_LABELS) as ExerciseCategory[];
 
   return (
     <main className="layout">
@@ -409,21 +411,6 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
           </div>
         )}
 
-        {!composeMode && (
-        <div className="field">
-          <label htmlFor="exercise-select">{t('exerciseLabel')}</label>
-          <select id="exercise-select" value={exerciseId} onChange={(e) => setExerciseId(e.target.value)}>
-            <option value="">{t('exerciseNone')}</option>
-            {categories.map((cat) => (
-              <optgroup key={cat} label={pick(lang, EXERCISE_CATEGORY_LABELS[cat].ja, EXERCISE_CATEGORY_LABELS[cat].en)}>
-                {EXERCISES.filter((e) => e.category === cat).map((e) => (
-                  <option key={e.id} value={e.id}>{pick(lang, e.title, e.titleEn)}</option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        </div>
-        )}
       </section>
 
       {/* ===== フレーズ作成モード(拍グリッド) ===== */}
@@ -437,6 +424,8 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
             initialBpm={bpm}
             material={composerMaterial}
             onMaterialChange={setComposerMaterial}
+            bars={Math.min(composerBars, progression.measures)}
+            onBarsChange={setComposerBars}
             history={composerHistory}
             hIdx={composerHIdx}
             onHistoryChange={(h, i) => { setComposerHistory(h); setComposerHIdx(i); }}
@@ -542,19 +531,6 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
           )}
         </section>
 
-        {exercise && (
-          <section className="panel exercise-card">
-            <h2>{t('exerciseLabel')} — {pick(lang, exercise.title, exercise.titleEn)}</h2>
-            <p className="exercise-desc">{pick(lang, exercise.description, exercise.descriptionEn)}</p>
-            <p className="hint-text">{t('objectiveTitle')}: {pick(lang, exercise.objective, exercise.objectiveEn)}</p>
-            <div className="rule-chips">
-              {exercise.rules.map((r) => (
-                <span key={r.id} className="rule-chip">{pick(lang, r.label, r.labelEn)}</span>
-              ))}
-            </div>
-          </section>
-        )}
-
         <section className="panel">
           <h2>{t('nowChordTitle')}</h2>
           <ChordInfoPanel
@@ -582,7 +558,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
             key: isCustom ? t('customBadge') : keyName,
             bpm,
             instrument: instrument.label,
-            mode: exercise ? pick(lang, exercise.title, exercise.titleEn) : guide.title,
+            mode: guide.title,
             difficulty: (() => {
               if (tab === 'scale') return scaleView === 'tension' ? t('tensionBadge') : t('scaleLogLabel');
               if (tab === 'approach') return t('approachBadge');
