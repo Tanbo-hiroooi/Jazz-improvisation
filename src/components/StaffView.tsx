@@ -160,17 +160,36 @@ export function StaffView({
 
   // 表示用MIDI: 原則「鳴っている音 + 記譜シフト」をそのまま描画し、
   // 譜表から大きく外れる場合のみオクターブ単位で寄せる。
+  //
+  // 重要: 寄せ幅は「移調なし(0)→直前の値→0に近い順」で決める(ヒステリシス)。
+  // 毎回そのときの中央値から計算し直すと、1つの音を編集しただけで中央値が動き、
+  // 変更していない音まで譜面上で1オクターブ飛んでしまうため。
+  const octaveShiftRef = useRef(0);
   const displayNotes = useMemo(() => {
     if (notes.length === 0) return [] as (NoteEvent & { displayMidi: number })[];
     const noteClef = clef === 'bass' ? 'bass' : 'treble';
     const shifted = notes.map((n) => n.midi + shift);
-    const sorted = [...shifted].sort((a, b) => a - b);
-    const median = sorted[Math.floor(sorted.length / 2)];
     const lo = noteClef === 'bass' ? 43 : 60;
     const hi = noteClef === 'bass' ? 62 : 81;
-    let k = 0;
-    while (median + k < lo) k += 12;
-    while (median + k > hi) k -= 12;
+    // 加線1オクターブ分までは許容する
+    const tolerance = 12;
+    const min = Math.min(...shifted);
+    const max = Math.max(...shifted);
+    const fits = (k: number) => min + k >= lo - tolerance && max + k <= hi + tolerance;
+
+    // 0(実音どおり)→直前の値→0に近いものの順に、全部が収まる寄せ幅を探す
+    const prev = octaveShiftRef.current;
+    const candidates = [0, prev, 12, -12, 24, -24];
+    let k = candidates.find(fits);
+    if (k === undefined) {
+      // どれでも収まらない場合(音域が広すぎる)は中央値を譜表の中に置く
+      const sorted = [...shifted].sort((a, b) => a - b);
+      const median = sorted[Math.floor(sorted.length / 2)];
+      k = 0;
+      while (median + k < lo) k += 12;
+      while (median + k > hi) k -= 12;
+    }
+    octaveShiftRef.current = k;
     return notes.map((n, i) => ({ ...n, displayMidi: shifted[i] + k }));
   }, [notes, shift, clef]);
 

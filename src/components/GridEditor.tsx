@@ -174,6 +174,10 @@ export function GridEditor({
     setSelected(p);
   };
 
+  // 音域の端では矢印を無効化する(押しても何も起きない状態を避ける)
+  const canGoUp = !!selCell && selCell.midi !== undefined && stepPitch(selPalette, selCell.midi, 1) !== selCell.midi;
+  const canGoDown = !!selCell && selCell.midi !== undefined && stepPitch(selPalette, selCell.midi, -1) !== selCell.midi;
+
   const changePitch = (dir: 1 | -1) => {
     if (!sel || !selCell || selCell.midi === undefined) return;
     const next = cloneGrid(grid);
@@ -364,13 +368,16 @@ export function GridEditor({
             <div className="grid-edit-row">
               <span className="opt-label">{t('pitchLabel2')}:</span>
               <div className="grid-pitch-ctrl">
-                <button className="btn grid-arrow" onClick={() => changePitch(-1)} aria-label={t('pitchDown')}>▼</button>
+                <button className="btn grid-arrow" onClick={() => changePitch(-1)} disabled={!canGoDown} aria-label={t('pitchDown')}>▼</button>
                 <span className="grid-pitch-label">
                   <strong>{selLabel?.label ?? '—'}</strong>
                   {selLabel?.degree && <small className="seg-sub">{selLabel.degree}</small>}
                 </span>
-                <button className="btn grid-arrow" onClick={() => changePitch(1)} aria-label={t('pitchUp')}>▲</button>
+                <button className="btn grid-arrow" onClick={() => changePitch(1)} disabled={!canGoUp} aria-label={t('pitchUp')}>▲</button>
               </div>
+              {(!canGoUp || !canGoDown) && (
+                <p className="hint-text">{!canGoUp ? t('pitchTopHint') : t('pitchBottomHint')}</p>
+              )}
             </div>
           )}
 
