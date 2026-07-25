@@ -44,7 +44,7 @@ function beatsToTime(beats: number): string {
   return `${bar}:${quarter}:${sixteenth}`;
 }
 
-/** チャンネル別の音量(0〜1)。velocityに乗算して適用する */
+/** チャンネル別の音量(0〜1)。チャンネルごとのGainノードで適用する */
 export interface ChannelVolumes {
   /** 毎拍メトロノーム(カウントインにも適用) */
   metronome: number;
@@ -55,6 +55,16 @@ export interface ChannelVolumes {
 }
 
 const VOLUMES_KEY = 'fc-volumes-v1';
+
+/**
+ * スライダー値(0〜1) → 実際のゲイン。
+ * 音の大きさの感じ方はほぼ対数なので、2乗カーブにしてスライダー全域で変化を感じられるようにする
+ * (0=完全な無音、0.5≒-12dB、1=そのまま)。
+ */
+function gainFor(v: number): number {
+  const x = Math.max(0, Math.min(1, v));
+  return x * x;
+}
 
 function loadVolumes(): ChannelVolumes {
   try {
@@ -72,25 +82,46 @@ export class AudioEngine {
   private melody: Tone.Synth | null = null;
   private clickHi: Tone.Synth | null = null;
   private clickLo: Tone.Synth | null = null;
+  /** 2・4拍クリック専用(毎拍メトロノームと音量を独立させるため別ノードにする) */
+  private clickBack: Tone.Synth | null = null;
   private comp: Tone.PolySynth | null = null;
+  // チャンネル別の音量ノード(dev検証のため読み取り可能にしておく)
+  master: Tone.Gain | null = null;
+  metronomeGain: Tone.Gain | null = null;
+  backbeatGain: Tone.Gain | null = null;
+  compGain: Tone.Gain | null = null;
   private parts: Tone.Part[] = [];
   private repeats: number[] = [];
   private started = false;
   private running = false;
-  /** チャンネル別音量。再生中の変更も次の発音からライブ反映される */
+  /** チャンネル別音量。再生中に変更しても即座にライブ反映される */
   volumes: ChannelVolumes = loadVolumes();
 
   setVolumes(patch: Partial<ChannelVolumes>): void {
     this.volumes = { ...this.volumes, ...patch };
+    this.applyVolumes();
     try {
       localStorage.setItem(VOLUMES_KEY, JSON.stringify(this.volumes));
     } catch { /* 保存失敗は無視 */ }
+  }
+
+  /** 現在の音量をGainノードへ反映(ノード未作成なら何もしない) */
+  private applyVolumes(): void {
+    if (this.metronomeGain) this.metronomeGain.gain.value = gainFor(this.volumes.metronome);
+    if (this.backbeatGain) this.backbeatGain.gain.value = gainFor(this.volumes.backbeat);
+    if (this.compGain) this.compGain.gain.value = gainFor(this.volumes.comp);
   }
 
   async ensureStarted(): Promise<void> {
     if (!this.started) {
       await Tone.start();
       const master = new Tone.Gain(0.9).toDestination();
+      this.master = master;
+      // チャンネルごとに音量ノードを挟む(velocityではなくゲインで制御する)
+      this.metronomeGain = new Tone.Gain(1).connect(master);
+      this.backbeatGain = new Tone.Gain(1).connect(master);
+      this.compGain = new Tone.Gain(1).connect(master);
+
       this.melody = new Tone.Synth({
         oscillator: { type: 'triangle8' },
         envelope: { attack: 0.02, decay: 0.15, sustain: 0.5, release: 0.15 },
@@ -100,17 +131,23 @@ export class AudioEngine {
         oscillator: { type: 'sine' },
         envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.02 },
         volume: -8,
-      }).connect(master);
+      }).connect(this.metronomeGain);
       this.clickLo = new Tone.Synth({
         oscillator: { type: 'sine' },
         envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.02 },
         volume: -14,
-      }).connect(master);
+      }).connect(this.metronomeGain);
+      this.clickBack = new Tone.Synth({
+        oscillator: { type: 'sine' },
+        envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.02 },
+        volume: -14,
+      }).connect(this.backbeatGain);
       this.comp = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: 'triangle' },
         envelope: { attack: 0.03, decay: 0.5, sustain: 0.35, release: 0.5 },
         volume: -7,
-      }).connect(master);
+      }).connect(this.compGain);
+      this.applyVolumes();
       this.started = true;
     }
   }
@@ -142,19 +179,20 @@ export class AudioEngine {
       const bar = Math.floor(beatIndex / 4);
       const beat = beatIndex % 4;
       const inCountIn = opts.countIn && bar < offsetBars;
+      // 音量はチャンネルのGainノードで制御するため、velocityは固定値のまま
       if (inCountIn) {
         const synth = beat === 0 ? this.clickHi! : this.clickLo!;
-        synth.triggerAttackRelease(beat === 0 ? 1400 : 1000, 0.03, time, 1 * this.volumes.metronome);
+        synth.triggerAttackRelease(beat === 0 ? 1400 : 1000, 0.03, time, 1);
         return;
       }
       if (!opts.metronome) return;
       if (opts.clickPattern === 'backbeat') {
         if (beat === 1 || beat === 3) {
-          this.clickLo!.triggerAttackRelease(1100, 0.03, time, 0.95 * this.volumes.backbeat);
+          this.clickBack!.triggerAttackRelease(1100, 0.03, time, 0.95);
         }
       } else {
         const synth = beat === 0 ? this.clickHi! : this.clickLo!;
-        synth.triggerAttackRelease(beat === 0 ? 1400 : 1000, 0.03, time, 0.8 * this.volumes.metronome);
+        synth.triggerAttackRelease(beat === 0 ? 1400 : 1000, 0.03, time, 0.8);
       }
     }, '4n', 0);
     this.repeats.push(clickId);
@@ -237,7 +275,7 @@ export class AudioEngine {
       const compPart = new Tone.Part((time, ev) => {
         const durSec = (ev.duration * 60) / transport.bpm.value * 0.85;
         const freqs = ev.midis.map((m) => Tone.Frequency(m, 'midi').toFrequency());
-        this.comp!.triggerAttackRelease(freqs, durSec, time, 0.75 * this.volumes.comp);
+        this.comp!.triggerAttackRelease(freqs, durSec, time, 0.75);
       }, compEvents);
       compPart.start(0);
       this.parts.push(compPart);
