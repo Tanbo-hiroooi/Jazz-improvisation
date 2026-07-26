@@ -13,7 +13,7 @@ import { usePracticePlayback, type LoopRange } from '../hooks/usePracticePlaybac
 import type { MyInstrumentSettings } from '../state/storage';
 import { chordSymbol } from '../theory/chords';
 import { GUITAR_POSITIONS } from '../theory/guitar';
-import { INSTRUMENTS, getInstrument, displayShift, notationModesOf, pitchModeMatters, transposesNoteNames, type Clef } from '../theory/instruments';
+import { INSTRUMENTS, getInstrument, displayShift, isTransposing, notationModesOf, usesOctaveNotation, type Clef } from '../theory/instruments';
 import { getPracticeGuide, type StaffTab } from '../theory/modes';
 import { KEYS, mod12, useFlatsForKey } from '../theory/notes';
 import {
@@ -112,8 +112,8 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
   const isGuitar = instrumentId === 'guitar';
   const effNotation = isGuitar ? session.notationMode : 'staff';
   const shift = displayShift(instrument, pitchMode);
-  // 実音と記譜が同じ楽器では表示ピッチを選ばせない
-  const showPitchMode = pitchModeMatters(instrument);
+  // 表示ピッチを選ばせるのは本当の移調楽器だけ(ギター等は常に記譜オクターブ)
+  const showPitchMode = isTransposing(instrument);
   const displayKeyPc = mod12(effKeyPc + shift);
   const flats = useFlatsForKey(displayKeyPc);
   const concertFlats = useFlatsForKey(keyPc);
@@ -271,10 +271,10 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
                   <button className={`seg${pitchMode === 'written' ? ' on' : ''}`} aria-pressed={pitchMode === 'written'} onClick={() => onPatchSession({ pitchMode: 'written' })}>{t('written')}</button>
                 </div>
                 <p className="hint-text">{pick(lang, instrument.transposeLabel, instrument.transposeLabelEn)}</p>
-                <p className="hint-text">{transposesNoteNames(instrument) ? t('pitchTransposeHint') : t('pitchOctaveHint')}</p>
+                <p className="hint-text">{t('pitchTransposeHint')}</p>
               </>
             ) : (
-              <p className="hint-text">{pick(lang, instrument.transposeLabel, instrument.transposeLabelEn)} — {t('pitchSameNote')}</p>
+              <p className="hint-text">{pick(lang, instrument.transposeLabel, instrument.transposeLabelEn)} — {usesOctaveNotation(instrument) ? t('pitchOctaveHint') : t('pitchSameNote')}</p>
             )}
           </div>
           {instrument.clefs.length > 1 && (
@@ -535,7 +535,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
               guitarOpenStrings={session.guitarOpenStrings}
             />
           </div>
-          {pitchMode === 'written' && shift !== 0 && (
+          {pitchMode === 'written' && shift % 12 !== 0 && (
             <p className="hint-text">{t('writtenNotice')}</p>
           )}
         </section>

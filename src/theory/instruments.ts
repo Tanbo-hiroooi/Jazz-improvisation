@@ -50,24 +50,28 @@ export function defaultNotationOf(inst: InstrumentDef): NotationMode {
   return inst.defaultNotation ?? 'staff';
 }
 
-/** 表示モードに応じた移調量(半音)。Concert Pitch では常に 0 */
+/**
+ * 表示モードに応じた移調量(半音)。
+ *
+ * ギター・ベースの +12 は移調ではなく記譜オクターブの慣習で、奏者は常に
+ * 実音の1オクターブ上に書かれた譜面を読む。そのため実音表示は選ばせず、
+ * モードによらず常に記譜オクターブを適用する。
+ * 本当の移調楽器(B♭管・E♭管)だけがモードで切り替わる。
+ */
 export function displayShift(instrument: InstrumentDef, mode: PitchMode): number {
+  if (!isTransposing(instrument)) return instrument.writtenShift;
   return mode === 'written' ? instrument.writtenShift : 0;
 }
 
 /**
- * 表示ピッチ(実音/記譜)の選択が意味を持つか。
- * ピアノ・トロンボーン・ボーカルなど writtenShift が 0 の楽器は、
- * どちらを選んでも譜面がまったく同じなので選択肢自体を出さない。
+ * 記譜で「音名」が変わる楽器か(=本当の移調楽器か)。
+ * ここが true の楽器だけ、表示ピッチ(実音/記譜)の選択肢を出す。
  */
-export function pitchModeMatters(instrument: InstrumentDef): boolean {
-  return instrument.writtenShift !== 0;
+export function isTransposing(instrument: InstrumentDef): boolean {
+  return instrument.writtenShift % 12 !== 0;
 }
 
-/**
- * 記譜で「音名」が変わるか(=本当の移調楽器か)。
- * ギター・ベースの +12 は記譜オクターブの慣習で、音名は実音と同じ。
- */
-export function transposesNoteNames(instrument: InstrumentDef): boolean {
-  return instrument.writtenShift % 12 !== 0;
+/** 音名は実音と同じで、記譜オクターブだけがずれる楽器(ギター・ベース) */
+export function usesOctaveNotation(instrument: InstrumentDef): boolean {
+  return instrument.writtenShift !== 0 && instrument.writtenShift % 12 === 0;
 }

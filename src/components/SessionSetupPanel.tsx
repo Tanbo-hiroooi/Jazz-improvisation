@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import type { MyInstrumentSettings } from '../state/storage';
 import { GUITAR_POSITIONS, type GuitarPosition } from '../theory/guitar';
-import { INSTRUMENTS, getInstrument, notationModesOf, pitchModeMatters, transposesNoteNames, type Clef, type NotationMode } from '../theory/instruments';
+import { INSTRUMENTS, getInstrument, isTransposing, notationModesOf, usesOctaveNotation, type Clef, type NotationMode } from '../theory/instruments';
 import { KEYS } from '../theory/notes';
 import { pick, t as tr, type Lang } from '../i18n';
 
@@ -60,8 +60,8 @@ export function SessionSetupPanel({
   const notationText = isGuitar
     ? `${notationLabel(lang, session.notationMode)}${session.notationMode !== 'staff' ? `・${positionLabel(lang, session.guitarPosition)}` : ''}`
     : clefName;
-  // 実音と記譜が同じ楽器では、表示ピッチは選ばせないし要約にも出さない
-  const showPitchMode = pitchModeMatters(instrument);
+  // 表示ピッチを選ばせるのは本当の移調楽器だけ(ギター等は常に記譜オクターブ)
+  const showPitchMode = isTransposing(instrument);
 
   const saveBase = () => {
     onSaveBase();
@@ -112,10 +112,10 @@ export function SessionSetupPanel({
                     <button className={`seg${session.pitchMode === 'concert' ? ' on' : ''}`} aria-pressed={session.pitchMode === 'concert'} onClick={() => onPatch({ pitchMode: 'concert' })}>{t('concert')}</button>
                     <button className={`seg${session.pitchMode === 'written' ? ' on' : ''}`} aria-pressed={session.pitchMode === 'written'} onClick={() => onPatch({ pitchMode: 'written' })}>{t('written')}</button>
                   </div>
-                  <p className="hint-text">{transposesNoteNames(instrument) ? t('pitchTransposeHint') : t('pitchOctaveHint')}</p>
+                  <p className="hint-text">{t('pitchTransposeHint')}</p>
                 </>
               ) : (
-                <p className="hint-text">{t('pitchSameNote')}</p>
+                <p className="hint-text">{usesOctaveNotation(instrument) ? t('pitchOctaveHint') : t('pitchSameNote')}</p>
               )}
             </div>
           </div>
