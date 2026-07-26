@@ -5,7 +5,7 @@ import { PracticeLogPanel } from '../components/PracticeLogPanel';
 import { notationLabel, positionLabel } from '../components/SessionSetupPanel';
 import type { MyInstrumentSettings } from '../state/storage';
 import { GUITAR_POSITIONS } from '../theory/guitar';
-import { INSTRUMENTS, getInstrument, notationModesOf, type Clef } from '../theory/instruments';
+import { INSTRUMENTS, getInstrument, notationModesOf, pitchModeMatters, transposesNoteNames, type Clef } from '../theory/instruments';
 import { pick, t as tr, type Lang } from '../i18n';
 import type { Screen } from '../App';
 
@@ -30,10 +30,12 @@ export function HomeScreen({ lang, onNavigate, lastScreen, baseInstrument: sessi
     ? session.clefOverride
     : instrument.defaultClef;
   const clefName = clef === 'grand' ? 'Grand Staff' : clef === 'treble' ? 'Treble Clef' : 'Bass Clef';
+  // 実音と記譜が同じ楽器では、表示ピッチは選ばせないし要約にも出さない
+  const showPitchMode = pitchModeMatters(instrument);
   const summary = [
     pick(lang, instrument.transposeLabel, instrument.transposeLabelEn),
     isGuitar ? notationLabel(lang, session.notationMode) : clefName,
-    session.pitchMode === 'written' ? t('written') : t('concert'),
+    ...(showPitchMode ? [session.pitchMode === 'written' ? t('written') : t('concert')] : []),
   ].join('・');
 
   const cards: { screen: Screen; icon: string; title: string; desc: string }[] = [
@@ -89,10 +91,17 @@ export function HomeScreen({ lang, onNavigate, lastScreen, baseInstrument: sessi
               </div>
               <div className="field">
                 <label>{t('pitchLabel')}</label>
-                <div className="seg-group">
-                  <button className={`seg${session.pitchMode === 'concert' ? ' on' : ''}`} aria-pressed={session.pitchMode === 'concert'} onClick={() => onUpdateBase({ pitchMode: 'concert' })}>{t('concert')}</button>
-                  <button className={`seg${session.pitchMode === 'written' ? ' on' : ''}`} aria-pressed={session.pitchMode === 'written'} onClick={() => onUpdateBase({ pitchMode: 'written' })}>{t('written')}</button>
-                </div>
+                {showPitchMode ? (
+                  <>
+                    <div className="seg-group">
+                      <button className={`seg${session.pitchMode === 'concert' ? ' on' : ''}`} aria-pressed={session.pitchMode === 'concert'} onClick={() => onUpdateBase({ pitchMode: 'concert' })}>{t('concert')}</button>
+                      <button className={`seg${session.pitchMode === 'written' ? ' on' : ''}`} aria-pressed={session.pitchMode === 'written'} onClick={() => onUpdateBase({ pitchMode: 'written' })}>{t('written')}</button>
+                    </div>
+                    <p className="hint-text">{transposesNoteNames(instrument) ? t('pitchTransposeHint') : t('pitchOctaveHint')}</p>
+                  </>
+                ) : (
+                  <p className="hint-text">{t('pitchSameNote')}</p>
+                )}
               </div>
             </div>
 

@@ -54,3 +54,20 @@ export function defaultNotationOf(inst: InstrumentDef): NotationMode {
 export function displayShift(instrument: InstrumentDef, mode: PitchMode): number {
   return mode === 'written' ? instrument.writtenShift : 0;
 }
+
+/**
+ * 表示ピッチ(実音/記譜)の選択が意味を持つか。
+ * ピアノ・トロンボーン・ボーカルなど writtenShift が 0 の楽器は、
+ * どちらを選んでも譜面がまったく同じなので選択肢自体を出さない。
+ */
+export function pitchModeMatters(instrument: InstrumentDef): boolean {
+  return instrument.writtenShift !== 0;
+}
+
+/**
+ * 記譜で「音名」が変わるか(=本当の移調楽器か)。
+ * ギター・ベースの +12 は記譜オクターブの慣習で、音名は実音と同じ。
+ */
+export function transposesNoteNames(instrument: InstrumentDef): boolean {
+  return instrument.writtenShift % 12 !== 0;
+}

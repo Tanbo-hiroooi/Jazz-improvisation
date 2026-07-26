@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import type { MyInstrumentSettings } from '../state/storage';
 import { GUITAR_POSITIONS, type GuitarPosition } from '../theory/guitar';
-import { INSTRUMENTS, getInstrument, notationModesOf, type Clef, type NotationMode } from '../theory/instruments';
+import { INSTRUMENTS, getInstrument, notationModesOf, pitchModeMatters, transposesNoteNames, type Clef, type NotationMode } from '../theory/instruments';
 import { KEYS } from '../theory/notes';
 import { pick, t as tr, type Lang } from '../i18n';
 
@@ -60,6 +60,8 @@ export function SessionSetupPanel({
   const notationText = isGuitar
     ? `${notationLabel(lang, session.notationMode)}${session.notationMode !== 'staff' ? `・${positionLabel(lang, session.guitarPosition)}` : ''}`
     : clefName;
+  // 実音と記譜が同じ楽器では、表示ピッチは選ばせないし要約にも出さない
+  const showPitchMode = pitchModeMatters(instrument);
 
   const saveBase = () => {
     onSaveBase();
@@ -72,7 +74,7 @@ export function SessionSetupPanel({
       <div className="session-bar">
         <span className="session-bar-text">
           🎷 {t('sessionInstrument')}: <strong>{instrument.label}</strong>
-          <span className="session-bar-sub"> — {notationText} / {session.pitchMode === 'written' ? t('written') : t('concert')}</span>
+          <span className="session-bar-sub"> — {notationText}{showPitchMode ? ` / ${session.pitchMode === 'written' ? t('written') : t('concert')}` : ''}</span>
         </span>
         <button className="btn" onClick={onEdit}>{t('changeBtn')}</button>
       </div>
@@ -86,7 +88,7 @@ export function SessionSetupPanel({
         <div><dt>{t('practiceLabel')}</dt><dd>{practiceTitle}</dd></div>
         <div><dt>{t('instrumentLabel')}</dt><dd>{instrument.label}</dd></div>
         <div><dt>{t('notationLabel')}</dt><dd>{notationText}</dd></div>
-        <div><dt>{t('displayShort')}</dt><dd>{session.pitchMode === 'written' ? t('written') : t('concert')}</dd></div>
+        {showPitchMode && <div><dt>{t('displayShort')}</dt><dd>{session.pitchMode === 'written' ? t('written') : t('concert')}</dd></div>}
         <div><dt>{t('keyLabel')}</dt><dd>{KEYS.find((k) => k.pc === keyPc)!.name}</dd></div>
         <div><dt>BPM</dt><dd>{bpm}</dd></div>
       </dl>
@@ -104,10 +106,17 @@ export function SessionSetupPanel({
             </div>
             <div className="field">
               <label>{t('pitchLabel')}</label>
-              <div className="seg-group">
-                <button className={`seg${session.pitchMode === 'concert' ? ' on' : ''}`} aria-pressed={session.pitchMode === 'concert'} onClick={() => onPatch({ pitchMode: 'concert' })}>{t('concert')}</button>
-                <button className={`seg${session.pitchMode === 'written' ? ' on' : ''}`} aria-pressed={session.pitchMode === 'written'} onClick={() => onPatch({ pitchMode: 'written' })}>{t('written')}</button>
-              </div>
+              {showPitchMode ? (
+                <>
+                  <div className="seg-group">
+                    <button className={`seg${session.pitchMode === 'concert' ? ' on' : ''}`} aria-pressed={session.pitchMode === 'concert'} onClick={() => onPatch({ pitchMode: 'concert' })}>{t('concert')}</button>
+                    <button className={`seg${session.pitchMode === 'written' ? ' on' : ''}`} aria-pressed={session.pitchMode === 'written'} onClick={() => onPatch({ pitchMode: 'written' })}>{t('written')}</button>
+                  </div>
+                  <p className="hint-text">{transposesNoteNames(instrument) ? t('pitchTransposeHint') : t('pitchOctaveHint')}</p>
+                </>
+              ) : (
+                <p className="hint-text">{t('pitchSameNote')}</p>
+              )}
             </div>
           </div>
 

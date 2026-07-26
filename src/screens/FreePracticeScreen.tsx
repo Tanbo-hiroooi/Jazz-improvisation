@@ -13,7 +13,7 @@ import { usePracticePlayback, type LoopRange } from '../hooks/usePracticePlaybac
 import type { MyInstrumentSettings } from '../state/storage';
 import { chordSymbol } from '../theory/chords';
 import { GUITAR_POSITIONS } from '../theory/guitar';
-import { INSTRUMENTS, getInstrument, displayShift, notationModesOf, type Clef } from '../theory/instruments';
+import { INSTRUMENTS, getInstrument, displayShift, notationModesOf, pitchModeMatters, transposesNoteNames, type Clef } from '../theory/instruments';
 import { getPracticeGuide, type StaffTab } from '../theory/modes';
 import { KEYS, mod12, useFlatsForKey } from '../theory/notes';
 import {
@@ -112,6 +112,8 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
   const isGuitar = instrumentId === 'guitar';
   const effNotation = isGuitar ? session.notationMode : 'staff';
   const shift = displayShift(instrument, pitchMode);
+  // 実音と記譜が同じ楽器では表示ピッチを選ばせない
+  const showPitchMode = pitchModeMatters(instrument);
   const displayKeyPc = mod12(effKeyPc + shift);
   const flats = useFlatsForKey(displayKeyPc);
   const concertFlats = useFlatsForKey(keyPc);
@@ -262,11 +264,18 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
         <div className="field-row">
           <div className="field">
             <label>{t('pitchLabel')}</label>
-            <div className="seg-group">
-              <button className={`seg${pitchMode === 'concert' ? ' on' : ''}`} aria-pressed={pitchMode === 'concert'} onClick={() => onPatchSession({ pitchMode: 'concert' })}>{t('concert')}</button>
-              <button className={`seg${pitchMode === 'written' ? ' on' : ''}`} aria-pressed={pitchMode === 'written'} onClick={() => onPatchSession({ pitchMode: 'written' })}>{t('written')}</button>
-            </div>
-            <p className="hint-text">{pick(lang, instrument.transposeLabel, instrument.transposeLabelEn)}</p>
+            {showPitchMode ? (
+              <>
+                <div className="seg-group">
+                  <button className={`seg${pitchMode === 'concert' ? ' on' : ''}`} aria-pressed={pitchMode === 'concert'} onClick={() => onPatchSession({ pitchMode: 'concert' })}>{t('concert')}</button>
+                  <button className={`seg${pitchMode === 'written' ? ' on' : ''}`} aria-pressed={pitchMode === 'written'} onClick={() => onPatchSession({ pitchMode: 'written' })}>{t('written')}</button>
+                </div>
+                <p className="hint-text">{pick(lang, instrument.transposeLabel, instrument.transposeLabelEn)}</p>
+                <p className="hint-text">{transposesNoteNames(instrument) ? t('pitchTransposeHint') : t('pitchOctaveHint')}</p>
+              </>
+            ) : (
+              <p className="hint-text">{pick(lang, instrument.transposeLabel, instrument.transposeLabelEn)} — {t('pitchSameNote')}</p>
+            )}
           </div>
           {instrument.clefs.length > 1 && (
             <div className="field">
