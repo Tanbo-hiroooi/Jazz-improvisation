@@ -1,4 +1,4 @@
-// ホーム画面: ブランド表示 / 3区分カード / マイ楽器(基本設定) / 練習履歴
+// ホーム画面: ブランド表示 / 2区分カード / マイ楽器(基本設定) / 練習履歴
 
 import { useState } from 'react';
 import { PracticeLogPanel } from '../components/PracticeLogPanel';
@@ -41,7 +41,6 @@ export function HomeScreen({ lang, onNavigate, lastScreen, baseInstrument: sessi
   const cards: { screen: Screen; icon: string; title: string; desc: string }[] = [
     { screen: 'free', icon: '🎯', title: t('homeFreeTitle'), desc: t('homeFreeDesc') },
     { screen: 'course', icon: '🪜', title: t('homeCourseTitle'), desc: t('homeCourseDesc') },
-    { screen: 'song', icon: '🎷', title: t('homeSongTitle'), desc: t('homeSongDesc') },
   ];
 
   return (

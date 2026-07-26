@@ -48,7 +48,6 @@ src/
 ├── hooks/usePracticePlayback.ts  # 再生制御の共有フック ※§8
 ├── data/
 │   ├── courses.ts      # ★コースデータ(6章23レッスン)。純データ、UI非依存 ※§5
-│   └── missions.ts     # 1コーラス挑戦のミッション
 ├── components/
 │   ├── StaffView.tsx      # VexFlow描画(タイ分割・3連・アーティキュレーション・TAB)※§9
 │   ├── GridEditor.tsx     # ★拍グリッド編集UI(チュートリアル内蔵)
@@ -57,7 +56,7 @@ src/
 │   ├── SessionSetupPanel.tsx # 練習前の設定確認(マイ楽器/今回の設定)
 │   ├── VolumeControls.tsx # チャンネル別音量スライダー
 │   └── ...
-├── screens/         # Home / FreePractice / Course→Lesson / SongPractice
+├── screens/         # Home / FreePractice / Course→Lesson
 ├── state/storage.ts # localStorage抽象化(キー一覧・マイ楽器・進捗+はしご)
 └── i18n.ts          # 日英辞書(t(lang,key), pick(lang,ja,en))
 ```
@@ -140,7 +139,7 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
 ## 11. その他の画面・機能
 
 - **マイ楽器 vs 今回の練習設定**: App.tsxで`baseInstrument`(永続)と`session`(一時)を別stateで管理。Homeはbaseのみ表示。「この設定をマイ楽器に保存」で明示保存した時だけbase更新。
-- 1コーラス挑戦: 開いた直後は設定確認パネル(setupConfirmed初期値false)。
+- レッスン: 開いた直後は設定確認パネル(setupConfirmed初期値false)。
 - テンポ/キーはしご: CourseProgress.ladders にトークン('bpm:80','key:5')で保存。自己申告の「クリアした!」ボタン。
 - グリッドのチュートリアル: GridEditor内蔵。初回自動オープン、閉じたらlocalStorage('fc-grid-help-seen-v1')に記憶。STEP種別で項目を出し分け。
 - アクセシビリティ: トグルはaria-pressed、STEPタブはrole=tablist/aria-selected。維持すること。

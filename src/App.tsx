@@ -1,22 +1,26 @@
-// アプリシェル: ホーム / 自由練習 / 練習コース / 1コーラス挑戦 の画面切替と共通設定
+// アプリシェル: ホーム / 自由練習 / 練習コース の画面切替と共通設定
 
 import { useCallback, useState } from 'react';
 import { CourseScreen } from './screens/CourseScreen';
 import { FreePracticeScreen, type FreePracticeInit } from './screens/FreePracticeScreen';
 import { HomeScreen } from './screens/HomeScreen';
-import { SongPracticeScreen } from './screens/SongPracticeScreen';
 import { loadJSON, saveJSON, loadMyInstrument, saveMyInstrument, STORAGE_KEYS, type MyInstrumentSettings } from './state/storage';
 import { defaultNotationOf, getInstrument } from './theory/instruments';
 import { loadLang, saveLang, t as tr, type Lang } from './i18n';
 import './styles.css';
 
-export type Screen = 'home' | 'free' | 'course' | 'song';
+export type Screen = 'home' | 'free' | 'course';
 
 const SCREEN_TITLES: Record<Exclude<Screen, 'home'>, Parameters<typeof tr>[1]> = {
   free: 'homeFreeTitle',
   course: 'homeCourseTitle',
-  song: 'homeSongTitle',
 };
+
+/** 保存済みの前回画面。廃止した画面IDが残っていても壊れないよう検証する */
+function loadLastScreen(): Screen | null {
+  const v = loadJSON<Screen | null>(STORAGE_KEYS.lastScreen, null);
+  return v === 'free' || v === 'course' ? v : null;
+}
 
 export default function App() {
   // ---- 表示言語 ----
@@ -29,7 +33,7 @@ export default function App() {
 
   // ---- 画面切替 ----
   const [screen, setScreen] = useState<Screen>('home');
-  const [lastScreen, setLastScreen] = useState<Screen | null>(() => loadJSON<Screen | null>(STORAGE_KEYS.lastScreen, null));
+  const [lastScreen, setLastScreen] = useState<Screen | null>(loadLastScreen);
   // コースで選択中のレッスン(自由練習で復習→戻る、のために App が保持)
   const [courseLessonId, setCourseLessonId] = useState<string | null>(null);
   // レッスンから自由練習へ引き継ぐ設定(nullなら通常の自由練習)
@@ -150,16 +154,6 @@ export default function App() {
           onSelectLesson={setCourseLessonId}
         />
       )}
-      {screen === 'song' && (
-        <SongPracticeScreen
-          lang={lang}
-          session={session}
-          onPatchSession={patchSession}
-          onChangeInstrument={changeSessionInstrument}
-          onSaveBase={saveSessionAsBase}
-        />
-      )}
-
       <footer className="app-footer">
         <p>{t('footer')}</p>
       </footer>
