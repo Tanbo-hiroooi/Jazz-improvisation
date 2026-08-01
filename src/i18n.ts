@@ -259,6 +259,7 @@ const JA = {
   keyLadderLabel: 'キーのはしご',
   ladderClear: 'クリアした!',
   ladderUnclear: 'クリアを取り消す',
+  ladderHelpTitle: 'はしごの使い方',
   ladderHint: 'できたと感じたら「クリアした!」を押して、次の段へ自分のペースで上がりましょう(進行の条件ではありません)。',
   triviaTitle: '豆知識(なぜ効くの?・よくある失敗)',
   // ---- STEP統合UI ----
@@ -515,6 +516,7 @@ const EN: typeof JA = {
   keyLadderLabel: 'Key ladder',
   ladderClear: 'Cleared it!',
   ladderUnclear: 'Un-clear',
+  ladderHelpTitle: 'How the ladders work',
   ladderHint: 'When it feels solid, press “Cleared it!” and climb at your own pace (never required to continue).',
   triviaTitle: 'Trivia (why it works, common stumbles)',
   // ---- Step-integrated UI ----

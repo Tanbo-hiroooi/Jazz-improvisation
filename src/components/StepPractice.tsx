@@ -398,6 +398,9 @@ interface Props {
   registerStop: (fn: (() => void) | null) => void;
 }
 
+/** はしごの使い方を初回だけ自動で開くためのフラグ(グリッドのチュートリアルと同じ方式) */
+const LADDER_HELP_SEEN_KEY = 'fc-ladder-help-seen-v1';
+
 export function StepPractice({
   lang, lesson, progression, keyPc, setKeyPc, shift, flats, clef, notation, guitarPosition, guitarOpenStrings,
   bpm, setBpm, countIn, setCountIn, metronomeOn, setMetronomeOn, clickPattern, setClickPattern,
@@ -411,6 +414,16 @@ export function StepPractice({
   const [visitedFixed, setVisitedFixed] = useState<Record<number, boolean>>(initialVisited);
   // はしご達成(localStorage保存)
   const [ladderDone, setLadderDone] = useState<string[]>(() => loadCourseProgress().ladders?.[lesson.id] ?? []);
+  // はしごの使い方は初回だけ開き、閉じたら以降のレッスンでは畳んだ状態で始める
+  const [ladderHelpOpen, setLadderHelpOpen] = useState<boolean>(() => {
+    try { return !localStorage.getItem(LADDER_HELP_SEEN_KEY); } catch { return true; }
+  });
+  const toggleLadderHelp = (open: boolean) => {
+    setLadderHelpOpen(open);
+    if (!open) {
+      try { localStorage.setItem(LADDER_HELP_SEEN_KEY, '1'); } catch { /* 保存失敗は無視 */ }
+    }
+  };
   const step = lesson.steps[currentStep];
   const total = lesson.steps.length;
   const activeDraft = drafts[currentStep] ?? null;
@@ -571,7 +584,14 @@ export function StepPractice({
               </div>
             </div>
           )}
-          <p className="hint-text">{t('ladderHint')}</p>
+          <details
+            className="ladder-help"
+            open={ladderHelpOpen}
+            onToggle={(e) => toggleLadderHelp((e.target as HTMLDetailsElement).open)}
+          >
+            <summary>{t('ladderHelpTitle')}</summary>
+            <p className="hint-text">{t('ladderHint')}</p>
+          </details>
         </div>
       )}
 

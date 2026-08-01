@@ -924,6 +924,16 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
   gap: 6px;
 }
 .ladder-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* はしごの使い方: 初回だけ開き、以降は1行の見出しだけ残す */
+.ladder-help summary {
+  cursor: pointer;
+  padding: 2px 0;
+  font-size: 12px;
+  color: var(--text-dim);
+  list-style-position: inside;
+}
+.ladder-help summary::marker { color: var(--text-dim); }
+.ladder-help .hint-text { margin-top: 2px; }
 .step-footer-nav {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   flex-wrap: wrap; margin-top: 6px;
