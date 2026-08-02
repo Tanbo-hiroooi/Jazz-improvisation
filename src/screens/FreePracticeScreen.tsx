@@ -91,6 +91,9 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
   const [loopRange, setLoopRange] = useState<LoopRange>('full');
   const [selectedMeasure, setSelectedMeasure] = useState(0);
   const [swingId, setSwingId] = useState('standard');
+  // 譜面ガイド: 伴奏に合わせて音符を光らせる(音は鳴らさない)。
+  // 旧「Rhythm Only」ボタンは Start との違いがこれだけだったので、表示設定に格下げした。
+  const [staffGuide, setStaffGuide] = useState(false);
 
   const isCustom = menuId === 'custom';
   // 自分でコードを決めるときはコードを直接指定するため、キーは 0(オフセット=実音)として扱う
@@ -465,7 +468,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
               {playing ? (
                 <button className="btn big stop" onClick={stopAll}>■ Stop</button>
               ) : (
-                <button className="btn big start" onClick={() => startPlayback('backing')}>▶ Start</button>
+                <button className="btn big start" onClick={() => startPlayback(staffGuide ? 'rhythm' : 'backing')}>▶ {t('playBacking')}</button>
               )}
               <button
                 className={`btn big example${playing === 'example' ? ' active' : ''}`}
@@ -473,19 +476,15 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
               >
                 ♪ {t('checkNotes')}
               </button>
-              <button
-                className={`btn big rhythm${playing === 'rhythm' ? ' active' : ''}`}
-                onClick={() => (playing === 'rhythm' ? stopAll() : startPlayback('rhythm'))}
-              >
-                ♩ Rhythm Only
-              </button>
             </div>
             <div className="transport-opts">
               <label className="toggle"><input type="checkbox" checked={loopEnabled} onChange={(e) => setLoopEnabled(e.target.checked)} /> Loop</label>
               <label className="toggle"><input type="checkbox" checked={countIn} onChange={(e) => setCountIn(e.target.checked)} /> 4 Count In</label>
               <label className="toggle"><input type="checkbox" checked={metronomeOn} onChange={(e) => setMetronomeOn(e.target.checked)} /> {t('metronome')}</label>
               <label className="toggle"><input type="checkbox" checked={compOn} onChange={(e) => setCompOn(e.target.checked)} /> {t('compSound')}</label>
+              <label className="toggle"><input type="checkbox" checked={staffGuide} onChange={(e) => setStaffGuide(e.target.checked)} /> {t('staffGuide')}</label>
             </div>
+            {staffGuide && <p className="hint-text">{t('staffGuideHint')}</p>}
             <div className="transport-opts">
               <span className="opt-label">{t('loopRangeLabel')}</span>
               <div className="seg-group">

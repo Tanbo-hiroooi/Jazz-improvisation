@@ -203,7 +203,7 @@ function FixedStepBody({
         {playing ? (
           <button className="btn big stop" onClick={stopAll}>■ Stop</button>
         ) : (
-          <button className="btn big start" onClick={() => startPlayback('backing')}>▶ Start</button>
+          <button className="btn big start" onClick={() => startPlayback('backing')}>▶ {t('playBacking')}</button>
         )}
         <button
           className={`btn big example${playing === 'example' ? ' active' : ''}`}
@@ -360,7 +360,7 @@ function EditableStepBody({
           <>
             <button className="btn big example" onClick={() => check({ compOn: false })}>♪ {t('checkSingle')}</button>
             <button className="btn big example" onClick={() => check({ compOn: true })}>♪ {t('checkWithChord')}</button>
-            <button className="btn big start" onClick={() => startPlayback('backing')}>▶ Start</button>
+            <button className="btn big start" onClick={() => startPlayback('backing')}>▶ {t('playBacking')}</button>
           </>
         )}
       </div>

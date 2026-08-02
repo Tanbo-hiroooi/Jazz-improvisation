@@ -112,6 +112,9 @@ const JA = {
   homeSettings: '楽器設定',
   backToHome: 'ホーム',
   checkNotes: '音を確認',
+  playBacking: '伴奏を流す',
+  staffGuide: '譜面ガイド',
+  staffGuideHint: '伴奏に合わせて、譜面の音符が順番に光ります(音は鳴りません)。',
   // ---- コース / レッスン ----
   lessonsUnit: 'レッスン',
   estimatedLabel: '目安',
@@ -369,6 +372,9 @@ const EN: typeof JA = {
   homeSettings: 'Instrument',
   backToHome: 'Home',
   checkNotes: 'Check Notes',
+  playBacking: 'Play backing',
+  staffGuide: 'Staff guide',
+  staffGuideHint: 'The notes light up in time with the backing (no sound).',
   // ---- Courses / lessons ----
   lessonsUnit: 'lessons',
   estimatedLabel: 'approx.',

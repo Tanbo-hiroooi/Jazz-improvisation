@@ -189,7 +189,7 @@ export function GridComposer({
             <>
               <button className="btn big example" onClick={() => check({ compOn: false })}>♪ {t('checkSingle')}</button>
               <button className="btn big example" onClick={() => check({ compOn: true })}>♪ {t('checkWithChord')}</button>
-              <button className="btn big start" onClick={() => startPlayback('backing')}>▶ Start</button>
+              <button className="btn big start" onClick={() => startPlayback('backing')}>▶ {t('playBacking')}</button>
             </>
           )}
         </div>

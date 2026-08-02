@@ -115,7 +115,9 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
 - スウィング: ウラ拍(x.5)を遅らせる方式。再生とハイライト判定が**同じ**タイミング計算を共有(ズレ防止)。
 - アーティキュレーション再生: accent=velocity×1.25 / staccato=gate0.45 / tenuto=gate1.0。
 - **チャンネル別音量** `engine.volumes {metronome, backbeat, comp}`: velocityへの乗算方式。localStorage('fc-volumes-v1')に保存、UIはVolumeControls.tsx。カウントインはmetronome音量に追従。
-- Rhythm Onlyは音を鳴らさず赤いガイドだけ動かす仕様(自由練習)。
+- 再生ボタンは2つ: 「♪ 音を確認」(kind='example' 譜面の音が鳴る)と「▶ 伴奏を流す」(自分で演奏する用)。
+  自由練習の「譜面ガイド」チェックで後者が kind='rhythm' になり、音は鳴らさず赤いガイドだけ動く。
+  旧「Rhythm Only」ボタンは Start との違いがこれだけだったため、表示設定へ格下げした。
 - 開発時のみ `window.__engine` が公開される(ブラウザ検証用)。
 - **重要**: `usePracticePlayback`のインスタンスは「アクティブな画面/STEPに1つ」。過去に複数フックの競合で「音が出ない」バグが発生。LessonScreenは`registerStop`パターンで子の停止関数を1つだけ保持し、画面遷移・完了・設定変更時に停止する。
 
