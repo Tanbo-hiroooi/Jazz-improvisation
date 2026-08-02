@@ -140,7 +140,7 @@ export function LessonScreen({
       {/* ① このレッスンでできるようになること */}
       <section className="panel">
         <h2 className="lesson-title">{p(lesson.title)}</h2>
-        {lesson.technicalName && <p className="lesson-technical">{lesson.technicalName}</p>}
+        {lesson.technicalName && <p className="lesson-technical">{pick(lang, lesson.technicalName.ja, lesson.technicalName.en)}</p>}
         {lesson.estimatedMinutes && <p className="hint-text">⏱ {t('estimatedLabel')} {lesson.estimatedMinutes}{t('minutesUnit')}</p>}
         <div className="outcome-box">
           <span className="outcome-label">🎯 {t('outcomeTitle')}</span>

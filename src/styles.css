@@ -924,6 +924,17 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
   gap: 6px;
 }
 .ladder-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* 章末の「通し」レッスンの目印 */
+.through-badge {
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(52, 211, 153, 0.15);
+  color: var(--green);
+  padding: 1px 8px;
+  border-radius: 99px;
+  vertical-align: middle;
+}
 /* はしごの使い方: 初回だけ開き、以降は1行の見出しだけ残す */
 .ladder-help summary {
   cursor: pointer;

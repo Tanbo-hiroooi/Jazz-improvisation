@@ -49,7 +49,7 @@ export function emptyGrid(bars: number, division: Division = 2): GridPhrase {
 
 // ---- 使用できる音(パレット) ----
 
-export type GridMaterial = 'root-only' | 'chord-tone' | 'guide-tone' | 'blues';
+export type GridMaterial = 'root-only' | 'third-only' | 'chord-tone' | 'guide-tone' | 'blues' | 'chromatic';
 
 /** ブルーススケール(ルートからの半音): 1 ♭3 4 ♭5 5 ♭7 */
 const BLUES_OFFSETS = [0, 3, 5, 6, 7, 10];
@@ -75,8 +75,15 @@ export function paletteFor(keyPc: number, rootOffset: number, quality: Quality, 
   let degrees: string[];
   switch (material) {
     case 'root-only': offsets = [0]; degrees = ['Root']; break;
+    // 3度だけ: コードの明暗を1音で聴き分ける課題に使う
+    case 'third-only': offsets = [def.tones[1]]; degrees = [def.toneDegrees[1]]; break;
     case 'guide-tone': offsets = def.guide; degrees = def.guide.map((g) => def.toneDegrees[def.tones.indexOf(g)] ?? ''); break;
     case 'blues': offsets = BLUES_OFFSETS; degrees = BLUES_DEGREES; break;
+    // 半音の助走を自分で置く課題に使う。コードトーンだけ度数を表示する
+    case 'chromatic':
+      offsets = Array.from({ length: 12 }, (_, i) => i);
+      degrees = offsets.map((o) => def.toneDegrees[def.tones.indexOf(o)] ?? '');
+      break;
     case 'chord-tone': default: offsets = def.tones; degrees = def.toneDegrees; break;
   }
   const out: PalettePitch[] = [];
@@ -285,6 +292,28 @@ export function hasOffbeatAttack(grid: GridPhrase): boolean {
   });
 }
 
+/** 指定小節(1始まり)の1拍目で音が鳴っているか(アタックでも、前小節からの伸びでも可) */
+export function soundsAtBarStart(grid: GridPhrase, bar: number): boolean {
+  const at = (bar - 1) * 4;
+  return gridToNoteEvents(grid).some((e) => e.start <= at + 0.001 && e.start + e.duration > at + 0.001);
+}
+
+/** 指定小節(1始まり)の最初の音が裏拍から始まるか(音が1つも無ければ false) */
+export function startsOffbeatOnBar(grid: GridPhrase, bar: number): boolean {
+  const from = (bar - 1) * 4;
+  const first = gridToNoteEvents(grid)
+    .filter((e) => e.start >= from - 0.001 && e.start < from + 4 - 0.001)
+    .sort((x, y) => x.start - y.start)[0];
+  if (!first) return false;
+  return first.start - Math.floor(first.start + 0.001) > 0.01;
+}
+
+/** 指定小節(1始まり)へ、前の小節から音が伸びて入っているか */
+export function holdsIntoBar(grid: GridPhrase, bar: number): boolean {
+  const at = (bar - 1) * 4;
+  return gridToNoteEvents(grid).some((e) => e.start < at - 0.001 && e.start + e.duration > at + 0.001);
+}
+
 export function usesTriplet(grid: GridPhrase): boolean {
   return grid.bars.some((bar) => bar.beats.some((bt) => bt.division === 3 && bt.cells.some((c) => c.state === 'attack')));
 }
@@ -354,6 +383,16 @@ export interface GridConditions {
   requireArticulation?: boolean;
   /** フレーズ最後の音が、その小節のコードの3度で終わる(着地の練習) */
   requireEndOn3rd?: boolean;
+  /**
+   * 指定した小節(1始まり)の1拍目で音が鳴っていること。着地の練習に使う。
+   * 前の小節から伸びてきた音(食い)でも「鳴っている」と見なす。
+   * 食い込みで着地する形も正解にするため。
+   */
+  requireDownbeatOnBar?: number[];
+  /** 指定した小節(1始まり)の最初の音が裏拍から始まること */
+  requireOffbeatStartOnBar?: number[];
+  /** 指定した小節(1始まり)へ、前の小節から音が伸びて入ること(食い) */
+  requireCrossBarHoldInto?: number[];
 }
 
 export type GridAction = 'any-change' | 'rhythm-change' | 'pitch-change';
@@ -450,6 +489,21 @@ export function validateGrid(
   }
   if (c.requireArticulation && !usesArticulation(grid)) {
     errors.push(err('artic', 'アクセント・短く・長くのどれかを1音以上に付けてください。', 'Apply accent, staccato or tenuto to at least one note.'));
+  }
+  for (const bar of c.requireDownbeatOnBar ?? []) {
+    if (!soundsAtBarStart(grid, bar)) {
+      errors.push(err('downbeatBar', `${bar}小節目の1拍目に音を置いてください(前の小節から伸ばして届かせてもOK)。`, `Make a note sound on beat 1 of bar ${bar} (carrying one over from the previous bar also counts).`));
+    }
+  }
+  for (const bar of c.requireOffbeatStartOnBar ?? []) {
+    if (!startsOffbeatOnBar(grid, bar)) {
+      errors.push(err('offbeatBar', `${bar}小節目の最初の音を、裏拍(拍の2番目のマス)から始めてください。`, `Start the first note of bar ${bar} on an offbeat cell.`));
+    }
+  }
+  for (const bar of c.requireCrossBarHoldInto ?? []) {
+    if (!holdsIntoBar(grid, bar)) {
+      errors.push(err('crossInto', `${bar - 1}小節目から${bar}小節目へ、「→のばす」で音を食い込ませてください。`, `Use “hold” to carry a note from bar ${bar - 1} into bar ${bar}.`));
+    }
   }
   if (c.requireEndOn3rd && ctx) {
     const pos = attackPositions(grid);

@@ -103,9 +103,12 @@ export function CourseScreen({ lang, session, onPatchSession, onChangeInstrument
                           >
                             <span className="lesson-item-num">{isDone ? '✓' : i + 1}</span>
                             <span className="lesson-item-body">
-                              <span className="lesson-item-title">{pick(lang, lesson.title.ja, lesson.title.en)}</span>
+                              <span className="lesson-item-title">
+                                {pick(lang, lesson.title.ja, lesson.title.en)}
+                                {lesson.isThrough && <span className="through-badge">{t('throughBadge')}</span>}
+                              </span>
                               <span className="lesson-item-theme">
-                                {lesson.technicalName ? `${lesson.technicalName} — ` : ''}
+                                {lesson.technicalName ? `${pick(lang, lesson.technicalName.ja, lesson.technicalName.en)} — ` : ''}
                                 {pick(lang, lesson.outcome.ja, lesson.outcome.en)}
                               </span>
                             </span>
