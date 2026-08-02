@@ -6,7 +6,6 @@ import { useState } from 'react';
 import type { MyInstrumentSettings } from '../state/storage';
 import { GUITAR_POSITIONS, type GuitarPosition } from '../theory/guitar';
 import { INSTRUMENTS, getInstrument, isTransposing, notationModesOf, usesOctaveNotation, type Clef, type NotationMode } from '../theory/instruments';
-import { KEYS } from '../theory/notes';
 import { pick, t as tr, type Lang } from '../i18n';
 
 interface Props {
@@ -17,10 +16,6 @@ interface Props {
   onPatch: (patch: Partial<MyInstrumentSettings>) => void;
   onChangeInstrument: (id: string) => void;
   onSaveBase: () => void;
-  keyPc: number;
-  setKeyPc: (pc: number) => void;
-  bpm: number;
-  setBpm: (bpm: number) => void;
   /** true: 確認済み(スリム表示) / false: 確認パネルを表示 */
   confirmed: boolean;
   onConfirm: () => void;
@@ -45,7 +40,7 @@ export function positionLabel(lang: Lang, pos: GuitarPosition): string {
 
 export function SessionSetupPanel({
   lang, practiceTitle, session, onPatch, onChangeInstrument, onSaveBase,
-  keyPc, setKeyPc, bpm, setBpm, confirmed, onConfirm, onEdit,
+  confirmed, onConfirm, onEdit,
 }: Props) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
   const [editing, setEditing] = useState(false);
@@ -89,8 +84,6 @@ export function SessionSetupPanel({
         <div><dt>{t('instrumentLabel')}</dt><dd>{instrument.label}</dd></div>
         <div><dt>{t('notationLabel')}</dt><dd>{notationText}</dd></div>
         {showPitchMode && <div><dt>{t('displayShort')}</dt><dd>{session.pitchMode === 'written' ? t('written') : t('concert')}</dd></div>}
-        <div><dt>{t('keyLabel')}</dt><dd>{KEYS.find((k) => k.pc === keyPc)!.name}</dd></div>
-        <div><dt>BPM</dt><dd>{bpm}</dd></div>
       </dl>
 
       {editing && (
@@ -166,21 +159,6 @@ export function SessionSetupPanel({
               )}
             </div>
           )}
-
-          <div className="field-row">
-            <div className="field">
-              <label htmlFor="session-key">{t('keyLabel')}</label>
-              <select id="session-key" value={keyPc} onChange={(e) => setKeyPc(Number(e.target.value))}>
-                {KEYS.map((k) => (
-                  <option key={k.pc} value={k.pc}>{k.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="session-bpm">{t('tempoLabel')}: <strong>{bpm} BPM</strong></label>
-              <input id="session-bpm" type="range" min={40} max={220} value={bpm} onChange={(e) => setBpm(Number(e.target.value))} />
-            </div>
-          </div>
 
           <button className="btn" onClick={saveBase}>{t('saveAsMyInstrument')}</button>
           {savedFlash && <span className="saved-note"> ✓ {t('resultSaved')}</span>}

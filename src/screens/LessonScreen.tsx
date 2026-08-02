@@ -128,10 +128,6 @@ export function LessonScreen({
         onPatch={onPatchSession}
         onChangeInstrument={onChangeInstrument}
         onSaveBase={onSaveBase}
-        keyPc={keyPc}
-        setKeyPc={changeKey}
-        bpm={bpm}
-        setBpm={setBpm}
         confirmed={setupConfirmed}
         onConfirm={() => setSetupConfirmed(true)}
         onEdit={() => { stopActive(); setSetupConfirmed(false); }}

@@ -143,7 +143,8 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
 ## 11. その他の画面・機能
 
 - **マイ楽器 vs 今回の練習設定**: App.tsxで`baseInstrument`(永続)と`session`(一時)を別stateで管理。Homeはbaseのみ表示。「この設定をマイ楽器に保存」で明示保存した時だけbase更新。
-- レッスン: 開いた直後は設定確認パネル(setupConfirmed初期値false)。
+- レッスン: 開いた直後は設定確認パネル(setupConfirmed初期値false)。扱うのは楽器・譜面・表示ピッチだけ。
+  キーとテンポは練習パネル側(StepPractice)にあるので、確認パネルには置かない(二重表示を避ける)。
 - テンポ/キーはしご: CourseProgress.ladders にトークン('bpm:80','key:5')で保存。自己申告の「クリアした!」ボタン。
 - グリッドのチュートリアル: GridEditor内蔵。初回自動オープン、閉じたらlocalStorage('fc-grid-help-seen-v1')に記憶。STEP種別で項目を出し分け。
 - アクセシビリティ: トグルはaria-pressed、STEPタブはrole=tablist/aria-selected。維持すること。
