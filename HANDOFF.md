@@ -111,6 +111,9 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
 
 ## 8. 音声(audio/engine.ts + usePracticePlayback)
 
+- **停止時はDrawキューも捨てる**: 位置・ハイライトの通知は `Tone.getDraw().schedule()` 経由なので、
+  Transportを止めただけでは既に積まれたコールバックが後から発火し、停止時に光っていた音符が残る。
+  `stop()` で `Tone.getDraw().cancel(0)` を呼び、コールバック側も `if (!this.running) return;` で二重に防ぐ。
 - engineはシングルトン。`StartOptions`: bpm/countIn/loop/regionBars/metronome/`clickPattern('all'|'backbeat')`/notes/rhythmOnly/comp/swing/コールバック群。
 - スウィング: ウラ拍(x.5)を遅らせる方式。再生とハイライト判定が**同じ**タイミング計算を共有(ズレ防止)。
 - アーティキュレーション再生: accent=velocity×1.25 / staccato=gate0.45 / tenuto=gate1.0。

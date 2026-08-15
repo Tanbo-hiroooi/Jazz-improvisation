@@ -231,6 +231,9 @@ export class AudioEngine {
       const beat = beats % 4;
       const regionBeats = beats - offsetBars * 4;
       Tone.getDraw().schedule(() => {
+        // 停止後に遅れて届いた描画コールバックは捨てる。
+        // これがないと、停止時に光っていた音符がそのまま残る。
+        if (!this.running) return;
         opts.onPosition?.(bar, beat);
         if (timedNotes.length > 0 && bar >= 0) {
           let idx = -1;
@@ -302,6 +305,8 @@ export class AudioEngine {
     const transport = Tone.getTransport();
     transport.stop();
     transport.cancel();
+    // Transportを止めてもDrawキューに積まれた描画コールバックは残るため、明示的に捨てる
+    Tone.getDraw().cancel(0);
     transport.loop = false;
     transport.position = 0;
     for (const p of this.parts) {
