@@ -113,8 +113,8 @@ const JA = {
   backToHome: 'ホーム',
   checkNotes: '音を確認',
   playBacking: '伴奏を流す',
-  staffGuide: '譜面ガイド',
-  staffGuideHint: '伴奏に合わせて、譜面の音符が順番に光ります(音は鳴りません)。',
+  staffGuide: '伴奏に譜面ガイド',
+  staffGuideHint: '「伴奏を流す」のとき、音を鳴らさずに音符だけを光らせます。「音を確認」では、この設定に関係なく光ります。',
   // ---- コース / レッスン ----
   lessonsUnit: 'レッスン',
   estimatedLabel: '目安',
@@ -374,8 +374,8 @@ const EN: typeof JA = {
   backToHome: 'Home',
   checkNotes: 'Check Notes',
   playBacking: 'Play backing',
-  staffGuide: 'Staff guide',
-  staffGuideHint: 'The notes light up in time with the backing (no sound).',
+  staffGuide: 'Guide with backing',
+  staffGuideHint: 'With “Play backing”, the notes light up without sounding. “Check Notes” always highlights, regardless of this setting.',
   // ---- Courses / lessons ----
   lessonsUnit: 'lessons',
   estimatedLabel: 'approx.',

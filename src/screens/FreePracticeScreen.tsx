@@ -495,7 +495,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
               <label className="toggle"><input type="checkbox" checked={compOn} onChange={(e) => setCompOn(e.target.checked)} /> {t('compSound')}</label>
               <label className="toggle"><input type="checkbox" checked={staffGuide} onChange={(e) => setStaffGuide(e.target.checked)} /> {t('staffGuide')}</label>
             </div>
-            {staffGuide && <p className="hint-text">{t('staffGuideHint')}</p>}
+            <p className="hint-text">{t('staffGuideHint')}</p>
             <div className="transport-opts">
               <span className="opt-label">{t('loopRangeLabel')}</span>
               <div className="seg-group">
