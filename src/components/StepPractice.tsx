@@ -620,10 +620,16 @@ export function StepPractice({
       <div className="transport-opts">
         <label className="toggle"><input type="checkbox" checked={countIn} onChange={(e) => setCountIn(e.target.checked)} /> 4 Count In</label>
         <label className="toggle"><input type="checkbox" checked={metronomeOn} onChange={(e) => setMetronomeOn(e.target.checked)} /> {t('metronome')}</label>
-        <label className="toggle">
-          <input type="checkbox" checked={clickPattern === 'backbeat'} onChange={(e) => setClickPattern(e.target.checked ? 'backbeat' : 'all')} />
-          {t('backbeatClick')}
-        </label>
+        <div className="seg-group">
+          <button
+            className={`seg${clickPattern === 'all' ? ' on' : ''}`} aria-pressed={clickPattern === 'all'}
+            disabled={!metronomeOn} onClick={() => setClickPattern('all')}
+          >{t('clickAllBeats')}</button>
+          <button
+            className={`seg${clickPattern === 'backbeat' ? ' on' : ''}`} aria-pressed={clickPattern === 'backbeat'}
+            disabled={!metronomeOn} onClick={() => setClickPattern('backbeat')}
+          >{t('clickBackbeat')}</button>
+        </div>
         <label className="toggle"><input type="checkbox" checked={compOn} onChange={(e) => setCompOn(e.target.checked)} /> {t('compSound')}</label>
       </div>
 

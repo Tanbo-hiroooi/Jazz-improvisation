@@ -46,10 +46,8 @@ function beatsToTime(beats: number): string {
 
 /** チャンネル別の音量(0〜1)。チャンネルごとのGainノードで適用する */
 export interface ChannelVolumes {
-  /** 毎拍メトロノーム(カウントインにも適用) */
+  /** メトロノーム(毎拍・2・4拍・カウントインすべて) */
   metronome: number;
-  /** 2・4拍クリック */
-  backbeat: number;
   /** コード伴奏 */
   comp: number;
 }
@@ -72,10 +70,10 @@ function loadVolumes(): ChannelVolumes {
     if (raw) {
       const v = JSON.parse(raw) as Partial<ChannelVolumes>;
       const clamp = (x: unknown, d: number) => (typeof x === 'number' && x >= 0 && x <= 1 ? x : d);
-      return { metronome: clamp(v.metronome, 1), backbeat: clamp(v.backbeat, 1), comp: clamp(v.comp, 1) };
+      return { metronome: clamp(v.metronome, 1), comp: clamp(v.comp, 1) };
     }
   } catch { /* 読み込み失敗時は既定値 */ }
-  return { metronome: 1, backbeat: 1, comp: 1 };
+  return { metronome: 1, comp: 1 };
 }
 
 export class AudioEngine {
@@ -108,7 +106,8 @@ export class AudioEngine {
   /** 現在の音量をGainノードへ反映(ノード未作成なら何もしない) */
   private applyVolumes(): void {
     if (this.metronomeGain) this.metronomeGain.gain.value = gainFor(this.volumes.metronome);
-    if (this.backbeatGain) this.backbeatGain.gain.value = gainFor(this.volumes.backbeat);
+    // 2・4拍クリックはメトロノームの一形態なので、音量も同じつまみで動かす
+    if (this.backbeatGain) this.backbeatGain.gain.value = gainFor(this.volumes.metronome);
     if (this.compGain) this.compGain.gain.value = gainFor(this.volumes.comp);
   }
 

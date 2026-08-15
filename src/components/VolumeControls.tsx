@@ -1,4 +1,4 @@
-// 音量調整パネル(折りたたみ): メトロノーム / 2・4拍クリック / コード音を個別に調整。
+// 音量調整パネル(折りたたみ): メトロノーム / コード音を個別に調整。
 // 設定はlocalStorageに保存され、全画面共通。再生中の変更も次の発音からライブ反映される。
 
 import { useState } from 'react';
@@ -37,7 +37,6 @@ export function VolumeControls({ lang }: Props) {
       <summary>🔊 {t('volumeTitle')}</summary>
       <div className="volume-body">
         {row('metronome', t('volMetronome'))}
-        {row('backbeat', t('volBackbeat'))}
         {row('comp', t('volComp'))}
       </div>
     </details>

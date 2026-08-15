@@ -42,7 +42,7 @@ export function GridComposer({
   const [bpm, setBpm] = useState(initialBpm);
   const [countIn, setCountIn] = useState(true);
   const [metronomeOn, setMetronomeOn] = useState(true);
-  const [backbeat, setBackbeat] = useState(true);
+  const [clickPattern, setClickPattern] = useState<'all' | 'backbeat'>('backbeat');
   const [labelMode, setLabelMode] = useState<LabelMode>('degree');
   // 編集で選択中の音(譜面上でハイライトする)
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -95,7 +95,7 @@ export function GridComposer({
 
   const { playing, currentNoteIndex, startPlayback, stopAll } = usePracticePlayback({
     progression: prog, effKeyPc: keyPc, displayedNotes, bpm, countIn,
-    loopEnabled: true, metronomeOn, clickPattern: backbeat ? 'backbeat' : 'all', compOn: true,
+    loopEnabled: true, metronomeOn, clickPattern, compOn: true,
     swing: 1 / 6, loopRange: 'full', selectedMeasure: 0,
   });
   const check = (overrides: PlaybackOverrides) => startPlayback('example', overrides);
@@ -197,7 +197,16 @@ export function GridComposer({
         <div className="transport-opts">
           <label className="toggle"><input type="checkbox" checked={countIn} onChange={(e) => setCountIn(e.target.checked)} /> 4 Count In</label>
           <label className="toggle"><input type="checkbox" checked={metronomeOn} onChange={(e) => setMetronomeOn(e.target.checked)} /> {t('metronome')}</label>
-          <label className="toggle"><input type="checkbox" checked={backbeat} onChange={(e) => setBackbeat(e.target.checked)} /> {t('backbeatClick')}</label>
+          <div className="seg-group">
+            <button
+              className={`seg${clickPattern === 'all' ? ' on' : ''}`} aria-pressed={clickPattern === 'all'}
+              disabled={!metronomeOn} onClick={() => setClickPattern('all')}
+            >{t('clickAllBeats')}</button>
+            <button
+              className={`seg${clickPattern === 'backbeat' ? ' on' : ''}`} aria-pressed={clickPattern === 'backbeat'}
+              disabled={!metronomeOn} onClick={() => setClickPattern('backbeat')}
+            >{t('clickBackbeat')}</button>
+          </div>
         </div>
         <VolumeControls lang={lang} />
         <p className="hint-text">{t('playSelfHint')}</p>

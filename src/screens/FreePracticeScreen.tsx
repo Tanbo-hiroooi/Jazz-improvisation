@@ -87,6 +87,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
   const [loopEnabled, setLoopEnabled] = useState(true);
   const [countIn, setCountIn] = useState(true);
   const [metronomeOn, setMetronomeOn] = useState(true);
+  const [clickPattern, setClickPattern] = useState<'all' | 'backbeat'>('all');
   const [compOn, setCompOn] = useState(true);
   const [loopRange, setLoopRange] = useState<LoopRange>('full');
   const [selectedMeasure, setSelectedMeasure] = useState(0);
@@ -145,7 +146,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
   );
 
   const { playing, position, currentNoteIndex, startPlayback, stopAll } = usePracticePlayback({
-    progression, effKeyPc, displayedNotes, bpm, countIn, loopEnabled, metronomeOn, compOn,
+    progression, effKeyPc, displayedNotes, bpm, countIn, loopEnabled, metronomeOn, clickPattern, compOn,
     swing: effectiveSwing, loopRange, selectedMeasure,
   });
 
@@ -481,6 +482,16 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
               <label className="toggle"><input type="checkbox" checked={loopEnabled} onChange={(e) => setLoopEnabled(e.target.checked)} /> Loop</label>
               <label className="toggle"><input type="checkbox" checked={countIn} onChange={(e) => setCountIn(e.target.checked)} /> 4 Count In</label>
               <label className="toggle"><input type="checkbox" checked={metronomeOn} onChange={(e) => setMetronomeOn(e.target.checked)} /> {t('metronome')}</label>
+              <div className="seg-group">
+                <button
+                  className={`seg${clickPattern === 'all' ? ' on' : ''}`} aria-pressed={clickPattern === 'all'}
+                  disabled={!metronomeOn} onClick={() => setClickPattern('all')}
+                >{t('clickAllBeats')}</button>
+                <button
+                  className={`seg${clickPattern === 'backbeat' ? ' on' : ''}`} aria-pressed={clickPattern === 'backbeat'}
+                  disabled={!metronomeOn} onClick={() => setClickPattern('backbeat')}
+                >{t('clickBackbeat')}</button>
+              </div>
               <label className="toggle"><input type="checkbox" checked={compOn} onChange={(e) => setCompOn(e.target.checked)} /> {t('compSound')}</label>
               <label className="toggle"><input type="checkbox" checked={staffGuide} onChange={(e) => setStaffGuide(e.target.checked)} /> {t('staffGuide')}</label>
             </div>

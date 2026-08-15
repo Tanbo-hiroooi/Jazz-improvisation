@@ -4,7 +4,8 @@
       "Bash(npm --version)",
       "Bash(npm install *)",
       "Bash(npx tsc *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "mcp__Roblox_Studio__list_roblox_studios"
     ]
   }
 }
