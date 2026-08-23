@@ -114,6 +114,12 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
 - **停止時はDrawキューも捨てる**: 位置・ハイライトの通知は `Tone.getDraw().schedule()` 経由なので、
   Transportを止めただけでは既に積まれたコールバックが後から発火し、停止時に光っていた音符が残る。
   `stop()` で `Tone.getDraw().cancel(0)` を呼び、コールバック側も `if (!this.running) return;` で二重に防ぐ。
+- **コードタイプは12種類**(`QUALITIES`)。`tones` は必ず [Root, 3rd相当, 5th相当, 7th相当] の4つで、
+  course側の「3度」「7度」判定(targetAsNotes / third-only / requireEndOn3rd)がこの並びに依存する。
+  6th系は tones[3] が6th、7sus4は tones[1] が4th。追加時はこの契約を崩さないこと。
+  dim7のスケールは8音なので、`scaleAsNotes` は8音以上ならオクターブを足さず1小節に収める。
+- **1小節2コード**: `CustomChord.pc2/q2` があれば beat0とbeat2の2イベントに展開する(`isSplitBar`)。
+  既知の制限: グリッド編集(`chordForBar`)は小節に1パレットなので、フレーズ作成では1つ目のコードだけが使われる。
 - engineはシングルトン。`StartOptions`: bpm/countIn/loop/regionBars/metronome/`clickPattern('all'|'backbeat')`/notes/rhythmOnly/comp/swing/コールバック群。
 - スウィング: ウラ拍(x.5)を遅らせる方式。再生とハイライト判定が**同じ**タイミング計算を共有(ズレ防止)。
 - アーティキュレーション再生: accent=velocity×1.25 / staccato=gate0.45 / tenuto=gate1.0。

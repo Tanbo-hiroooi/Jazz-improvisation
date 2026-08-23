@@ -52,7 +52,10 @@ export function ChordInfoPanel({ rootPc, quality, flats, concertLabel, lang }: P
               </span>
             );
           })}
-          <span className="guide-note-hint">{t(lang, 'guideToneHint')}</span>
+          {/* 6thコードなどガイドトーンが3度+7度でない場合は、汎用の言い方にする */}
+          <span className="guide-note-hint">
+            {t(lang, def.guide[1] === def.tones[3] && def.toneDegrees[3].includes('7') ? 'guideToneHint' : 'guideToneHintGeneric')}
+          </span>
         </span>
       </div>
 

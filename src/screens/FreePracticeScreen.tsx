@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChordInfoPanel } from '../components/ChordInfoPanel';
 import { ChordProgressionView } from '../components/ChordProgressionView';
-import { CustomProgressionEditor, DEFAULT_CUSTOM, type CustomChord } from '../components/CustomProgressionEditor';
+import { CustomProgressionEditor, DEFAULT_CUSTOM, isSplitBar, type CustomChord } from '../components/CustomProgressionEditor';
 import { PracticeLogPanel } from '../components/PracticeLogPanel';
 import { StaffView, type ChordDisplay, type LabelMode } from '../components/StaffView';
 import { notationLabel, positionLabel } from '../components/SessionSetupPanel';
@@ -108,7 +108,15 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
       measures: customChords.length,
       description: tr('ja', 'customDescription'),
       descriptionEn: tr('en', 'customDescription'),
-      chords: customChords.map((c, i) => ({ measure: i, beat: 0, beats: 4, rootOffset: c.pc, quality: c.q })),
+      // 2拍ずつに分けた小節は、1拍目と3拍目の2イベントにする
+      chords: customChords.flatMap((c, i) => (
+        isSplitBar(c)
+          ? [
+              { measure: i, beat: 0, beats: 2, rootOffset: c.pc, quality: c.q },
+              { measure: i, beat: 2, beats: 2, rootOffset: c.pc2!, quality: c.q2! },
+            ]
+          : [{ measure: i, beat: 0, beats: 4, rootOffset: c.pc, quality: c.q }]
+      )),
     };
   }, [isCustom, menuId, customChords]);
   const instrument = getInstrument(instrumentId);

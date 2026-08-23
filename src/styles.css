@@ -351,8 +351,12 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-wrap: wrap;
 }
 .custom-chord-row select { padding: 8px 4px; font-size: 14px; min-width: 0; }
+/* 2拍ずつに分けるチェック。分けた小節は列を広く取る */
+.custom-split-toggle { font-size: 11px; white-space: nowrap; min-height: 24px; }
+.custom-chord-row.split { grid-column: span 2; }
 .custom-chord-num {
   font-size: 11px;
   color: var(--text-dim);

@@ -666,8 +666,9 @@ export function scaleAsNotes(prog: Progression, keyPc: number): NoteEvent[] {
     let rootMidi = 60 + rootPc;
     if (rootMidi > 65) rootMidi -= 12;
     const measureStart = chord.measure * 4 + chord.beat;
-    // 4拍コードはスケール全音+オクターブ、2拍コードはコードトーンのみ
-    const seq = chord.beats >= 4 ? [...def.scale, 12] : def.tones;
+    // 4拍コードはスケール全音+オクターブ、2拍コードはコードトーンのみ。
+    // ディミニッシュのように8音あるスケールはオクターブを足さず、1小節=8個に収める
+    const seq = chord.beats >= 4 ? (def.scale.length >= 8 ? def.scale : [...def.scale, 12]) : def.tones;
     seq.forEach((o, i) => {
       events.push({
         midi: rootMidi + o,

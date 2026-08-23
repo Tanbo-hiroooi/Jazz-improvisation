@@ -9,6 +9,14 @@ import { pick, t, type Lang } from '../i18n';
 export interface CustomChord {
   pc: number; // ルート(実音)
   q: Quality;
+  /** 3拍目から鳴る2つ目のコード。未指定なら1小節1コード */
+  pc2?: number;
+  q2?: Quality;
+}
+
+/** 1小節を2拍ずつ2コードに分けているか */
+export function isSplitBar(c: CustomChord): boolean {
+  return c.pc2 !== undefined && c.q2 !== undefined;
 }
 
 export const DEFAULT_CUSTOM: CustomChord[] = [
@@ -18,9 +26,27 @@ export const DEFAULT_CUSTOM: CustomChord[] = [
   { pc: 0, q: 'maj7' },
 ];
 
-const QUALITY_OPTIONS: { value: Quality; label: string }[] = (
-  Object.keys(QUALITIES) as Quality[]
-).map((q) => ({ value: q, label: QUALITIES[q].suffix }));
+// 系統ごとに並べる(オブジェクトのキー順だと数字始まりが先に来て探しにくいため)
+const QUALITY_GROUPS: { labelKey: 'qGroupMajor' | 'qGroupMinor' | 'qGroupDominant' | 'qGroupOther'; items: Quality[] }[] = [
+  { labelKey: 'qGroupMajor', items: ['maj7', 'maj9', '6'] },
+  { labelKey: 'qGroupMinor', items: ['m7', 'm9', 'm6'] },
+  { labelKey: 'qGroupDominant', items: ['7', '9', '7sus4', '7b9'] },
+  { labelKey: 'qGroupOther', items: ['m7b5', 'dim7'] },
+];
+
+function QualityOptions({ lang }: { lang: Lang }) {
+  return (
+    <>
+      {QUALITY_GROUPS.map((g) => (
+        <optgroup key={g.labelKey} label={t(lang, g.labelKey)}>
+          {g.items.map((q) => (
+            <option key={q} value={q}>{QUALITIES[q].suffix}</option>
+          ))}
+        </optgroup>
+      ))}
+    </>
+  );
+}
 
 interface Props {
   chords: CustomChord[];
@@ -43,6 +69,16 @@ export function CustomProgressionEditor({ chords, onChange, shift, pitchLabel, l
     onChange(chords.map((c, i) => (i === index ? { ...c, ...patch } : c)));
   };
 
+  /** 2拍ずつに分ける/戻す。分けるときは1つ目と同じコードから始める */
+  const toggleSplit = (index: number, split: boolean) => {
+    onChange(chords.map((c, i) => {
+      if (i !== index) return c;
+      if (split) return { ...c, pc2: c.pc, q2: c.q };
+      const { pc2: _pc2, q2: _q2, ...rest } = c;
+      return rest;
+    }));
+  };
+
   return (
     <div className="custom-editor">
       <p className="custom-editor-pitch">{t(lang, 'chordInputLabel')}: <strong>{pitchLabel}</strong></p>
@@ -56,7 +92,7 @@ export function CustomProgressionEditor({ chords, onChange, shift, pitchLabel, l
       </div>
       <div className="custom-editor-grid">
         {chords.map((c, i) => (
-          <div key={i} className="custom-chord-row">
+          <div key={i} className={`custom-chord-row${isSplitBar(c) ? ' split' : ''}`}>
             <span className="custom-chord-num">{i + 1}</span>
             <select
               value={mod12(c.pc + shift)}
@@ -72,15 +108,41 @@ export function CustomProgressionEditor({ chords, onChange, shift, pitchLabel, l
               onChange={(e) => update(i, { q: e.target.value as Quality })}
               aria-label={pick(lang, `${i + 1} ${t(lang, 'qualityAria')}`, `Bar ${i + 1} chord type`)}
             >
-              {QUALITY_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
+              <QualityOptions lang={lang} />
             </select>
+            {isSplitBar(c) && (
+              <>
+                <select
+                  value={mod12(c.pc2! + shift)}
+                  onChange={(e) => update(i, { pc2: mod12(Number(e.target.value) - shift) })}
+                  aria-label={pick(lang, `${i + 1}小節目 3拍目のルート`, `Bar ${i + 1} beat 3 root`)}
+                >
+                  {KEYS.map((k) => (
+                    <option key={k.pc} value={k.pc}>{k.name}</option>
+                  ))}
+                </select>
+                <select
+                  value={c.q2}
+                  onChange={(e) => update(i, { q2: e.target.value as Quality })}
+                  aria-label={pick(lang, `${i + 1}小節目 3拍目のコードタイプ`, `Bar ${i + 1} beat 3 chord type`)}
+                >
+              <QualityOptions lang={lang} />
+                </select>
+              </>
+            )}
+            <label className="toggle custom-split-toggle">
+              <input
+                type="checkbox"
+                checked={isSplitBar(c)}
+                onChange={(e) => toggleSplit(i, e.target.checked)}
+              />
+              {t(lang, 'splitBarLabel')}
+            </label>
           </div>
         ))}
       </div>
       <p className="hint-text">
-        {t(lang, 'customEditorHint')}
+        {t(lang, 'splitBarHint')} {t(lang, 'customEditorHint')}
         {shift % 12 !== 0 && ` ${t(lang, 'customWrittenHint')}`}
       </p>
     </div>
