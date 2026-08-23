@@ -82,6 +82,7 @@ export function CustomProgressionEditor({ chords, onChange, shift, pitchLabel, l
   return (
     <div className="custom-editor">
       <p className="custom-editor-pitch">{t(lang, 'chordInputLabel')}: <strong>{pitchLabel}</strong></p>
+      <p className="hint-text custom-editor-lead">{t(lang, 'customEditorLead')}</p>
       <div className="field">
         <label htmlFor="custom-measures">{t(lang, 'measuresLabel')}</label>
         <select id="custom-measures" value={chords.length} onChange={(e) => setCount(Number(e.target.value))}>
@@ -92,26 +93,39 @@ export function CustomProgressionEditor({ chords, onChange, shift, pitchLabel, l
       </div>
       <div className="custom-editor-grid">
         {chords.map((c, i) => (
-          <div key={i} className={`custom-chord-row${isSplitBar(c) ? ' split' : ''}`}>
-            <span className="custom-chord-num">{i + 1}</span>
-            <select
-              value={mod12(c.pc + shift)}
-              onChange={(e) => update(i, { pc: mod12(Number(e.target.value) - shift) })}
-              aria-label={pick(lang, `${i + 1} ${t(lang, 'rootAria')}`, `Bar ${i + 1} root`)}
-            >
-              {KEYS.map((k) => (
-                <option key={k.pc} value={k.pc}>{k.name}</option>
-              ))}
-            </select>
-            <select
-              value={c.q}
-              onChange={(e) => update(i, { q: e.target.value as Quality })}
-              aria-label={pick(lang, `${i + 1} ${t(lang, 'qualityAria')}`, `Bar ${i + 1} chord type`)}
-            >
-              <QualityOptions lang={lang} />
-            </select>
+          <div key={i} className="custom-bar">
+            <div className="custom-chord-line">
+              <span className="custom-chord-num">{i + 1}</span>
+              <select
+                value={mod12(c.pc + shift)}
+                onChange={(e) => update(i, { pc: mod12(Number(e.target.value) - shift) })}
+                aria-label={pick(lang, `${i + 1} ${t(lang, 'rootAria')}`, `Bar ${i + 1} root`)}
+              >
+                {KEYS.map((k) => (
+                  <option key={k.pc} value={k.pc}>{k.name}</option>
+                ))}
+              </select>
+              <select
+                value={c.q}
+                onChange={(e) => update(i, { q: e.target.value as Quality })}
+                aria-label={pick(lang, `${i + 1} ${t(lang, 'qualityAria')}`, `Bar ${i + 1} chord type`)}
+              >
+                <QualityOptions lang={lang} />
+              </select>
+              <button
+                type="button"
+                className={`btn tiny custom-split-btn${isSplitBar(c) ? ' on' : ''}`}
+                aria-pressed={isSplitBar(c)}
+                title={t(lang, isSplitBar(c) ? 'splitBarUndo' : 'splitBarAdd')}
+                aria-label={t(lang, isSplitBar(c) ? 'splitBarUndo' : 'splitBarAdd')}
+                onClick={() => toggleSplit(i, !isSplitBar(c))}
+              >
+                {isSplitBar(c) ? '−' : t(lang, 'splitBarBtn')}
+              </button>
+            </div>
             {isSplitBar(c) && (
-              <>
+              <div className="custom-chord-line sub">
+                <span className="custom-chord-num">{t(lang, 'splitBarBeat3')}</span>
                 <select
                   value={mod12(c.pc2! + shift)}
                   onChange={(e) => update(i, { pc2: mod12(Number(e.target.value) - shift) })}
@@ -126,23 +140,16 @@ export function CustomProgressionEditor({ chords, onChange, shift, pitchLabel, l
                   onChange={(e) => update(i, { q2: e.target.value as Quality })}
                   aria-label={pick(lang, `${i + 1}小節目 3拍目のコードタイプ`, `Bar ${i + 1} beat 3 chord type`)}
                 >
-              <QualityOptions lang={lang} />
+                  <QualityOptions lang={lang} />
                 </select>
-              </>
+                <span />
+              </div>
             )}
-            <label className="toggle custom-split-toggle">
-              <input
-                type="checkbox"
-                checked={isSplitBar(c)}
-                onChange={(e) => toggleSplit(i, e.target.checked)}
-              />
-              {t(lang, 'splitBarLabel')}
-            </label>
           </div>
         ))}
       </div>
       <p className="hint-text">
-        {t(lang, 'splitBarHint')} {t(lang, 'customEditorHint')}
+        {t(lang, 'customEditorHint')}
         {shift % 12 !== 0 && ` ${t(lang, 'customWrittenHint')}`}
       </p>
     </div>

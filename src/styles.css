@@ -344,19 +344,30 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
 .custom-editor-pitch strong { color: var(--accent); }
 .custom-editor-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 8px;
 }
-.custom-chord-row {
-  display: flex;
+/* 1小節=1ブロック。分割した小節だけ2行目が下に付く。
+   select は width:100% が効くので、折り返さないようgridで列幅を決める */
+.custom-bar { display: flex; flex-direction: column; gap: 3px; }
+.custom-chord-line {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) minmax(0, 1.35fr) auto;
   align-items: center;
   gap: 4px;
-  flex-wrap: wrap;
 }
-.custom-chord-row select { padding: 8px 4px; font-size: 14px; min-width: 0; }
-/* 2拍ずつに分けるチェック。分けた小節は列を広く取る */
-.custom-split-toggle { font-size: 11px; white-space: nowrap; min-height: 24px; }
-.custom-chord-row.split { grid-column: span 2; }
+.custom-chord-line select { padding: 8px 4px; font-size: 14px; min-width: 0; }
+.custom-chord-line.sub { padding-left: 10px; }
+.custom-chord-line.sub .custom-chord-num { font-size: 10px; white-space: nowrap; }
+.custom-split-btn {
+  padding: 2px 6px;
+  font-size: 11px;
+  min-height: 30px;
+  white-space: nowrap;
+  color: var(--text-dim);
+}
+.custom-split-btn.on { border-color: var(--accent); color: var(--accent); }
+.custom-editor-lead { margin-bottom: 8px; }
 .custom-chord-num {
   font-size: 11px;
   color: var(--text-dim);
