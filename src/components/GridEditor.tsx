@@ -44,6 +44,14 @@ export interface GridEditorProps {
   currentIndex?: number;
   /** 選択中の音のattack通し番号を親へ通知(譜面のハイライト用。-1: なし) */
   onSelectedIndexChange?: (index: number) => void;
+  /**
+   * 表示する小節(0始まり)。指定すると入力欄をその1小節だけに絞る。
+   * 12小節などで入力欄が縦に伸びすぎるのを防ぐため、譜面から小節を選んで編集する。
+   * 未指定なら全小節を並べる(従来どおり)。
+   */
+  visibleBar?: number;
+  /** 小節を切り替えたときの通知(前/次ボタン用) */
+  onVisibleBarChange?: (bar: number) => void;
 }
 
 interface CellPos { bar: number; beat: number; cell: number }
@@ -113,6 +121,7 @@ const HELP_SEEN_KEY = 'fc-grid-help-seen-v1';
 export function GridEditor({
   lang, grid, onChange, progression, keyPc, flats, material, divisions,
   fixedRhythm, fixedPitch, allowArticulation, currentIndex = -1, onSelectedIndexChange,
+  visibleBar, onVisibleBarChange,
 }: GridEditorProps) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
   const [selected, setSelected] = useState<CellPos | null>(null);
@@ -127,6 +136,11 @@ export function GridEditor({
   };
 
   const bars = grid.bars.length;
+  // visibleBar が範囲内なら1小節だけ表示する
+  const focusBar = visibleBar !== undefined && visibleBar >= 0 && visibleBar < bars ? visibleBar : -1;
+  const shownBars = focusBar >= 0
+    ? [{ bar: grid.bars[focusBar], b: focusBar }]
+    : grid.bars.map((bar, b) => ({ bar, b }));
   const palettes = palettesForGrid(progression, keyPc, bars, material, flats);
 
   const attacks = attackPositions(grid);
@@ -287,7 +301,26 @@ export function GridEditor({
         </ol>
       </details>
 
-      {grid.bars.map((bar, b) => (
+      {focusBar >= 0 && grid.bars.length > 1 && (
+        <div className="grid-bar-nav">
+          <button
+            className="btn tiny"
+            disabled={focusBar === 0}
+            onClick={() => onVisibleBarChange?.(focusBar - 1)}
+          >← {pick(lang, '前の小節', 'Prev bar')}</button>
+          <span className="grid-bar-nav-label">
+            {focusBar + 1} / {grid.bars.length} {t('measuresUnit')}
+          </span>
+          <button
+            className="btn tiny"
+            disabled={focusBar === grid.bars.length - 1}
+            onClick={() => onVisibleBarChange?.(focusBar + 1)}
+          >{pick(lang, '次の小節', 'Next bar')} →</button>
+        </div>
+      )}
+      {focusBar >= 0 && <p className="hint-text grid-bar-nav-hint">{t('gridPickBarHint')}</p>}
+
+      {shownBars.map(({ bar, b }) => (
         <div key={b} className="grid-bar">
           <div className="grid-bar-head">
             <span className="grid-bar-num">{b + 1}</span>

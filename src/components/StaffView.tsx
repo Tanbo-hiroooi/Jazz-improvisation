@@ -56,6 +56,10 @@ interface Props {
   currentIndex: number;
   /** 編集で選択中のノートインデックス(-1: なし)。編集中どの音を触っているか示す */
   selectedIndex?: number;
+  /** 入力対象として選ばれている小節(0始まり)。譜面上で色を付ける */
+  selectedMeasure?: number;
+  /** 小節をクリックしたときの通知。渡すと譜面がクリック可能になる */
+  onSelectMeasure?: (measure: number) => void;
   /** 譜面表示(TABはギター用。既定は五線譜のみ) */
   notation?: NotationMode;
   guitarPosition?: GuitarPosition;
@@ -145,6 +149,7 @@ const ARTIC_CODE: Record<string, string> = { accent: 'a>', staccato: 'a.', tenut
 
 export function StaffView({
   notes, measures, clef, shift, flats, labelMode, chords, currentIndex, selectedIndex = -1,
+  selectedMeasure = -1, onSelectMeasure,
   notation = 'staff', guitarPosition = 'auto', guitarOpenStrings = true,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -157,6 +162,13 @@ export function StaffView({
   currentIndexRef.current = currentIndex;
   const selectedIndexRef = useRef(selectedIndex);
   selectedIndexRef.current = selectedIndex;
+  // 小節クリック(入力する小節を譜面から選ぶ)。コールバックは毎回変わるので
+  // refで持ち、描画のdepsには入れない(入れると無限に再描画される)
+  const onSelectMeasureRef = useRef(onSelectMeasure);
+  onSelectMeasureRef.current = onSelectMeasure;
+  const selectedMeasureRef = useRef(selectedMeasure);
+  selectedMeasureRef.current = selectedMeasure;
+  const measureRectsRef = useRef<SVGRectElement[]>([]);
 
   // 表示用MIDI: 原則「鳴っている音 + 記譜シフト」をそのまま描画し、
   // 譜表から大きく外れる場合のみオクターブ単位で寄せる。
@@ -309,6 +321,8 @@ export function StaffView({
 
       // タイ描画用: ノートごとの五線譜セグメント(小節をまたいで収集)
       const tieNotes: Map<number, { segIdx: number; line: number; sn: StaveNote }[]> = new Map();
+      // 小節クリック用の当たり判定(描画後にSVGへ重ねる)
+      const measureBoxes: { m: number; x: number; y: number; w: number; h: number }[] = [];
 
       for (let m = 0; m < measures; m++) {
         const line = Math.floor(m / perLine);
@@ -317,6 +331,7 @@ export function StaffView({
         const baseW = width / perLine;
         const x = col * baseW;
         const y = topPad + line * lineHeight;
+        measureBoxes.push({ m, x, y: y - 16, w: baseW - 1, h: lineHeight - 8 });
 
         let stave: Stave | null = null;
         if (showStaff) {
@@ -479,6 +494,36 @@ export function StaffView({
         }
       });
 
+      // 小節の選択枠とクリック領域。選択枠は音符の後ろ、クリック領域は一番手前に置く
+      measureRectsRef.current = [];
+      const svgEl = container.querySelector('svg');
+      if (svgEl && onSelectMeasureRef.current) {
+        const NS = 'http://www.w3.org/2000/svg';
+        for (const box of measureBoxes) {
+          const sel = document.createElementNS(NS, 'rect');
+          sel.setAttribute('x', String(box.x));
+          sel.setAttribute('y', String(box.y));
+          sel.setAttribute('width', String(box.w));
+          sel.setAttribute('height', String(box.h));
+          sel.setAttribute('class', 'vf-measure-sel');
+          sel.setAttribute('data-measure', String(box.m));
+          svgEl.insertBefore(sel, svgEl.firstChild);
+          measureRectsRef.current[box.m] = sel;
+
+          const hit = document.createElementNS(NS, 'rect');
+          hit.setAttribute('x', String(box.x));
+          hit.setAttribute('y', String(box.y));
+          hit.setAttribute('width', String(box.w));
+          hit.setAttribute('height', String(box.h));
+          hit.setAttribute('class', 'vf-measure-hit');
+          hit.setAttribute('data-measure', String(box.m));
+          hit.addEventListener('click', () => onSelectMeasureRef.current?.(box.m));
+          svgEl.appendChild(hit);
+        }
+        const sm = selectedMeasureRef.current;
+        if (sm >= 0) measureRectsRef.current[sm]?.classList.add('on');
+      }
+
       // 再描画後にハイライト(再生位置・編集の選択)を復元
       const ci = currentIndexRef.current;
       if (ci >= 0) {
@@ -499,6 +544,11 @@ export function StaffView({
     ro.observe(container);
     return () => ro.disconnect();
   }, [displayNotes, measures, clef, flats, labelMode, chords, notation, guitarPosition, guitarOpenStrings]);
+
+  // 選択中の小節(再描画せずクラス切替)
+  useEffect(() => {
+    measureRectsRef.current.forEach((r, i) => r?.classList.toggle('on', i === selectedMeasure));
+  }, [selectedMeasure]);
 
   // 再生中ノートのハイライト(再描画せずクラス切替)
   useEffect(() => {

@@ -271,6 +271,8 @@ function EditableStepBody({
 
   // 編集で選択中の音(譜面上でハイライトして「今どれを触っているか」を示す)
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  // 入力対象の小節。譜面をタップして切り替える(12小節などで入力欄が伸びすぎるため)
+  const [editBar, setEditBar] = useState(0);
 
   // 達成チェックリスト(操作課題+形式条件)
   const reqItems: { key: string; label: string; met: boolean }[] = [];
@@ -306,6 +308,7 @@ function EditableStepBody({
             notes={displayedNotes} measures={prog.measures} clef={clef} shift={shift} flats={flats}
             labelMode={labelMode} chords={chordDisplays} currentIndex={currentNoteIndex}
             selectedIndex={selectedIndex}
+            selectedMeasure={Math.min(editBar, grid.bars.length - 1)} onSelectMeasure={setEditBar}
             notation={notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings}
           />
         </div>
@@ -325,6 +328,8 @@ function EditableStepBody({
         allowArticulation={editable.allowArticulation}
         currentIndex={currentNoteIndex >= 0 && currentNoteIndex < attackPositions(grid).length ? currentNoteIndex : -1}
         onSelectedIndexChange={setSelectedIndex}
+        visibleBar={Math.min(editBar, grid.bars.length - 1)}
+        onVisibleBarChange={setEditBar}
       />
 
       {reqItems.length > 0 && (

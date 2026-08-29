@@ -125,6 +125,9 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
   読み込みは FreePracticeScreen の `loadSavedPhrase` が全部を戻す。**注意**: 進行を変えると小節数を自動同期する
   effectがあるため、そのままだと読み込んだ小節数を上書きしてしまう。`prevMeasuresRef` を読み込み側で先に
   更新しておくことで自動同期を発火させない。ここを壊すと「8小節の進行に4小節を読み込む」が失敗する。
+- **入力する小節は譜面から選ぶ**: GridEditorの`visibleBar`を渡すとその1小節だけ入力欄を出す(12小節で縦に伸びるのを防ぐ)。
+  StaffViewは`onSelectMeasure`を渡されたときだけ、小節ごとの透明な`<rect class="vf-measure-hit">`をSVGへ重ねる。
+  選択枠(`vf-measure-sel`)は音符の後ろ、当たり判定は最前面。コールバックはrefで持ち描画depsに入れない(入れると無限再描画)。
 - engineはシングルトン。`StartOptions`: bpm/countIn/loop/regionBars/metronome/`clickPattern('all'|'backbeat')`/notes/rhythmOnly/comp/swing/コールバック群。
 - スウィング: ウラ拍(x.5)を遅らせる方式。再生とハイライト判定が**同じ**タイミング計算を共有(ズレ防止)。
 - アーティキュレーション再生: accent=velocity×1.25 / staccato=gate0.45 / tenuto=gate1.0。

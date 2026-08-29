@@ -46,6 +46,8 @@ export function GridComposer({
   const [labelMode, setLabelMode] = useState<LabelMode>('degree');
   // 編集で選択中の音(譜面上でハイライトする)
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  // 入力対象の小節。譜面をタップして切り替える(小節が多いとき入力欄が伸びすぎるため)
+  const [editBar, setEditBar] = useState(0);
 
   const instrument = getInstrument(session.instrumentId);
   const clef: Clef = session.clefOverride && instrument.clefs.includes(session.clefOverride) ? session.clefOverride : instrument.defaultClef;
@@ -148,6 +150,7 @@ export function GridComposer({
               notes={displayedNotes} measures={prog.measures} clef={clef} shift={shift} flats={flats}
               labelMode={labelMode} chords={chordDisplays} currentIndex={currentNoteIndex}
               selectedIndex={selectedIndex}
+              selectedMeasure={Math.min(editBar, bars - 1)} onSelectMeasure={setEditBar}
               notation={effNotation} guitarPosition={session.guitarPosition} guitarOpenStrings={session.guitarOpenStrings}
             />
           </div>
@@ -166,6 +169,8 @@ export function GridComposer({
           allowArticulation
           currentIndex={currentNoteIndex}
           onSelectedIndexChange={setSelectedIndex}
+          visibleBar={Math.min(editBar, bars - 1)}
+          onVisibleBarChange={setEditBar}
         />
         <div className="transport-opts composer-undo-row">
           <div className="seg-group">
