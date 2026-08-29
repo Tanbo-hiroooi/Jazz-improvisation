@@ -306,7 +306,9 @@ export function StaffView({
         const required = 50 + items.length * 32 + accCount * 12;
         if (required > maxRequired) maxRequired = required;
       }
-      const hardCap = width < 620 ? 2 : 4;
+      // 1行あたりの小節数の上限。広い画面ではもっと横に並べて、譜面の縦を短くする。
+      // 実際の数は下の maxRequired(内容の密度)にも制限されるので、詰まりすぎることはない
+      const hardCap = width < 620 ? 2 : width < 860 ? 4 : 6;
       const perLine = Math.max(1, Math.min(measures, hardCap, Math.floor(width / maxRequired)));
       const lines = Math.ceil(measures / perLine);
       const isGrand = clef === 'grand' && showStaff;

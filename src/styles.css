@@ -807,14 +807,15 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
   background: var(--bg-panel);
   padding-bottom: 6px;
   margin-bottom: 2px;
-  max-height: 46vh;
+  /* vhだけだと縦長の画面で譜面が画面を占有し、入力欄が押し出される。絶対値でも頭打ちにする */
+  max-height: min(65vh, 560px);
   overflow-y: auto;
   box-shadow: 0 6px 10px -8px rgba(0, 0, 0, 0.8);
 }
 /* 画面が狭いときは譜面の占有を抑え、グリッドの操作領域を確保する
    (選択した音は譜面枠内へ自動スクロールされるので、全体が見えていなくても迷わない) */
 @media (max-width: 640px) {
-  .staff-sticky { max-height: 40vh; }
+  .staff-sticky { max-height: min(55vh, 460px); }
 }
 .composer-edit-title { margin-top: 12px; }
 
@@ -875,15 +876,34 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
 .grid-copy-btn { margin-left: auto; }
 .grid-beats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .grid-beat { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.grid-div-toggle {
+/* 拍の分割は音符の記号で選ぶ。狭い画面では折り返す */
+.grid-div-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+  /* 拍ごとのまとまりが分かるよう、4つの記号を1つの帯に載せる */
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 8px;
+  padding: 2px;
+}
+.grid-div-btn {
+  flex: 1 1 auto;
+  min-width: 26px;
+  min-height: 26px;
   background: var(--bg);
-  border: 1px dashed var(--border);
+  border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--text-dim);
-  font-size: 10.5px;
+  font-size: 15px;
+  line-height: 1;
   padding: 2px 4px;
   cursor: pointer;
-  min-height: 22px;
+}
+.grid-div-btn.on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 .grid-cells { display: flex; gap: 3px; }
 .grid-cell {

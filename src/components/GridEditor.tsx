@@ -63,6 +63,9 @@ const DIV_LABEL: Record<Division, { ja: string; en: string }> = {
   4: { ja: '16分', en: '1/16' },
 };
 
+/** 拍の分割を音符の記号で示す。文字(4分/8分)より一目で分かるように */
+const DIV_GLYPH: Record<Division, string> = { 1: '♩', 2: '♫', 3: '♫³', 4: '♬' };
+
 const ARTIC_GLYPH: Record<Articulation, string> = { accent: '>', staccato: '·', tenuto: '–' };
 
 function cloneGrid(grid: GridPhrase): GridPhrase {
@@ -257,12 +260,10 @@ export function GridEditor({
     commit(next);
   };
 
-  /** 拍の分割を切り替え(先頭セルの状態は保持、他はリセット) */
-  const cycleDivision = (bar: number, beat: number) => {
+  /** 拍の分割を指定する(先頭セルの状態は保持、他はリセット) */
+  const setDivision = (bar: number, beat: number, nextDiv: Division) => {
     if (fixedRhythm || divisions.length <= 1) return;
-    const cur = grid.bars[bar].beats[beat].division;
-    const idx = divisions.indexOf(cur);
-    const nextDiv = divisions[(idx + 1) % divisions.length];
+    if (grid.bars[bar].beats[beat].division === nextDiv) return;
     const next = cloneGrid(grid);
     const head = next.bars[bar].beats[beat].cells[0];
     next.bars[bar].beats[beat] = emptyBeat(nextDiv);
@@ -339,13 +340,23 @@ export function GridEditor({
             {bar.beats.map((beat, bt) => (
               <div key={bt} className={`grid-beat div-${beat.division}`}>
                 {divisions.length > 1 && !fixedRhythm && (
-                  <button
-                    className="grid-div-toggle"
-                    onClick={() => cycleDivision(b, bt)}
-                    aria-label={pick(lang, `${bt + 1}拍目の分割を変更`, `Change beat ${bt + 1} subdivision`)}
-                  >
-                    {pick(lang, DIV_LABEL[beat.division].ja, DIV_LABEL[beat.division].en)}
-                  </button>
+                  <div className="grid-div-picker" role="group" aria-label={pick(lang, `${bt + 1}拍目の音符`, `Beat ${bt + 1} note value`)}>
+                    {divisions.map((d) => {
+                      const label = pick(lang, DIV_LABEL[d].ja, DIV_LABEL[d].en);
+                      return (
+                        <button
+                          key={d}
+                          className={`grid-div-btn${beat.division === d ? ' on' : ''}`}
+                          aria-pressed={beat.division === d}
+                          title={label}
+                          aria-label={label}
+                          onClick={() => setDivision(b, bt, d)}
+                        >
+                          {DIV_GLYPH[d]}
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
                 <div className="grid-cells" role="group" aria-label={pick(lang, `${b + 1}小節${bt + 1}拍目`, `Bar ${b + 1} beat ${bt + 1}`)}>
                   {beat.cells.map((cell, c) => {
