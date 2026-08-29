@@ -329,9 +329,11 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
 .scale-note small { font-size: 9px; }
 
 /* ---- 譜面の小節選択(入力する小節を譜面から選ぶ) ---- */
-.vf-measure-hit { fill: transparent; cursor: pointer; }
+/* SVGルートから stroke:black / stroke-width:.3px を継承するため、明示的に消す。
+   消さないと小節ごとに細い黒枠が出てしまう */
+.vf-measure-hit, .vf-measure-sel { stroke: none; fill: transparent; }
+.vf-measure-hit { cursor: pointer; }
 .vf-measure-hit:hover { fill: rgba(96, 165, 250, 0.08); }
-.vf-measure-sel { fill: transparent; }
 .vf-measure-sel.on { fill: rgba(245, 158, 11, 0.14); }
 .grid-bar-nav {
   display: flex;
