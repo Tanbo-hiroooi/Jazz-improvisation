@@ -1,6 +1,6 @@
 // 自由練習: 練習したい技術を自分で選び、個別に反復するモード
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChordInfoPanel } from '../components/ChordInfoPanel';
 import { ChordProgressionView } from '../components/ChordProgressionView';
 import { CustomProgressionEditor, DEFAULT_CUSTOM, isSplitBar, type CustomChord } from '../components/CustomProgressionEditor';
@@ -8,6 +8,8 @@ import { PracticeLogPanel } from '../components/PracticeLogPanel';
 import { StaffView, type ChordDisplay, type LabelMode } from '../components/StaffView';
 import { notationLabel, positionLabel } from '../components/SessionSetupPanel';
 import { GridComposer } from '../components/GridComposer';
+import { SavedPhrasesPanel } from '../components/SavedPhrasesPanel';
+import type { SavedPhrase } from '../state/savedPhrases';
 import { VolumeControls } from '../components/VolumeControls';
 import { usePracticePlayback, type LoopRange } from '../hooks/usePracticePlayback';
 import type { MyInstrumentSettings } from '../state/storage';
@@ -159,10 +161,31 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
   });
 
   // 練習メニューを変えたら、作る小節数はその進行の長さに合わせ直す
-  // (枯葉=8小節を選んだのに4小節しか作れない、という食い違いを避ける)
+  // (枯葉=8小節を選んだのに4小節しか作れない、という食い違いを避ける)。
+  // ただし保存フレーズの読み込みで進行が変わったときは、保存時の小節数を優先する。
+  // そのため「前回の小節数」をrefで持ち、読み込み側が先に更新しておく。
+  const prevMeasuresRef = useRef(progression.measures);
   useEffect(() => {
-    setComposerBars(progression.measures);
-  }, [progression.measures]);
+    if (progression.measures !== prevMeasuresRef.current) {
+      prevMeasuresRef.current = progression.measures;
+      setComposerBars(progression.measures);
+    }
+  });
+
+  /** 保存フレーズの読み込み: 進行・キー・素材・小節数・音符をまとめて戻す */
+  const loadSavedPhrase = (p: SavedPhrase) => {
+    stopAll();
+    const measures = p.menuId === 'custom' ? (p.customChords?.length ?? p.bars) : getProgression(p.menuId).measures;
+    prevMeasuresRef.current = measures; // 自動同期に上書きさせない
+    if (p.menuId === 'custom' && p.customChords) setCustomChords(p.customChords);
+    setMenuId(p.menuId);
+    setKeyPc(p.keyPc);
+    setComposerMaterial(p.material);
+    setComposerBars(p.bars);
+    setComposerHistory([p.phrase]);
+    setComposerHIdx(0);
+    setComposeMode(true);
+  };
 
   // やることを切り替えるときは、鳴りっぱなしを避けるため必ず再生を止める
   const changeMode = (compose: boolean) => {
@@ -450,6 +473,21 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
             history={composerHistory}
             hIdx={composerHIdx}
             onHistoryChange={(h, i) => { setComposerHistory(h); setComposerHIdx(i); }}
+          />
+          <SavedPhrasesPanel
+            lang={lang}
+            phrase={composerHistory[composerHIdx]}
+            snapshot={{
+              menuId,
+              customChords: isCustom ? customChords : undefined,
+              keyPc: effKeyPc,
+              material: composerMaterial,
+              bars: Math.min(composerBars, progression.measures),
+            }}
+            progressionLabel={pick(lang, progression.label, progression.labelEn)}
+            keyName={isCustom ? t('customBadge') : keyName}
+            materialLabel={t(composerMaterial === 'guide-tone' ? 'materialGuideTone' : composerMaterial === 'blues' ? 'materialBlues' : 'materialChordTone')}
+            onLoad={loadSavedPhrase}
           />
         </div>
       )}

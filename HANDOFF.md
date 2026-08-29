@@ -120,6 +120,11 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
   dim7のスケールは8音なので、`scaleAsNotes` は8音以上ならオクターブを足さず1小節に収める。
 - **1小節2コード**: `CustomChord.pc2/q2` があれば beat0とbeat2の2イベントに展開する(`isSplitBar`)。
   既知の制限: グリッド編集(`chordForBar`)は小節に1パレットなので、フレーズ作成では1つ目のコードだけが使われる。
+- **フレーズ保存**(`state/savedPhrases.ts`, localStorage `fc-saved-phrases-v1`, 最大50件):
+  音は進行の上でしか意味を持たないので、GridPhrase単体ではなく menuId/customChords/keyPc/material/bars ごと保存する。
+  読み込みは FreePracticeScreen の `loadSavedPhrase` が全部を戻す。**注意**: 進行を変えると小節数を自動同期する
+  effectがあるため、そのままだと読み込んだ小節数を上書きしてしまう。`prevMeasuresRef` を読み込み側で先に
+  更新しておくことで自動同期を発火させない。ここを壊すと「8小節の進行に4小節を読み込む」が失敗する。
 - engineはシングルトン。`StartOptions`: bpm/countIn/loop/regionBars/metronome/`clickPattern('all'|'backbeat')`/notes/rhythmOnly/comp/swing/コールバック群。
 - スウィング: ウラ拍(x.5)を遅らせる方式。再生とハイライト判定が**同じ**タイミング計算を共有(ズレ防止)。
 - アーティキュレーション再生: accent=velocity×1.25 / staccato=gate0.45 / tenuto=gate1.0。
