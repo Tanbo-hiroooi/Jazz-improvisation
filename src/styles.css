@@ -808,16 +808,28 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
   padding-bottom: 6px;
   margin-bottom: 2px;
   /* vhだけだと縦長の画面で譜面が画面を占有し、入力欄が押し出される。絶対値でも頭打ちにする */
-  max-height: min(65vh, 560px);
+  max-height: min(78vh, 760px);
   overflow-y: auto;
   box-shadow: 0 6px 10px -8px rgba(0, 0, 0, 0.8);
 }
 /* 画面が狭いときは譜面の占有を抑え、グリッドの操作領域を確保する
    (選択した音は譜面枠内へ自動スクロールされるので、全体が見えていなくても迷わない) */
 @media (max-width: 640px) {
-  .staff-sticky { max-height: min(55vh, 460px); }
+  .staff-sticky { max-height: min(62vh, 520px); }
 }
 .composer-edit-title { margin-top: 12px; }
+/* 素材の選択はグリッドのすぐ上に置き、使える音とセットで見せる */
+.grid-material { margin-bottom: 4px; }
+/* 小節が未選択のときの案内(グリッドの代わりに出る) */
+.grid-pick-prompt {
+  margin: 10px 0 0;
+  padding: 14px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  color: var(--text-dim);
+  text-align: center;
+  font-size: 0.92rem;
+}
 
 /* ---- 拍グリッドエディタ ---- */
 .grid-editor { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }

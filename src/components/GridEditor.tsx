@@ -46,7 +46,7 @@ export interface GridEditorProps {
   onSelectedIndexChange?: (index: number) => void;
   /**
    * 表示する小節(0始まり)。指定すると入力欄をその1小節だけに絞る。
-   * 12小節などで入力欄が縦に伸びすぎるのを防ぐため、譜面から小節を選んで編集する。
+   * -1 を渡すと入力欄を出さず、譜面から小節を選ぶよう促す。
    * 未指定なら全小節を並べる(従来どおり)。
    */
   visibleBar?: number;
@@ -81,6 +81,12 @@ function* iterateCells(grid: GridPhrase): Generator<CellPos> {
       }
     }
   }
+}
+
+/** そのグリッドに (bar,beat,cell) が存在するか(作り直し後の古い選択位置を弾く) */
+function cellExists(grid: GridPhrase, p: CellPos): boolean {
+  const beat = grid.bars[p.bar]?.beats[p.beat];
+  return !!beat && p.cell < beat.cells.length;
 }
 
 function cellAt(grid: GridPhrase, p: CellPos): GridCell {
@@ -139,17 +145,19 @@ export function GridEditor({
   };
 
   const bars = grid.bars.length;
-  // visibleBar が範囲内なら1小節だけ表示する
-  const focusBar = visibleBar !== undefined && visibleBar >= 0 && visibleBar < bars ? visibleBar : -1;
-  const shownBars = focusBar >= 0
-    ? [{ bar: grid.bars[focusBar], b: focusBar }]
+  // visibleBar を渡されたら1小節モード。-1 のときは入力欄自体を出さない
+  const perBarMode = visibleBar !== undefined;
+  const focusBar = perBarMode && visibleBar! >= 0 && visibleBar! < bars ? visibleBar! : -1;
+  const shownBars = perBarMode
+    ? (focusBar >= 0 ? [{ bar: grid.bars[focusBar], b: focusBar }] : [])
     : grid.bars.map((bar, b) => ({ bar, b }));
   const palettes = palettesForGrid(progression, keyPc, bars, material, flats);
 
   const attacks = attackPositions(grid);
   const currentAttack = currentIndex >= 0 && currentIndex < attacks.length ? attacks[currentIndex] : null;
 
-  const sel = selected && cellAt(grid, selected).state === 'attack' ? selected : null;
+  // 進行や小節数が変わるとグリッドが作り直されるので、選択位置が範囲外に残ることがある
+  const sel = selected && cellExists(grid, selected) && cellAt(grid, selected).state === 'attack' ? selected : null;
   const selCell = sel ? cellAt(grid, sel) : null;
   const selPalette = sel ? palettes[sel.bar] : [];
 
@@ -301,6 +309,10 @@ export function GridEditor({
           <li><span className="grid-help-icon">🔊</span>{t('gridHelp6')}</li>
         </ol>
       </details>
+
+      {perBarMode && focusBar < 0 && (
+        <p className="grid-pick-prompt">{t('gridPickBarPrompt')}</p>
+      )}
 
       {focusBar >= 0 && grid.bars.length > 1 && (
         <div className="grid-bar-nav">

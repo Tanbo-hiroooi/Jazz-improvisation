@@ -126,8 +126,15 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
   effectがあるため、そのままだと読み込んだ小節数を上書きしてしまう。`prevMeasuresRef` を読み込み側で先に
   更新しておくことで自動同期を発火させない。ここを壊すと「8小節の進行に4小節を読み込む」が失敗する。
 - **入力する小節は譜面から選ぶ**: GridEditorの`visibleBar`を渡すとその1小節だけ入力欄を出す(12小節で縦に伸びるのを防ぐ)。
+  `visibleBar`未指定=全小節(レッスンの一部)、`-1`=入力欄を出さず「譜面の小節をタップして」と促す。
+  フレーズ作成(GridComposer)は`-1`始まりで、まず譜面を大きく見せてから小節を選ばせる。レッスン(StepPractice)は`0`始まり。
   StaffViewは`onSelectMeasure`を渡されたときだけ、小節ごとの透明な`<rect class="vf-measure-hit">`をSVGへ重ねる。
   選択枠(`vf-measure-sel`)は音符の後ろ、当たり判定は最前面。コールバックはrefで持ち描画depsに入れない(入れると無限再描画)。
+  **注意**: 進行・小節数・素材を変えるとグリッドが作り直されるため、`selected`(編集中セル)と`visibleBar`が範囲外に残りうる。
+  GridEditorは`cellExists()`で弾き、GridComposerは`focusBar`で弾く。ここを外すと`bars[n].beats`でクラッシュする。
+- **1行あたりの小節数**(StaffView): 画面幅で上限(<620px:2 / <860px:4 / それ以上:6)、下限は広い画面で4。
+  さらに最終行が1〜2小節にならないよう、割り切れる/最終行が長い並べ方を選ぶ(8小節=6+2ではなく4+4)。
+  素材の選択(コードトーン/ガイドトーン/スケール/ブルース)はグリッドの直上に置く(使える音とセットで見せるため)。
 - engineはシングルトン。`StartOptions`: bpm/countIn/loop/regionBars/metronome/`clickPattern('all'|'backbeat')`/notes/rhythmOnly/comp/swing/コールバック群。
 - スウィング: ウラ拍(x.5)を遅らせる方式。再生とハイライト判定が**同じ**タイミング計算を共有(ズレ防止)。
 - アーティキュレーション再生: accent=velocity×1.25 / staccato=gate0.45 / tenuto=gate1.0。

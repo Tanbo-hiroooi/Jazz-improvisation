@@ -47,7 +47,8 @@ export function GridComposer({
   // 編集で選択中の音(譜面上でハイライトする)
   const [selectedIndex, setSelectedIndex] = useState(-1);
   // 入力対象の小節。譜面をタップして切り替える(小節が多いとき入力欄が伸びすぎるため)
-  const [editBar, setEditBar] = useState(0);
+  // -1 = 未選択。最初は譜面だけを見せ、小節を選んでから入力欄を出す
+  const [editBar, setEditBar] = useState(-1);
 
   const instrument = getInstrument(session.instrumentId);
   const clef: Clef = session.clefOverride && instrument.clefs.includes(session.clefOverride) ? session.clefOverride : instrument.defaultClef;
@@ -63,6 +64,8 @@ export function GridComposer({
   }), [progression, bars]);
 
   const grid = history[hIdx];
+  // 小節数を減らしたときに範囲外の小節を選んだままにしない
+  const focusBar = editBar >= 0 && editBar < bars ? editBar : -1;
 
   // キー・進行・素材・小節数が変わったら、パレット外の音が残らないよう作り直す
   useEffect(() => {
@@ -104,18 +107,9 @@ export function GridComposer({
 
   return (
     <div className="composer">
-      <section className="panel">
-        <h2>{t('composeTitle')}</h2>
-        <p className="hint-text">{t('gridComposeIntro')}</p>
-        <div className="field">
-          <label>{t('materialLabel')}</label>
-          <div className="seg-group">
-            <button className={`seg${material === 'chord-tone' ? ' on' : ''}`} aria-pressed={material === 'chord-tone'} onClick={() => onMaterialChange('chord-tone')}>{t('materialChordTone')}</button>
-            <button className={`seg${material === 'guide-tone' ? ' on' : ''}`} aria-pressed={material === 'guide-tone'} onClick={() => onMaterialChange('guide-tone')}>{t('materialGuideTone')}</button>
-            <button className={`seg${material === 'blues' ? ' on' : ''}`} aria-pressed={material === 'blues'} onClick={() => onMaterialChange('blues')}>{t('materialBlues')}</button>
-          </div>
-        </div>
-        {progression.measures > 1 && (
+      {progression.measures > 1 && (
+        <section className="panel">
+          <h2>{t('composerSetupTitle')}</h2>
           <div className="field">
             <label htmlFor="composer-bars">{t('composerBarsLabel')}</label>
             <select
@@ -131,8 +125,8 @@ export function GridComposer({
               {pick(lang, progression.label, progression.labelEn)} = {progression.measures}{t('measuresUnit')} / {t('composerBarsHint')}
             </p>
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
       <section className="panel">
         {/* 編集中も譜面が見えるよう、譜面と編集を同じパネルに置き上部へ貼り付ける */}
@@ -150,13 +144,23 @@ export function GridComposer({
               notes={displayedNotes} measures={prog.measures} clef={clef} shift={shift} flats={flats}
               labelMode={labelMode} chords={chordDisplays} currentIndex={currentNoteIndex}
               selectedIndex={selectedIndex}
-              selectedMeasure={Math.min(editBar, bars - 1)} onSelectMeasure={setEditBar}
+              selectedMeasure={focusBar} onSelectMeasure={setEditBar}
               notation={effNotation} guitarPosition={session.guitarPosition} guitarOpenStrings={session.guitarOpenStrings}
             />
           </div>
         </div>
 
         <h2 className="composer-edit-title">{t('phraseEditTitle')}</h2>
+        <p className="hint-text">{t('gridComposeIntro')}</p>
+        <div className="field grid-material">
+          <label>{t('materialLabel')}</label>
+          <div className="seg-group">
+            <button className={`seg${material === 'chord-tone' ? ' on' : ''}`} aria-pressed={material === 'chord-tone'} onClick={() => onMaterialChange('chord-tone')}>{t('materialChordTone')}</button>
+            <button className={`seg${material === 'guide-tone' ? ' on' : ''}`} aria-pressed={material === 'guide-tone'} onClick={() => onMaterialChange('guide-tone')}>{t('materialGuideTone')}</button>
+            <button className={`seg${material === 'scale' ? ' on' : ''}`} aria-pressed={material === 'scale'} onClick={() => onMaterialChange('scale')}>{t('materialScale')}</button>
+            <button className={`seg${material === 'blues' ? ' on' : ''}`} aria-pressed={material === 'blues'} onClick={() => onMaterialChange('blues')}>{t('materialBlues')}</button>
+          </div>
+        </div>
         <GridEditor
           lang={lang}
           grid={grid}
@@ -169,7 +173,7 @@ export function GridComposer({
           allowArticulation
           currentIndex={currentNoteIndex}
           onSelectedIndexChange={setSelectedIndex}
-          visibleBar={Math.min(editBar, bars - 1)}
+          visibleBar={focusBar}
           onVisibleBarChange={setEditBar}
         />
         <div className="transport-opts composer-undo-row">

@@ -486,7 +486,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
             }}
             progressionLabel={pick(lang, progression.label, progression.labelEn)}
             keyName={isCustom ? t('customBadge') : keyName}
-            materialLabel={t(composerMaterial === 'guide-tone' ? 'materialGuideTone' : composerMaterial === 'blues' ? 'materialBlues' : 'materialChordTone')}
+            materialLabel={t(composerMaterial === 'guide-tone' ? 'materialGuideTone' : composerMaterial === 'blues' ? 'materialBlues' : composerMaterial === 'scale' ? 'materialScale' : 'materialChordTone')}
             onLoad={loadSavedPhrase}
           />
         </div>

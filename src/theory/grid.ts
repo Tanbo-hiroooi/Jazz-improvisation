@@ -49,7 +49,7 @@ export function emptyGrid(bars: number, division: Division = 2): GridPhrase {
 
 // ---- 使用できる音(パレット) ----
 
-export type GridMaterial = 'root-only' | 'third-only' | 'chord-tone' | 'guide-tone' | 'blues' | 'chromatic';
+export type GridMaterial = 'root-only' | 'third-only' | 'chord-tone' | 'guide-tone' | 'blues' | 'scale' | 'chromatic';
 
 /** ブルーススケール(ルートからの半音): 1 ♭3 4 ♭5 5 ♭7 */
 const BLUES_OFFSETS = [0, 3, 5, 6, 7, 10];
@@ -79,6 +79,11 @@ export function paletteFor(keyPc: number, rootOffset: number, quality: Quality, 
     case 'third-only': offsets = [def.tones[1]]; degrees = [def.toneDegrees[1]]; break;
     case 'guide-tone': offsets = def.guide; degrees = def.guide.map((g) => def.toneDegrees[def.tones.indexOf(g)] ?? ''); break;
     case 'blues': offsets = BLUES_OFFSETS; degrees = BLUES_DEGREES; break;
+    // スケール: そのコードのおすすめスケール全音。コードトーンには度数を出す
+    case 'scale':
+      offsets = def.scale;
+      degrees = def.scale.map((o) => def.toneDegrees[def.tones.indexOf(o)] ?? '');
+      break;
     // 半音の助走を自分で置く課題に使う。コードトーンだけ度数を表示する
     case 'chromatic':
       offsets = Array.from({ length: 12 }, (_, i) => i);
