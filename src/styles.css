@@ -886,65 +886,133 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
 }
 .grid-bar-chord { font-weight: 700; font-size: 14px; color: var(--accent); }
 .grid-copy-btn { margin-left: auto; }
-.grid-beats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.grid-beat { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-/* 拍の分割は音符の記号で選ぶ。狭い画面では折り返す */
-.grid-div-picker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
-  justify-content: center;
-  /* 拍ごとのまとまりが分かるよう、4つの記号を1つの帯に載せる */
-  background: rgba(0, 0, 0, 0.22);
-  border-radius: 8px;
-  padding: 2px;
-}
-.grid-div-btn {
-  flex: 1 1 auto;
-  min-width: 26px;
-  min-height: 26px;
-  background: var(--bg);
+/* ---- ピアノロール(縦=音の高さ / 横=拍) ---- */
+.pianoroll {
   border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text-dim);
-  font-size: 15px;
-  line-height: 1;
-  padding: 2px 4px;
-  cursor: pointer;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg);
 }
-.grid-div-btn.on {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent);
+/* 行見出しぶんの列を空けて、ヘッダと各行の拍位置をそろえる */
+.pr-headrow,
+.pr-row { display: grid; grid-template-columns: 62px 1fr; }
+.pr-headrow { border-bottom: 1px solid var(--border); background: rgba(0, 0, 0, 0.22); }
+.pr-corner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-right: 1px solid var(--border);
+  padding: 3px;
 }
-.grid-cells { display: flex; gap: 3px; }
-.grid-cell {
+/* 表示する音域をオクターブ単位でずらす(既定はG3〜D5) */
+.pr-oct {
   flex: 1;
   min-width: 0;
-  min-height: 52px;
-  border-radius: 8px;
-  border: 1.5px solid var(--border);
+  min-height: 22px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
   background: var(--bg);
   color: var(--text-dim);
+  font-size: 10px;
+  line-height: 1;
+  padding: 0;
   cursor: pointer;
+}
+.pr-oct:disabled { opacity: 0.35; cursor: default; }
+.pr-beats { display: grid; grid-template-columns: repeat(4, 1fr); min-width: 0; }
+.pr-beat-head {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 1px;
-  padding: 2px 1px;
-  font-size: 12px;
+  gap: 2px;
+  padding: 4px 3px;
+  min-width: 0;
 }
-.grid-cell.attack { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
-.grid-cell.hold { background: rgba(245, 158, 11, 0.07); border-style: dashed; border-color: var(--accent); color: var(--accent); }
-.grid-cell.selected { outline: 2px solid var(--accent); outline-offset: 1px; }
-.grid-cell.playing { outline: 2px solid var(--red); outline-offset: 1px; }
-.grid-cell:active { transform: scale(0.96); }
-.grid-cell-body { font-weight: 700; font-size: 12px; line-height: 1.1; white-space: nowrap; }
-.grid-cell-degree { font-size: 9px; color: var(--accent); line-height: 1; }
-.grid-cell-artic { font-size: 10px; color: var(--red); line-height: 1; font-weight: 700; }
-.div-3 .grid-cell, .div-4 .grid-cell { font-size: 10px; }
-.div-4 .grid-cell-body { font-size: 9.5px; }
+.pr-beat-head + .pr-beat-head { border-left: 1px solid var(--border); }
+.pr-beat-num { font-size: 11px; font-weight: 700; color: var(--text-dim); }
+/* 高さのある表なので、はみ出すぶんは中でスクロールさせる */
+.pr-body {
+  position: relative;
+  max-height: min(44vh, 380px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.pr-row { border-top: 1px solid rgba(255, 255, 255, 0.04); }
+.pr-row:first-child { border-top: none; }
+/* コードトーン(度数のある音)の行は地の色を変えて、狙う音が目で分かるようにする */
+.pr-row.chord-tone { background: rgba(245, 158, 11, 0.06); }
+.pr-row.foreign { background: rgba(255, 255, 255, 0.02); }
+.pr-rowhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 0 6px;
+  min-height: 26px;
+  border: none;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  text-align: right;
+}
+.pr-row.chord-tone .pr-rowhead { color: var(--text); }
+.pr-rowhead-note { font-size: 12px; font-weight: 600; line-height: 1; }
+.pr-rowhead-deg { font-size: 9px; color: var(--accent); }
+.pr-beat { display: grid; min-width: 0; }
+.pr-beat.div-1 { grid-template-columns: repeat(1, 1fr); }
+.pr-beat.div-2 { grid-template-columns: repeat(2, 1fr); }
+.pr-beat.div-3 { grid-template-columns: repeat(3, 1fr); }
+.pr-beat.div-4 { grid-template-columns: repeat(4, 1fr); }
+.pr-beat + .pr-beat { border-left: 1px solid var(--border); }
+.pr-cell {
+  min-width: 0;
+  min-height: 26px;
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1;
+}
+.pr-cell:first-child { border-left: none; }
+.pr-cell:hover:not(:disabled) { background: rgba(245, 158, 11, 0.16); }
+.pr-cell:disabled { cursor: default; }
+/* 音は横棒。のばした先(hold)も同じ行に続けて描くので、長さが見た目で分かる */
+.pr-cell.attack::after,
+.pr-cell.hold::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  /* 既定では右へ1pxはみ出させ、次のマスへ続く音を切れ目なくつなぐ */
+  right: -1px;
+  background: var(--accent);
+}
+.pr-cell.attack::after { left: 2px; border-radius: 4px 0 0 4px; }
+.pr-cell.hold::after { opacity: 0.55; }
+/* 音の終わりだけ角を丸める(伸びている途中はつながったまま) */
+.pr-cell.run-end::after { right: 2px; border-top-right-radius: 4px; border-bottom-right-radius: 4px; }
+.pr-cell.selected { outline: 2px solid var(--text); outline-offset: -2px; z-index: 1; }
+.pr-cell.playing { outline: 2px solid var(--red); outline-offset: -2px; z-index: 1; }
+.pr-cell:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; z-index: 2; }
+.pr-cell-artic {
+  position: relative;
+  z-index: 1;
+  color: var(--bg);
+  font-weight: 700;
+}
+@media (max-width: 640px) {
+  .pr-headrow, .pr-row { grid-template-columns: 52px 1fr; }
+  .pr-rowhead { min-height: 24px; }
+  .pr-cell { min-height: 24px; }
+  .pr-body { max-height: min(40vh, 300px); }
+}
 /* 選択した音の編集パネルは画面下部に貼り付け、譜面を見ながら操作できるようにする */
 .grid-edit-panel {
   position: sticky;

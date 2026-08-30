@@ -78,6 +78,8 @@ function loadVolumes(): ChannelVolumes {
 
 export class AudioEngine {
   private melody: Tone.Synth | null = null;
+  /** 編集中の単音プレビュー用(melodyを使うと再生中の音を奪うため別ノードにする) */
+  private preview: Tone.Synth | null = null;
   private clickHi: Tone.Synth | null = null;
   private clickLo: Tone.Synth | null = null;
   /** 2・4拍クリック専用(毎拍メトロノームと音量を独立させるため別ノードにする) */
@@ -125,6 +127,11 @@ export class AudioEngine {
         oscillator: { type: 'triangle8' },
         envelope: { attack: 0.02, decay: 0.15, sustain: 0.5, release: 0.15 },
         volume: -4,
+      }).connect(master);
+      this.preview = new Tone.Synth({
+        oscillator: { type: 'triangle8' },
+        envelope: { attack: 0.01, decay: 0.15, sustain: 0.4, release: 0.2 },
+        volume: -6,
       }).connect(master);
       this.clickHi = new Tone.Synth({
         oscillator: { type: 'sine' },
@@ -299,6 +306,17 @@ export class AudioEngine {
 
     transport.start('+0.05', 0);
     this.running = true;
+  }
+
+  /**
+   * 編集中の1音を短く鳴らす(グリッドで音の高さを選んだときのフィードバック)。
+   * ユーザー自身が置いた音を鳴らすだけで、見本演奏ではない。
+   * 再生中は伴奏の邪魔になるため鳴らさない。
+   */
+  async previewNote(midi: number): Promise<void> {
+    if (this.running) return;
+    await this.ensureStarted();
+    this.preview!.triggerAttackRelease(Tone.Frequency(midi, 'midi').toFrequency(), 0.35, Tone.now(), 0.8);
   }
 
   stop(): void {

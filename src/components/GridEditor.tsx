@@ -1,13 +1,15 @@
-// 拍グリッドエディタ: 1小節=4拍の固定枠をマスで埋めるリズム/フレーズ編集UI
-// - マスをタップ → 音を置く(●)+選択。すでに●のマスはタップで選択のみ
-// - 選択中の●: ▲▼で使用可能音セット内を移動 / のばす / 縮める / 休符にする
+// 拍グリッドエディタ: 1小節=4拍の固定枠を「音の高さ×位置」の2次元グリッドで埋めるUI
+// - 縦=そのコードで使える音(パレット)、横=拍とその分割。交点をタップ → その高さで音が置ける
+// - 音の高さを変える: 同じ位置の別の行をタップ(▲▼でも可)。行見出しのタップで単音プレビュー
+// - 選択中の音: のばす / 縮める / 休符にする / アーティキュレーション
 // - 拍ごとの分割切替(4分/8分/3連/16分)。「のばす」は分割の異なる拍を越えない
 // - 合計は構造上つねに4拍×小節数: 拍数計算・超過は起きない
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Progression } from '../theory/progressions';
 import { chordSymbol } from '../theory/chords';
-import { mod12 } from '../theory/notes';
+import { engine } from '../audio/engine';
+import { mod12, pcName } from '../theory/notes';
 import {
   attackPositions,
   chordForBar,
@@ -18,9 +20,11 @@ import {
   stepPitch,
   type Articulation,
   type Division,
+  type GridBar,
   type GridCell,
   type GridMaterial,
   type GridPhrase,
+  type PalettePitch,
 } from '../theory/grid';
 import { pick, t as tr, type Lang } from '../i18n';
 
@@ -112,16 +116,48 @@ function holdRun(grid: GridPhrase, p: CellPos): CellPos[] {
   return run;
 }
 
-/** 直前のattack(このセルがholdだった場合の親)を探す */
-function directPrevAttack(grid: GridPhrase, target: CellPos): CellPos | null {
-  let prev: CellPos | null = null;
+const posKey = (p: CellPos) => `${p.bar}:${p.beat}:${p.cell}`;
+
+/**
+ * 各セルで鳴っている音のMIDI(holdは元のattackを引き継ぐ)。
+ * ピアノロールで「伸びている音」をその音の行に描くために使う。
+ */
+function soundingMidiMap(grid: GridPhrase): Map<string, number> {
+  const map = new Map<string, number>();
+  let cur: number | undefined;
   for (const p of iterateCells(grid)) {
-    if (p.bar === target.bar && p.beat === target.beat && p.cell === target.cell) break;
     const c = cellAt(grid, p);
-    if (c.state === 'attack') prev = p;
-    else if (c.state === 'rest') prev = null;
+    if (c.state === 'attack') cur = c.midi;
+    else if (c.state === 'rest') cur = undefined;
+    if (cur !== undefined && c.state !== 'rest') map.set(posKey(p), cur);
   }
-  return prev;
+  return map;
+}
+
+/** ピアノロールの1行(高い音が上) */
+interface PitchRow extends PalettePitch {
+  /** このコードのパレット外(前の小節から伸びてきた音)。表示のみで、ここには置けない */
+  foreign: boolean;
+}
+
+/** 既定で表示する音域(G3〜D5)。教材のターゲット音と同じ範囲に合わせてある */
+const ROW_WINDOW = { low: 55, high: 74 };
+
+/**
+ * その小節の行を作る。表示するのは音域ウィンドウ内のパレット音と、
+ * いまその小節で鳴っている音(ウィンドウ外・パレット外も含む)。
+ * コードが変わるとパレットも変わるため、小節をまたいで伸びてきた音には行が無いことがある。
+ */
+function rowsForBar(palette: PalettePitch[], sounding: number[], flats: boolean, octShift: number): PitchRow[] {
+  const low = ROW_WINDOW.low + octShift;
+  const high = ROW_WINDOW.high + octShift;
+  const inWindow = palette.filter((p) => (p.midi >= low && p.midi <= high) || sounding.includes(p.midi));
+  const rows: PitchRow[] = (inWindow.length > 0 ? inWindow : palette).map((p) => ({ ...p, foreign: false }));
+  for (const midi of sounding) {
+    if (rows.some((r) => r.midi === midi)) continue;
+    rows.push({ midi, label: `${pcName(mod12(midi), flats)}${Math.floor(midi / 12) - 1}`, degree: '', foreign: true });
+  }
+  return rows.sort((a, b) => b.midi - a.midi);
 }
 
 /** 使い方ガイドを初回だけ自動で開くためのフラグ */
@@ -171,11 +207,27 @@ export function GridEditor({
 
   const commit = (next: GridPhrase) => onChange(next);
 
-  /** タップ: rest/hold → attackにして選択。attack → 選択のみ */
-  const tapCell = (p: CellPos) => {
+  /**
+   * 交点のタップ。
+   * - 同じ音の上 → 選択のトグル
+   * - 別の行(同じ位置に音がある) → その高さへ動かす
+   * - 休み/伸ばし中 → その高さで新しい音を置く
+   */
+  const tapAt = (p: CellPos, midi: number) => {
     const c = cellAt(grid, p);
     if (c.state === 'attack') {
-      setSelected(sel && sel.bar === p.bar && sel.beat === p.beat && sel.cell === p.cell ? null : p);
+      const isSame = !!sel && sel.bar === p.bar && sel.beat === p.beat && sel.cell === p.cell;
+      if (c.midi === midi) {
+        setSelected(isSame ? null : p);
+        if (!isSame) void engine.previewNote(midi);
+        return;
+      }
+      if (fixedPitch) return;
+      const moved = cloneGrid(grid);
+      cellAt(moved, p).midi = midi;
+      commit(moved);
+      setSelected(p);
+      void engine.previewNote(midi);
       return;
     }
     if (fixedRhythm) return; // リズム固定では新しい音を置けない
@@ -188,15 +240,13 @@ export function GridEditor({
         cur = nextPos(next, cur);
       }
     }
-    // 直前のattackの音を初期値に(なければパレット中央)
-    const prev = directPrevAttack(grid, p);
-    const midi = prev ? cellAt(grid, prev).midi ?? defaultPitch(palettes[p.bar]) : defaultPitch(palettes[p.bar]);
     const target = cellAt(next, p);
     target.state = 'attack';
     target.midi = fixedPitch ? defaultPitch(palettes[p.bar]) : midi;
     target.articulation = undefined;
     commit(next);
     setSelected(p);
+    void engine.previewNote(target.midi);
   };
 
   // 音域の端では矢印を無効化する(押しても何も起きない状態を避ける)
@@ -205,9 +255,11 @@ export function GridEditor({
 
   const changePitch = (dir: 1 | -1) => {
     if (!sel || !selCell || selCell.midi === undefined) return;
+    const midi = stepPitch(selPalette, selCell.midi, dir);
     const next = cloneGrid(grid);
-    cellAt(next, sel).midi = stepPitch(selPalette, selCell.midi, dir);
+    cellAt(next, sel).midi = midi;
     commit(next);
+    void engine.previewNote(midi);
   };
 
   /** のばす: 次のセルをholdに(次が同じ分割の拍に属し、restのときだけ) */
@@ -291,6 +343,68 @@ export function GridEditor({
     ? selPalette.find((p) => p.midi === selCell.midi)
     : undefined;
 
+  // ---- ピアノロール(縦=音の高さ / 横=拍) ----
+  const soundMap = soundingMidiMap(grid);
+  /** その小節で鳴っている音(前の小節から伸びてきた音も含む)。行を消さないために使う */
+  const soundingInBar = (b: number): number[] => {
+    const out: number[] = [];
+    grid.bars[b].beats.forEach((beat, bt) => {
+      beat.cells.forEach((_, c) => {
+        const midi = soundMap.get(posKey({ bar: b, beat: bt, cell: c }));
+        if (midi !== undefined && !out.includes(midi)) out.push(midi);
+      });
+    });
+    return out;
+  };
+  // 表示する音域(既定はG3〜D5)。オクターブ単位でずらせる
+  const [octShift, setOctShift] = useState(0);
+  const colsOf = (bar: GridBar) => bar.beats.flatMap((beat, bt) => beat.cells.map((_, c) => ({ beat: bt, cell: c })));
+  const cellKey = (b: number, midi: number, bt: number, c: number) => `${b}:${midi}:${bt}:${c}`;
+
+  // キーボード操作: 矢印でカーソルを動かし、Enter/Spaceで置く(セルを全部タブ順に並べない)
+  const [cursor, setCursor] = useState<{ bar: number; midi: number; beat: number; cell: number } | null>(null);
+  const cellRefs = useRef(new Map<string, HTMLButtonElement>());
+  const focusKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    const key = focusKeyRef.current;
+    if (!key) return;
+    focusKeyRef.current = null;
+    cellRefs.current.get(key)?.focus();
+  });
+
+  const onGridKey = (e: React.KeyboardEvent, b: number, rows: PitchRow[]) => {
+    const delta: Record<string, [number, number]> = {
+      ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1],
+    };
+    const d = delta[e.key];
+    if (!d || rows.length === 0) return;
+    const cols = colsOf(grid.bars[b]);
+    const curRow = cursor && cursor.bar === b ? rows.findIndex((r) => r.midi === cursor.midi) : 0;
+    const curCol = cursor && cursor.bar === b ? cols.findIndex((x) => x.beat === cursor.beat && x.cell === cursor.cell) : 0;
+    const row = Math.min(rows.length - 1, Math.max(0, (curRow < 0 ? 0 : curRow) + d[0]));
+    const col = Math.min(cols.length - 1, Math.max(0, (curCol < 0 ? 0 : curCol) + d[1]));
+    e.preventDefault();
+    const next = { bar: b, midi: rows[row].midi, beat: cols[col].beat, cell: cols[col].cell };
+    setCursor(next);
+    focusKeyRef.current = cellKey(b, next.midi, next.beat, next.cell);
+  };
+
+  // 小節を切り替えたとき、その小節の音(なければ中音域)が見える位置までスクロールする
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const centerMidi = focusBar >= 0
+    ? (grid.bars[focusBar].beats.flatMap((bt) => bt.cells).find((c) => c.state === 'attack' && c.midi !== undefined)?.midi
+      ?? defaultPitch(palettes[focusBar]))
+    : 0;
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!body || focusBar < 0) return;
+    const el = body.querySelector<HTMLElement>(`[data-row-midi="${centerMidi}"]`);
+    if (!el) return;
+    body.scrollTop = Math.max(0, el.offsetTop - body.clientHeight / 2 + el.offsetHeight / 2);
+    // 小節・キー・素材が変わったときだけ位置を合わせ直す(編集のたびには動かさない)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusBar, keyPc, material, palettes.length]);
+
   return (
     <div className="grid-editor">
       {/* 使い方チュートリアル(初回は開いた状態。閉じると次回から折りたたみ) */}
@@ -333,7 +447,13 @@ export function GridEditor({
       )}
       {focusBar >= 0 && <p className="hint-text grid-bar-nav-hint">{t('gridPickBarHint')}</p>}
 
-      {shownBars.map(({ bar, b }) => (
+      {shownBars.map(({ bar, b }) => {
+        const sounding = soundingInBar(b);
+        // ピッチ固定のSTEPは行も1本だけにする(選べない高さの行を出さない)
+        const rows = fixedPitch
+          ? rowsForBar(palettes[b].filter((pp) => pp.midi === defaultPitch(palettes[b])), sounding, flats, 0)
+          : rowsForBar(palettes[b], sounding, flats, octShift);
+        return (
         <div key={b} className="grid-bar">
           <div className="grid-bar-head">
             <span className="grid-bar-num">{b + 1}</span>
@@ -348,65 +468,122 @@ export function GridEditor({
               </button>
             )}
           </div>
-          <div className="grid-beats">
-            {bar.beats.map((beat, bt) => (
-              <div key={bt} className={`grid-beat div-${beat.division}`}>
-                {divisions.length > 1 && !fixedRhythm && (
-                  <div className="grid-div-picker" role="group" aria-label={pick(lang, `${bt + 1}拍目の音符`, `Beat ${bt + 1} note value`)}>
-                    {divisions.map((d) => {
-                      const label = pick(lang, DIV_LABEL[d].ja, DIV_LABEL[d].en);
-                      return (
-                        <button
-                          key={d}
-                          className={`grid-div-btn${beat.division === d ? ' on' : ''}`}
-                          aria-pressed={beat.division === d}
-                          title={label}
-                          aria-label={label}
-                          onClick={() => setDivision(b, bt, d)}
-                        >
-                          {DIV_GLYPH[d]}
-                        </button>
-                      );
-                    })}
-                  </div>
+
+          {/* 縦=音の高さ、横=拍。交点をタップするとその高さで音が置ける */}
+          <div className="pianoroll" onKeyDown={(e) => onGridKey(e, b, rows)}>
+            <div className="pr-headrow">
+              <div className="pr-corner">
+                {!fixedPitch && (
+                  <>
+                    <button
+                      className="pr-oct" onClick={() => setOctShift((v) => Math.min(12, v + 12))}
+                      disabled={octShift >= 12} title={t('rowRangeUp')} aria-label={t('rowRangeUp')}
+                    >▲</button>
+                    <button
+                      className="pr-oct" onClick={() => setOctShift((v) => Math.max(-12, v - 12))}
+                      disabled={octShift <= -12} title={t('rowRangeDown')} aria-label={t('rowRangeDown')}
+                    >▼</button>
+                  </>
                 )}
-                <div className="grid-cells" role="group" aria-label={pick(lang, `${b + 1}小節${bt + 1}拍目`, `Bar ${b + 1} beat ${bt + 1}`)}>
-                  {beat.cells.map((cell, c) => {
-                    const isSel = !!sel && sel.bar === b && sel.beat === bt && sel.cell === c;
-                    const isCurrent = !!currentAttack && currentAttack[0] === b && currentAttack[1] === bt && currentAttack[2] === c;
-                    const pitch = cell.midi !== undefined ? palettes[b].find((p) => p.midi === cell.midi) : undefined;
-                    let body: string;
-                    if (cell.state === 'attack') body = fixedPitch ? '●' : (pitch ? pitch.label : '●');
-                    else if (cell.state === 'hold') body = '→';
-                    else body = '';
-                    return (
-                      <button
-                        key={c}
-                        className={`grid-cell ${cell.state}${isSel ? ' selected' : ''}${isCurrent ? ' playing' : ''}`}
-                        onClick={() => tapCell({ bar: b, beat: bt, cell: c })}
-                        aria-pressed={cell.state === 'attack'}
-                        aria-label={pick(
-                          lang,
-                          `${b + 1}小節${bt + 1}拍${c + 1}: ${cell.state === 'attack' ? (pitch?.label ?? '音') : cell.state === 'hold' ? 'のばす' : '休み'}`,
-                          `Bar ${b + 1} beat ${bt + 1}.${c + 1}: ${cell.state}`,
-                        )}
-                      >
-                        <span className="grid-cell-body">{body}</span>
-                        {cell.state === 'attack' && cell.articulation && (
-                          <span className="grid-cell-artic">{ARTIC_GLYPH[cell.articulation]}</span>
-                        )}
-                        {cell.state === 'attack' && !fixedPitch && pitch?.degree && (
-                          <span className="grid-cell-degree">{pitch.degree}</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
-            ))}
+              <div className="pr-beats">
+                {bar.beats.map((beat, bt) => (
+                  <div key={bt} className="pr-beat-head">
+                    <span className="pr-beat-num">{bt + 1}</span>
+                    {divisions.length > 1 && !fixedRhythm && (
+                      <div className="grid-div-picker" role="group" aria-label={pick(lang, `${bt + 1}拍目の音符`, `Beat ${bt + 1} note value`)}>
+                        {divisions.map((d) => {
+                          const label = pick(lang, DIV_LABEL[d].ja, DIV_LABEL[d].en);
+                          return (
+                            <button
+                              key={d}
+                              className={`grid-div-btn${beat.division === d ? ' on' : ''}`}
+                              aria-pressed={beat.division === d}
+                              title={label}
+                              aria-label={label}
+                              onClick={() => setDivision(b, bt, d)}
+                            >
+                              {DIV_GLYPH[d]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="pr-body" ref={perBarMode ? bodyRef : undefined}>
+              {rows.map((row, rowIdx) => (
+                <div
+                  key={row.midi}
+                  data-row-midi={row.midi}
+                  className={`pr-row${row.degree ? ' chord-tone' : ''}${row.foreign ? ' foreign' : ''}`}
+                >
+                  <button
+                    type="button"
+                    className="pr-rowhead"
+                    tabIndex={-1}
+                    onClick={() => void engine.previewNote(row.midi)}
+                    aria-label={pick(lang, `${row.label}を鳴らす`, `Play ${row.label}`)}
+                  >
+                    <span className="pr-rowhead-note">{row.label}</span>
+                    {row.degree && <small className="pr-rowhead-deg">{row.degree}</small>}
+                  </button>
+                  <div className="pr-beats">
+                    {bar.beats.map((beat, bt) => (
+                      <div key={bt} className={`pr-beat div-${beat.division}`}>
+                        {beat.cells.map((cell, c) => {
+                          const pos = { bar: b, beat: bt, cell: c };
+                          const sounding = soundMap.get(posKey(pos));
+                          const isAttack = cell.state === 'attack' && cell.midi === row.midi;
+                          const isHold = cell.state === 'hold' && sounding === row.midi;
+                          const isSel = isAttack && !!sel && sel.bar === b && sel.beat === bt && sel.cell === c;
+                          const isCurrent = isAttack && !!currentAttack
+                            && currentAttack[0] === b && currentAttack[1] === bt && currentAttack[2] === c;
+                          // 音の終わり(次がholdでない)だけ右端を丸める。伸びている音は1本の棒に見せる
+                          const np = nextPos(grid, pos);
+                          const isRunEnd = (isAttack || isHold) && !(np && cellAt(grid, np).state === 'hold');
+                          const key = cellKey(b, row.midi, bt, c);
+                          const isTabStop = cursor && cursor.bar === b
+                            ? cursor.midi === row.midi && cursor.beat === bt && cursor.cell === c
+                            : rowIdx === 0 && bt === 0 && c === 0;
+                          return (
+                            <button
+                              key={c}
+                              ref={(el) => { if (el) cellRefs.current.set(key, el); else cellRefs.current.delete(key); }}
+                              className={`pr-cell${isAttack ? ' attack' : ''}${isHold ? ' hold' : ''}${isRunEnd ? ' run-end' : ''}${isSel ? ' selected' : ''}${isCurrent ? ' playing' : ''}`}
+                              tabIndex={isTabStop ? 0 : -1}
+                              /* リズム固定では音を置けないが、音のある位置なら別の行を押して高さを変えられる */
+                              disabled={row.foreign || (fixedRhythm && cell.state !== 'attack')}
+                              onClick={() => {
+                                setCursor({ bar: b, midi: row.midi, beat: bt, cell: c });
+                                tapAt(pos, row.midi);
+                              }}
+                              aria-pressed={isAttack}
+                              aria-label={pick(
+                                lang,
+                                `${b + 1}小節${bt + 1}拍${c + 1} ${row.label}: ${isAttack ? '音' : isHold ? 'のばす' : '空き'}`,
+                                `Bar ${b + 1} beat ${bt + 1}.${c + 1} ${row.label}: ${isAttack ? 'note' : isHold ? 'hold' : 'empty'}`,
+                              )}
+                            >
+                              {isAttack && cell.articulation && (
+                                <span className="pr-cell-artic">{ARTIC_GLYPH[cell.articulation]}</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      ))}
+        );
+      })}
 
       {!sel && <p className="hint-text">{t('gridTapHint')}</p>}
 
