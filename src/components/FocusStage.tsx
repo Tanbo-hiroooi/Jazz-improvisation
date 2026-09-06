@@ -13,14 +13,6 @@ interface Props {
   children: ReactNode;
 }
 
-/**
- * 集中モードで譜面に使える高さ。
- * 見出し(28px)+再生ボタン(53px)+オプション(56px)+余白 の実測から約190pxを引く。
- */
-export function focusFitHeight(): number {
-  return Math.max(180, window.innerHeight - 190);
-}
-
 export function FocusStage({ lang, title, onClose, children }: Props) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
 

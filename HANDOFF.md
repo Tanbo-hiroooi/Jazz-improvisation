@@ -151,9 +151,13 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
   **画面を新設せず、STEPのbodyがJSXの出し先を変えるだけ**にしてある(`usePracticePlayback`は1画面1つという決まりを守るため。
   別画面にすると再生フックが2つになり、過去に「音が出ない」バグが出た)。
   譜面に使える高さは開いたあと実測する(`.focus-stage .staff-card`はflexで高さが決まり、中身に影響されないので振動しない)。
-- **譜面の拡大**(StaffView `zoom` / `fitHeight`): レイアウトは `幅 ÷ 拡大率` の論理幅で組み、最後にSVGのstyleだけ引き伸ばす。
-  VexFlowが付けるviewBoxのおかげで音符も当たり判定も一緒に拡大される。`fitHeight`を渡すと、
-  高さに収まる中で最大の拡大率を候補から選ぶ(拡大するほど1行の小節が減って行数が増えるので、大きい方から試す)。
+- **譜面の拡大・縮小**(StaffView `zoom` / `fitHeight` / `fitMaxZoom`): レイアウトは `幅 ÷ 拡大率` の論理幅で組み、
+  最後にSVGのstyleだけ引き伸ばす。VexFlowが付けるviewBoxのおかげで音符も当たり判定も一緒に拡大される。
+  `fitHeight`を渡すと、その高さに収まる中で最大の拡大率を候補(3〜0.6)から選ぶ。
+  **1未満まで許すのが要点**: 縮小すると論理幅が広がって1行に入る小節が増え、行数が減って全体が収まる。
+  これが無いと「小節数が多いと演奏しながら譜面をスクロールする」状態になる(オーナーからの指摘、2026-09-07)。
+  `fitMaxZoom`は上限。通常表示は`1`(拡大はせず、必要なときだけ縮める)、集中モードは既定の`3`。
+  通常表示の高さは`staffSizing.ts`の`staffBoxHeight()`が返す(styles.cssの`.staff-sticky`のmax-heightと対応させること)。
 - **章まとめ練習**(`chapterWorkout()` + `ChapterWorkoutScreen`): 章の編集STEPから
   「いちばん多い(進行×小節数)」を主役に選び、その上に載る課題だけを集めてチェックリストにする。
   判定は各レッスンの`conditions`を**同じグリッドに**`validateGrid`でかけるだけ(新しい判定ロジックは無い)。

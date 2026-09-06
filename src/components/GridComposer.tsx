@@ -6,7 +6,8 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { GridEditor } from './GridEditor';
 import { StaffView, type ChordDisplay, type LabelMode } from './StaffView';
 import { VolumeControls } from './VolumeControls';
-import { FocusStage, focusFitHeight } from './FocusStage';
+import { FocusStage } from './FocusStage';
+import { focusFitHeight, staffBoxHeight } from './staffSizing';
 import { usePracticePlayback, type PlaybackOverrides } from '../hooks/usePracticePlayback';
 import type { MyInstrumentSettings } from '../state/storage';
 import { chordSymbol } from '../theory/chords';
@@ -69,10 +70,10 @@ export function GridComposer({
   const [labelMode, setLabelMode] = useState<LabelMode>('degree');
   // 集中モード(譜面と再生だけを全画面に出す)
   const [focus, setFocus] = useState(false);
-  const [fitH, setFitH] = useState(() => focusFitHeight());
+  const [fitH, setFitH] = useState(() => staffBoxHeight());
   useEffect(() => {
-    if (!focus) return;
     const measure = () => {
+      if (!focus) { setFitH(staffBoxHeight()); return; }
       const card = document.querySelector('.focus-stage .staff-card');
       const real = card ? Math.round(card.getBoundingClientRect().height) : 0;
       setFitH(real > 120 ? real : focusFitHeight());
@@ -250,6 +251,7 @@ export function GridComposer({
               selectedIndex={selectedIndex}
               selectedMeasure={focusBar} onSelectMeasure={setEditBar}
               notation={effNotation} guitarPosition={session.guitarPosition} guitarOpenStrings={session.guitarOpenStrings}
+              fitHeight={fitH} fitMaxZoom={1}
             />
           </div>
         </div>

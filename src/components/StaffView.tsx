@@ -67,9 +67,11 @@ interface Props {
   zoom?: number;
   /**
    * 使える高さ(px)。渡すと、その高さに収まる範囲で自動的にいちばん大きい拡大率を選ぶ。
-   * 集中モードで「画面いっぱいに譜面を出す」ために使う。
+   * 入りきらないときは縮小して収める(演奏しながら譜面をスクロールさせないため)。
    */
   fitHeight?: number;
+  /** fitHeight使用時の拡大率の上限(既定3)。通常表示では1=「拡大はせず、必要なら縮小だけ」 */
+  fitMaxZoom?: number;
   /** 譜面表示(TABはギター用。既定は五線譜のみ) */
   notation?: NotationMode;
   guitarPosition?: GuitarPosition;
@@ -159,7 +161,7 @@ const ARTIC_CODE: Record<string, string> = { accent: 'a>', staccato: 'a.', tenut
 
 export function StaffView({
   notes, measures, clef, shift, flats, labelMode, chords, currentIndex, selectedIndex = -1,
-  zoom = 1, fitHeight,
+  zoom = 1, fitHeight, fitMaxZoom = 3,
   selectedMeasure = -1, onSelectMeasure,
   notation = 'staff', guitarPosition = 'auto', guitarOpenStrings = true,
 }: Props) {
@@ -344,13 +346,16 @@ export function StaffView({
         return { perLine: per, lines: ln, height: ln * lineHeight + topPad };
       };
 
-      // 拡大率の決定。fitHeight があれば、その高さに収まる中でいちばん大きい率を選ぶ
-      // (拡大すると1行に入る小節が減って行数が増えるため、候補を大きい方から試す)
+      // 拡大率の決定。fitHeight があれば、その高さに収まる中でいちばん大きい率を選ぶ。
+      // 拡大すると1行に入る小節が減って行数が増え、縮小すると逆に1行へ多く入るので、
+      // 候補を大きい方から試して最初に収まったものを採用する。
+      // 1未満まで許すのは、小節数が多いときに全体を1画面へ収めるため(スクロールしながらの演奏を避ける)。
       let scale = Math.max(0.5, zoom);
       if (fitHeight && fitHeight > 0) {
-        const candidates = [3, 2.5, 2.2, 2, 1.8, 1.6, 1.4, 1.25, 1.1, 1];
-        scale = 1;
-        for (const z of candidates) {
+        const candidates = [3, 2.5, 2.2, 2, 1.8, 1.6, 1.4, 1.25, 1.1, 1, 0.9, 0.8, 0.7, 0.6];
+        const usable = candidates.filter((z) => z <= fitMaxZoom);
+        scale = usable[usable.length - 1];
+        for (const z of usable) {
           if (layoutFor(Math.round(avail / z)).height * z <= fitHeight) { scale = z; break; }
         }
       }
@@ -591,7 +596,7 @@ export function StaffView({
     const ro = new ResizeObserver(() => render());
     ro.observe(container);
     return () => ro.disconnect();
-  }, [displayNotes, measures, clef, flats, labelMode, chords, notation, guitarPosition, guitarOpenStrings, zoom, fitHeight]);
+  }, [displayNotes, measures, clef, flats, labelMode, chords, notation, guitarPosition, guitarOpenStrings, zoom, fitHeight, fitMaxZoom]);
 
   // 選択中の小節(再描画せずクラス切替)
   useEffect(() => {

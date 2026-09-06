@@ -7,7 +7,8 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { GridEditor } from './GridEditor';
 import { StaffView, type ChordDisplay, type LabelMode } from './StaffView';
 import { VolumeControls } from './VolumeControls';
-import { FocusStage, focusFitHeight } from './FocusStage';
+import { FocusStage } from './FocusStage';
+import { focusFitHeight, staffBoxHeight } from './staffSizing';
 import type { Bi, Lesson, StepContent, StepEditable } from '../data/courses';
 import { usePracticePlayback, type PlaybackOverrides } from '../hooks/usePracticePlayback';
 import { chordSymbol } from '../theory/chords';
@@ -155,15 +156,15 @@ interface SharedProps {
 }
 
 /**
- * 集中モードで譜面に使える高さ。
- * 開いたあとは実際の枠を測る(再生ボタンの折り返しなどで高さが変わるため)。
- * 枠は flex で高さが決まっていて中身の量に左右されないので、測り直しても振動しない。
+ * 譜面に使える高さ。通常表示は譜面枠の高さ、集中モードは全画面の残り。
+ * 集中モードでは開いたあとに実枠を測る(再生ボタンの折り返しで高さが変わるため)。
+ * 枠は flex で高さが決まり中身に左右されないので、測り直しても振動しない。
  */
-function useFitHeight(focus: boolean): number | undefined {
-  const [h, setH] = useState(() => focusFitHeight());
+function useFitHeight(focus: boolean): number {
+  const [h, setH] = useState(() => (focus ? focusFitHeight() : staffBoxHeight()));
   useEffect(() => {
-    if (!focus) return;
     const measure = () => {
+      if (!focus) { setH(staffBoxHeight()); return; }
       const card = document.querySelector('.focus-stage .staff-card');
       const real = card ? Math.round(card.getBoundingClientRect().height) : 0;
       setH(real > 120 ? real : focusFitHeight());
@@ -176,7 +177,7 @@ function useFitHeight(focus: boolean): number | undefined {
       window.removeEventListener('resize', measure);
     };
   }, [focus]);
-  return focus ? h : undefined;
+  return h;
 }
 
 /** 譜面の見出し(表示切替+集中モードボタン) */
@@ -248,7 +249,7 @@ function FixedStepBody({
           notes={displayedNotes} measures={progression.measures} clef={clef} shift={shift} flats={flats}
           labelMode={labelMode} chords={chordDisplays} currentIndex={currentNoteIndex}
           notation={notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings}
-          fitHeight={fitHeight}
+          fitHeight={fitHeight} fitMaxZoom={focus ? 3 : 1}
         />
       </div>
       <div className="transport-main">
@@ -404,6 +405,7 @@ function EditableStepBody({
             selectedIndex={selectedIndex}
             selectedMeasure={Math.min(editBar, grid.bars.length - 1)} onSelectMeasure={setEditBar}
             notation={notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings}
+            fitHeight={fitHeight} fitMaxZoom={1}
           />
         </div>
       </div>
