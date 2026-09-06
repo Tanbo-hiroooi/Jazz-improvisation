@@ -169,6 +169,25 @@ export function getProgression(id: ProgressionId): Progression {
 }
 
 /** コードが直前と変わる小節番号の一覧(0始まり)。STEPの「コードが変わる小節だけ」練習に使う */
+/**
+ * 進行を指定の小節数に合わせる。
+ * 短くするときは切り詰め、長くするときは先頭から繰り返す(4小節のii-V-Iを8小節ぶん練習する等)。
+ * 表示・伴奏・パレットはすべて progression.measures / chords を見るので、ここを揃えれば下流は自動で追従する。
+ */
+export function fitProgression(prog: Progression, bars: number): Progression {
+  if (bars === prog.measures) return prog;
+  if (bars < prog.measures) {
+    return { ...prog, measures: bars, chords: prog.chords.filter((c) => c.measure < bars) };
+  }
+  const chords: ChordEvent[] = [];
+  for (let m = 0; m < bars; m++) {
+    for (const c of prog.chords) {
+      if (c.measure === m % prog.measures) chords.push({ ...c, measure: m });
+    }
+  }
+  return { ...prog, measures: bars, chords };
+}
+
 export function changeMeasures(prog: Progression): number[] {
   const result: number[] = [];
   let prevKey: string | null = null;

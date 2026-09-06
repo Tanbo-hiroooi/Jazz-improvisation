@@ -132,7 +132,7 @@ export const CHAPTERS: Chapter[] = [
   {
     id: 'ch2',
     title: b('第2章: コードの中から使う音を選ぶ', 'Ch. 2: Pick your notes from the chord'),
-    purpose: b('各コードで使える音が分かり、4小節を自分で作れるようになる。', 'Learn which notes fit each chord and build your own four bars.'),
+    purpose: b('各コードで使える音が分かり、自分のフレーズを作れるようになる。', 'Learn which notes fit each chord and build a line of your own.'),
   },
   {
     id: 'ch3',
@@ -161,7 +161,7 @@ export const LESSONS: Lesson[] = [
   {
     id: 'r1-quarters',
     chapterId: 'ch1',
-    title: b('4分音符と休みだけで4小節作る', 'Build four bars from quarters and rests'),
+    title: b('4分音符と休みだけで作る', 'Build a line from quarters and rests'),
     technicalName: b('スウィング', 'Swing'),
     outcome: b('2・4拍のクリックに乗って、4分音符と休みだけで演奏できる。', 'You can groove over a 2-and-4 click with nothing but quarter notes and rests.'),
     progressionId: 'ii-V-I',
@@ -177,13 +177,13 @@ export const LESSONS: Lesson[] = [
       },
       {
         title: b('自分のリズムを作る', 'Build your own rhythm'),
-        instruction: b('マスをタップして、4分音符と休みだけで4小節を作ろう。', 'Tap the cells and build four bars from quarter notes and rests.'),
+        instruction: b('マスをタップして、4分音符と休みだけで{bars}小節を作ろう。', 'Tap the cells and build {bars} bars from quarter notes and rests.'),
         rules: [b('4分音符と休みだけ', 'Quarters and rests only'), b('音の高さは考えない', 'Ignore pitch for now')],
         editable: {
           material: 'root-only', bars: 4, divisions: [1], initial: 'empty', initialDivision: 1, fixedPitch: true,
           conditions: { minNotes: 6, minRestBeats: 2 },
           requiredAction: 'any-change',
-          task: b('音を6個以上、休みを2拍以上入れて作ろう。', 'Use at least 6 notes and 2 beats of rest.'),
+          task: b('音を{minNotes}個以上、休みを{minRest}拍以上入れて作ろう。', 'Use at least {minNotes} notes and {minRest} beats of rest.'),
         },
       },
     ],
@@ -260,7 +260,7 @@ export const LESSONS: Lesson[] = [
       },
       {
         title: b('休みを入れて作る', 'Build with space'),
-        instruction: b('どの小節にも休みを残して、4小節を作ろう。', 'Build four bars, leaving space in every one of them.'),
+        instruction: b('どの小節にも休みを残して、{bars}小節を作ろう。', 'Build {bars} bars, leaving space in every one of them.'),
         rules: [b('各小節に1拍以上の休み', 'At least one beat of rest per bar')],
         editable: {
           material: 'root-only', bars: 4, divisions: [1, 2], initial: 'empty', fixedPitch: true,
@@ -380,13 +380,13 @@ export const LESSONS: Lesson[] = [
       },
       {
         title: b('3度でリズムを作る', 'Build a rhythm on the 3rd'),
-        instruction: b('第1章のリズムのまま、音は各コードの3度だけで4小節を作ろう。', 'Keep your Chapter 1 rhythms, but use only each chord’s 3rd.'),
+        instruction: b('第1章のリズムのまま、音は各コードの3度だけで{bars}小節を作ろう。', 'Keep your Chapter 1 rhythms, but use only each chord’s 3rd.'),
         rules: [b('使える音は3度だけ', 'The 3rd is the only note available')],
         editable: {
           material: 'third-only', bars: 4, divisions: [1, 2], initial: 'empty',
           conditions: { minNotes: 4, minRestBeatsPerBar: 1 },
           requiredAction: 'any-change',
-          task: b('3度だけを使って、休みを入れた4小節を作ろう。', 'Build four bars from 3rds only, leaving rests.'),
+          task: b('3度だけを使って、休みを入れた{bars}小節を作ろう。', 'Build {bars} bars from 3rds only, leaving rests.'),
         },
       },
     ],
@@ -419,14 +419,14 @@ export const LESSONS: Lesson[] = [
         content: { source: 'guide-tones', rhythm: 'basic' },
       },
       {
-        title: b('ガイドトーンで4小節作る', 'Build four bars from guide tones'),
-        instruction: b('3度と7度だけを使って、休みも入れながら4小節を作ろう。', 'Build four bars from 3rds and 7ths, leaving some rests.'),
+        title: b('ガイドトーンで{bars}小節作る', 'Build {bars} bars from guide tones'),
+        instruction: b('3度と7度だけを使って、休みも入れながら{bars}小節を作ろう。', 'Build {bars} bars from 3rds and 7ths, leaving some rests.'),
         rules: [b('使える音は3度と7度だけ', 'Only 3rds and 7ths available')],
         editable: {
           material: 'guide-tone', bars: 4, divisions: [1, 2], initial: 'empty',
           conditions: { minNotes: 4, minRestBeats: 2 },
           requiredAction: 'any-change',
-          task: b('3度と7度だけで4小節を作ろう。', 'Build four bars from 3rds and 7ths.'),
+          task: b('3度と7度だけで{bars}小節を作ろう。', 'Build {bars} bars from 3rds and 7ths.'),
         },
       },
     ],
@@ -445,7 +445,7 @@ export const LESSONS: Lesson[] = [
     chapterId: 'ch2',
     title: b('コードトーン4音から選んで作る', 'Choose from the four chord tones'),
     technicalName: b('コードトーン', 'Chord tones'),
-    outcome: b('1-3-5-7の4音から選んで、自分の4小節を作れる。', 'You can pick from 1-3-5-7 and build four bars of your own.'),
+    outcome: b('1-3-5-7の4音から選んで、自分のフレーズを作れる。', 'You can pick from 1-3-5-7 and build a line of your own.'),
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
@@ -461,12 +461,12 @@ export const LESSONS: Lesson[] = [
       {
         title: b('リズムと音を組み合わせる', 'Combine rhythm and pitch'),
         instruction: b('リズムを作ってから、▲▼で音を選ぼう。表情も1つ以上付けてみよう。', 'Build the rhythm first, then pick pitches with ▲▼. Add at least one articulation.'),
-        rules: [b('休みを2拍以上', 'At least 2 beats of rest'), b('表情を1つ以上', 'At least one articulation')],
+        rules: [b('休みを{minRest}拍以上', 'At least {minRest} beats of rest'), b('表情を1つ以上', 'At least one articulation')],
         editable: {
           material: 'chord-tone', bars: 4, divisions: [1, 2], initial: 'empty', allowArticulation: true,
           conditions: { minNotes: 6, minRestBeats: 2, requireArticulation: true },
           requiredAction: 'any-change',
-          task: b('音を6個以上、休みを2拍以上入れて、表情も付けよう。', 'Use 6+ notes, 2+ beats of rest, and one articulation.'),
+          task: b('音を{minNotes}個以上、休みを{minRest}拍以上入れて、表情も付けよう。', 'Use {minNotes}+ notes, {minRest}+ beats of rest, and one articulation.'),
         },
       },
     ],
@@ -500,7 +500,7 @@ export const LESSONS: Lesson[] = [
       {
         title: b('12小節を作る', 'Build all 12 bars'),
         instruction: b('コードトーンだけで12小節を作ろう。9-10-11小節は4小節の練習と同じ形だよ。', 'Build 12 bars from chord tones. Bars 9-10-11 are the same shape you practised.'),
-        rules: [b('休みを4拍以上', 'At least 4 beats of rest')],
+        rules: [b('休みを{minRest}拍以上', 'At least {minRest} beats of rest')],
         editable: {
           material: 'chord-tone', bars: 12, divisions: [1, 2], initial: 'empty',
           conditions: { minNotes: 12, minRestBeats: 4 },
@@ -535,7 +535,7 @@ export const LESSONS: Lesson[] = [
     steps: [
       {
         title: b('頭に置いて着地させる', 'Land on the downbeat'),
-        instruction: b('3小節目(Cmaj7)の1拍目に音を置いて、4小節を作ろう。', 'Build four bars with a note on beat 1 of bar 3 (Cmaj7).'),
+        instruction: b('3小節目(Cmaj7)の1拍目に音を置いて、{bars}小節を作ろう。', 'Build {bars} bars with a note on beat 1 of bar 3 (Cmaj7).'),
         rules: [b('3小節目の1拍目に音を置く', 'A note must sound on beat 1 of bar 3')],
         editable: {
           material: 'chord-tone', bars: 4, divisions: [1, 2], initial: 'empty',
@@ -649,7 +649,7 @@ export const LESSONS: Lesson[] = [
     id: 't3-combine',
     chapterId: 'ch3',
     title: b('裏拍で始めて食い込んで頭で着地する', 'Enter off, anticipate, land on the beat'),
-    outcome: b('助走・食い・着地を1本の4小節にまとめられる。', 'You can put entry, anticipation and landing into a single four bars.'),
+    outcome: b('助走・食い・着地を1本のフレーズにまとめられる。', 'You can put entry, anticipation and landing into a single line.'),
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
@@ -658,7 +658,7 @@ export const LESSONS: Lesson[] = [
     steps: [
       {
         title: b('3つを同時に使う', 'All three at once'),
-        instruction: b('1小節目は裏拍から、2小節目から食い込み、3小節目の頭で着地する4小節を作ろう。', 'Bar 1 enters off the beat, bar 2 carries over, bar 3 lands on the downbeat.'),
+        instruction: b('1小節目は裏拍から、2小節目から食い込み、3小節目の頭で着地する{bars}小節を作ろう。', 'Bar 1 enters off the beat, bar 2 carries over, bar 3 lands on the downbeat.'),
         rules: [
           b('1小節目は裏拍から', 'Bar 1 starts offbeat'),
           b('3小節目へ食い込む', 'Carry into bar 3'),
@@ -668,7 +668,7 @@ export const LESSONS: Lesson[] = [
           material: 'chord-tone', bars: 4, divisions: [1, 2], initial: 'empty',
           conditions: { minNotes: 6, requireOffbeatStartOnBar: [1], requireCrossBarHoldInto: [3], requireDownbeatOnBar: [3] },
           requiredAction: 'any-change',
-          task: b('裏拍で始めて、食い込んで、頭で着地する4小節を作ろう。', 'Enter off the beat, carry over, and land on the downbeat.'),
+          task: b('裏拍で始めて、食い込んで、頭で着地する{bars}小節を作ろう。', 'Enter off the beat, carry over, and land on the downbeat.'),
         },
       },
       {
@@ -684,7 +684,7 @@ export const LESSONS: Lesson[] = [
       },
     ],
     selfCheck: [
-      b('4小節が1つの流れとしてつながった', 'The four bars formed one line'),
+      b('全体が1つの流れとしてつながった', 'The whole thing formed one line'),
       b('どこが助走でどこが着地か自分で言えた', 'I could name the approach and the landing'),
     ],
     trivia: {
@@ -707,7 +707,7 @@ export const LESSONS: Lesson[] = [
       {
         title: b('着地を1回決める', 'Land once'),
         instruction: b('11小節目(C7)の1拍目に音を置こう。あとは自由に12小節を作ろう。', 'Put a note on beat 1 of bar 11 (C7). The rest of the 12 bars is up to you.'),
-        rules: [b('11小節目の1拍目に音を置く', 'A note must sound on beat 1 of bar 11'), b('休みを4拍以上', 'At least 4 beats of rest')],
+        rules: [b('11小節目の1拍目に音を置く', 'A note must sound on beat 1 of bar 11'), b('休みを{minRest}拍以上', 'At least {minRest} beats of rest')],
         editable: {
           material: 'chord-tone', bars: 12, divisions: [1, 2], initial: 'empty',
           conditions: { minNotes: 12, minRestBeats: 4, requireDownbeatOnBar: [11] },
@@ -866,7 +866,7 @@ export const LESSONS: Lesson[] = [
       {
         title: b('着地でつないで12小節', 'Twelve bars of landings'),
         instruction: b('12小節を作って、最後の音をその小節のコードの3度で終わらせよう。', 'Build 12 bars and end on the 3rd of the final bar’s chord.'),
-        rules: [b('最後の音はその小節の3度', 'The final note is that bar’s 3rd'), b('休みを4拍以上', 'At least 4 beats of rest')],
+        rules: [b('最後の音はその小節の3度', 'The final note is that bar’s 3rd'), b('休みを{minRest}拍以上', 'At least {minRest} beats of rest')],
         editable: {
           material: 'chord-tone', bars: 12, divisions: [1, 2], initial: 'empty',
           conditions: { minNotes: 12, minRestBeats: 4, requireEndOn3rd: true },
@@ -973,7 +973,7 @@ export const LESSONS: Lesson[] = [
     chapterId: 'ch5',
     title: b('前半2小節に似た形で後半2小節を作る', 'Answer your first two bars'),
     technicalName: b('コール＆レスポンス', 'Call and response'),
-    outcome: b('前半の「問い」に後半で「答える」4小節を作れる。', 'You can write four bars that ask a question and answer it.'),
+    outcome: b('前半の「問い」に後半で「答える」フレーズを作れる。', 'You can write a line that asks a question and answers it.'),
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
@@ -987,7 +987,7 @@ export const LESSONS: Lesson[] = [
       {
         title: b('自分で答える', 'Write the answer'),
         instruction: b('前半2小節で問いを作り、後半2小節は似た形で終わり方だけ変えよう。', 'Ask with bars 1-2, then answer with a similar shape that ends differently.'),
-        rules: [b('休みを2拍以上', 'At least 2 beats of rest')],
+        rules: [b('休みを{minRest}拍以上', 'At least {minRest} beats of rest')],
         editable: {
           material: 'chord-tone', bars: 4, divisions: [1, 2], initial: 'empty',
           conditions: { minNotes: 6, minRestBeats: 2 },
@@ -1019,7 +1019,7 @@ export const LESSONS: Lesson[] = [
       {
         title: b('12小節で掛け合う', 'Trade through 12 bars'),
         instruction: b('2小節ずつ、問い・答えを交互に作って12小節を埋めよう。', 'Fill the 12 bars two bars at a time, alternating call and response.'),
-        rules: [b('休みを6拍以上', 'At least 6 beats of rest')],
+        rules: [b('休みを{minRest}拍以上', 'At least {minRest} beats of rest')],
         editable: {
           material: 'chord-tone', bars: 12, divisions: [1, 2], initial: 'empty',
           conditions: { minNotes: 12, minRestBeats: 6 },
@@ -1057,13 +1057,13 @@ export const LESSONS: Lesson[] = [
       },
       {
         title: b('ブルースの音で作る', 'Build with blues notes'),
-        instruction: b('ブルースの音を使って、4小節を作ろう。', 'Build four bars from the blues palette.'),
+        instruction: b('ブルースの音を使って、{bars}小節を作ろう。', 'Build {bars} bars from the blues palette.'),
         rules: [b('ブルーノートを1つ以上', 'At least one blue note')],
         editable: {
           material: 'blues', bars: 4, divisions: [1, 2], initial: 'empty',
           conditions: { minNotes: 5, minRestBeats: 1 },
           requiredAction: 'any-change',
-          task: b('ブルーノートを入れて4小節を作ってみよう。', 'Build four bars including a blue note.'),
+          task: b('ブルーノートを入れて{bars}小節を作ってみよう。', 'Build {bars} bars including a blue note.'),
         },
       },
     ],
@@ -1131,7 +1131,7 @@ export const LESSONS: Lesson[] = [
       {
         title: b('起伏をつけて作る', 'Build the arc'),
         instruction: b('前半は音を少なく、中盤で増やし、最後は減らして12小節を作ろう。', 'Fewer notes at the start, more in the middle, fewer again at the end.'),
-        rules: [b('休みを6拍以上', 'At least 6 beats of rest')],
+        rules: [b('休みを{minRest}拍以上', 'At least {minRest} beats of rest')],
         editable: {
           material: 'blues', bars: 12, divisions: [1, 2], initial: 'empty',
           conditions: { minNotes: 12, minRestBeats: 6 },
@@ -1162,7 +1162,7 @@ export const LESSONS: Lesson[] = [
       {
         title: b('1コーラスを完成させる', 'Finish the chorus'),
         instruction: b('ここまでの技を全部使って12小節を作り、自分の楽器で最後まで演奏しよう。', 'Use everything you have learned, then play it through on your instrument.'),
-        rules: [b('休みを4拍以上', 'At least 4 beats of rest')],
+        rules: [b('休みを{minRest}拍以上', 'At least {minRest} beats of rest')],
         editable: {
           material: 'blues', bars: 12, divisions: [1, 2, 3, 4], initial: 'empty', allowArticulation: true,
           conditions: { minNotes: 12, minRestBeats: 4 },

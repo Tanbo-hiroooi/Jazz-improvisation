@@ -47,6 +47,19 @@ export function emptyGrid(bars: number, division: Division = 2): GridPhrase {
   return { bars: Array.from({ length: bars }, () => ({ beats: Array.from({ length: 4 }, () => emptyBeat(division)) })) };
 }
 
+/**
+ * グリッドの小節数を変える。増やすぶんは空の小節、減らすぶんは後ろから捨てる。
+ * 練習の長さを4→8小節に変えたときに、作りかけの前半を残すために使う。
+ */
+export function resizeGrid(grid: GridPhrase, bars: number, division: Division = 2): GridPhrase {
+  if (grid.bars.length === bars) return grid;
+  if (grid.bars.length > bars) return { bars: grid.bars.slice(0, bars) };
+  const extra = Array.from({ length: bars - grid.bars.length }, () => ({
+    beats: Array.from({ length: 4 }, () => emptyBeat(division)),
+  }));
+  return { bars: [...grid.bars, ...extra] };
+}
+
 // ---- 使用できる音(パレット) ----
 
 export type GridMaterial = 'root-only' | 'third-only' | 'chord-tone' | 'guide-tone' | 'blues' | 'scale' | 'chromatic';

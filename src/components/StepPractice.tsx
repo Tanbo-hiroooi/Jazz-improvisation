@@ -17,6 +17,7 @@ import {
   gridToNoteEvents,
   initialGrid,
   palettesForGrid,
+  resizeGrid,
   validateGrid,
   GRID_ACTION_LABEL,
   type GridPhrase,
@@ -41,7 +42,7 @@ import {
   type NoteEvent,
   type ToneRhythmId,
 } from '../theory/phrases';
-import { changeMeasures, type Progression } from '../theory/progressions';
+import { changeMeasures, fitProgression, type Progression } from '../theory/progressions';
 import { loadCourseProgress, saveCourseProgress } from '../state/storage';
 import { pick, t as tr, type Lang } from '../i18n';
 
@@ -84,13 +85,27 @@ export interface StepDraftState {
   hIdx: number;
 }
 
-/** 編集課題の小節数ぶんの進行(コード表示・伴奏・パレットに使う) */
-function progressionSlice(progression: Progression, bars: number): Progression {
-  if (bars >= progression.measures) return progression;
+/**
+ * 選べる練習の長さ。4小節の課題は8小節(=ii-V-Iを2回)でも練習できる。
+ * 12小節の通し課題は長さを変えない。
+ */
+const BAR_CHOICES = [4, 8];
+
+/** その長さでの課題設定を作る。音符数などの数値条件は長さに比例させる */
+function editableForBars(editable: StepEditable, bars: number): StepEditable {
+  if (bars === editable.bars) return editable;
+  const f = bars / editable.bars;
+  const c = editable.conditions;
+  const scale = (v: number | undefined) => (v === undefined ? undefined : Math.max(1, Math.round(v * f)));
   return {
-    ...progression,
-    measures: bars,
-    chords: progression.chords.filter((c) => c.measure < bars),
+    ...editable,
+    bars,
+    conditions: c && {
+      ...c,
+      minNotes: scale(c.minNotes),
+      maxNotes: scale(c.maxNotes),
+      minRestBeats: scale(c.minRestBeats),
+    },
   };
 }
 
@@ -110,7 +125,7 @@ function resolveEditable(
   flats: boolean,
   draft: StepDraftState | null,
 ): ResolvedEditable {
-  const prog = progressionSlice(progression, editable.bars);
+  const prog = fitProgression(progression, editable.bars);
   const initial = initialGrid(editable.initial, editable.bars, prog, keyPc, editable.material, flats, editable.initialDivision ?? 2);
   const palettes = palettesForGrid(prog, keyPc, editable.bars, editable.material, flats);
   const usable = !!draft
@@ -412,8 +427,9 @@ export function StepPractice({
   compOn, setCompOn, labelMode, setLabelMode, onDirtyChange, onProgressChange, registerStop,
 }: Props) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
-  const p = (x: Bi) => pick(lang, x.ja, x.en);
   const [currentStep, setCurrentStep] = useState(0);
+  // 練習の長さ(4小節の課題だけ8小節に伸ばせる)。レッスン内の全STEPで共通
+  const [barsChoice, setBarsChoice] = useState(BAR_CHOICES[0]);
   const [drafts, setDrafts] = useState<Record<number, StepDraftState>>({});
   const initialVisited = (): Record<number, boolean> => (lesson.steps[0]?.editable ? {} : { 0: true });
   const [visitedFixed, setVisitedFixed] = useState<Record<number, boolean>>(initialVisited);
@@ -432,6 +448,37 @@ export function StepPractice({
   const step = lesson.steps[currentStep];
   const total = lesson.steps.length;
   const activeDraft = drafts[currentStep] ?? null;
+  /** そのSTEPで実際に使う課題設定(4小節の課題だけ長さを選べる) */
+  const effEditable = (e: StepEditable | undefined) =>
+    e && (e.bars === BAR_CHOICES[0] ? editableForBars(e, barsChoice) : e);
+  const stepEditable = effEditable(step.editable);
+  // 説明文の {bars} は、いま作っている長さに置き換える
+  const barsInText = stepEditable?.bars ?? progression.measures;
+  // 説明文の {bars} {minNotes} {minRest} は、いまの課題設定の実値に置き換える
+  const p = (x: Bi) => {
+    const c = stepEditable?.conditions;
+    return pick(lang, x.ja, x.en)
+      .replace(/\{bars\}/g, String(barsInText))
+      .replace(/\{minNotes\}/g, String(c?.minNotes ?? ''))
+      .replace(/\{maxNotes\}/g, String(c?.maxNotes ?? ''))
+      .replace(/\{minRest\}/g, String(c?.minRestBeats ?? ''));
+  };
+
+  /** 長さを変える。作りかけは前半を残したまま伸縮させる(捨てない) */
+  const changeBars = (next: number) => {
+    setBarsChoice(next);
+    setDrafts((all) => {
+      const out: Record<number, StepDraftState> = {};
+      Object.entries(all).forEach(([k, d]) => {
+        const i = Number(k);
+        const e = lesson.steps[i]?.editable;
+        if (!e) return;
+        const target = e.bars === BAR_CHOICES[0] ? next : e.bars;
+        out[i] = { ...d, history: d.history.map((g) => resizeGrid(g, target, e.initialDivision ?? 2)) };
+      });
+      return out;
+    });
+  };
 
   useEffect(() => {
     setCurrentStep(0);
@@ -458,9 +505,11 @@ export function StepPractice({
   const stepCompletion = useMemo(
     () => lesson.steps.map((s, i) => {
       if (!s.editable) return !!visitedFixed[i];
-      return resolveEditable(s.editable, progression, keyPc, flats, drafts[i] ?? null).result.stepCompleted;
+      const e = effEditable(s.editable)!;
+      return resolveEditable(e, progression, keyPc, flats, drafts[i] ?? null).result.stepCompleted;
     }),
-    [lesson.steps, visitedFixed, drafts, progression, keyPc, flats],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lesson.steps, visitedFixed, drafts, progression, keyPc, flats, barsChoice],
   );
   const currentDone = stepCompletion[currentStep];
   const pendingCount = stepCompletion.filter((done) => !done).length;
@@ -536,7 +585,27 @@ export function StepPractice({
           <label htmlFor="step-bpm">{t('tempoLabel')}: <strong>{bpm} BPM</strong></label>
           <input id="step-bpm" type="range" min={40} max={220} value={bpm} onChange={(e) => setBpm(Number(e.target.value))} />
         </div>
+        {step.editable?.bars === BAR_CHOICES[0] && (
+          <div className="field">
+            <label>{t('practiceBarsLabel')}</label>
+            <div className="seg-group">
+              {BAR_CHOICES.map((v) => (
+                <button
+                  key={v}
+                  className={`seg${barsChoice === v ? ' on' : ''}`}
+                  aria-pressed={barsChoice === v}
+                  onClick={() => changeBars(v)}
+                >
+                  {v}{t('measuresUnit')}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+      {step.editable?.bars === BAR_CHOICES[0] && barsChoice > BAR_CHOICES[0] && (
+        <p className="hint-text">{t('practiceBarsHint')}</p>
+      )}
 
       {(lesson.tempoLadder || lesson.keyLadder) && (
         <div className="ladder-panel">
@@ -602,8 +671,8 @@ export function StepPractice({
 
       {step.editable ? (
         <EditableStepBody
-          key={currentStep}
-          lang={lang} editable={step.editable} progression={progression} keyPc={keyPc} shift={shift} flats={flats}
+          key={`${currentStep}-${stepEditable!.bars}`}
+          lang={lang} editable={stepEditable!} progression={progression} keyPc={keyPc} shift={shift} flats={flats}
           clef={clef} notation={notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings}
           bpm={bpm} countIn={countIn} metronomeOn={metronomeOn} clickPattern={clickPattern} compOn={compOn}
           labelMode={labelMode} setLabelMode={setLabelMode}
