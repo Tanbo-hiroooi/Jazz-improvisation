@@ -306,20 +306,18 @@ export function StaffView({
         const required = 50 + items.length * 32 + accCount * 12;
         if (required > maxRequired) maxRequired = required;
       }
-      // 1行あたりの小節数の上限。広い画面ではもっと横に並べて、譜面の縦を短くする。
-      // 実際の数は下の maxRequired(内容の密度)にも制限されるので、詰まりすぎることはない
+      // 1行あたりの小節数の上限。広い画面ではもっと横に並べて、譜面の縦を短くする
       const hardCap = width < 620 ? 2 : width < 860 ? 4 : 6;
-      // 1行が3小節などにならないよう下限を4にする(狭い画面は2のまま)。
-      // 上限は hardCap、その範囲で内容の密度(maxRequired)に合わせる
-      const minPerLine = width < 620 ? 1 : 4;
-      const byDensity = Math.floor(width / maxRequired);
-      const cap = Math.max(1, Math.min(measures, Math.min(hardCap, Math.max(minPerLine, byDensity))));
+      // 実際の数は内容の密度で決める。ここを内容より多くすると音符が重なって印刷されるので、
+      // 「1行に何小節」より優先する。行頭の音部記号ぶん(約60px)は音符に使えない
+      const byDensity = Math.floor(Math.max(120, width - 60) / maxRequired);
+      const cap = Math.max(1, Math.min(measures, hardCap, byDensity));
       // 最終行だけ1〜2小節になると見づらいので、割り切れる/最終行が長い並べ方を選ぶ
       // (例: 8小節を 6+2 ではなく 4+4 にする)
       let perLine = cap;
-      if (cap > minPerLine && measures > cap) {
+      if (cap > 1 && measures > cap) {
         let best = -1;
-        for (let p = minPerLine; p <= cap; p++) {
+        for (let p = 1; p <= cap; p++) {
           const rem = measures % p;
           const score = rem === 0 ? p : rem;
           if (score >= best) { best = score; perLine = p; }
