@@ -60,6 +60,16 @@ interface Props {
   selectedMeasure?: number;
   /** 小節をクリックしたときの通知。渡すと譜面がクリック可能になる */
   onSelectMeasure?: (measure: number) => void;
+  /**
+   * 譜面の拡大率(1=等倍)。レイアウトは「表示幅 ÷ 拡大率」で組み、最後に表示サイズだけ引き伸ばす。
+   * 音符・音部記号・タイまで一緒に大きくなる。
+   */
+  zoom?: number;
+  /**
+   * 使える高さ(px)。渡すと、その高さに収まる範囲で自動的にいちばん大きい拡大率を選ぶ。
+   * 集中モードで「画面いっぱいに譜面を出す」ために使う。
+   */
+  fitHeight?: number;
   /** 譜面表示(TABはギター用。既定は五線譜のみ) */
   notation?: NotationMode;
   guitarPosition?: GuitarPosition;
@@ -149,6 +159,7 @@ const ARTIC_CODE: Record<string, string> = { accent: 'a>', staccato: 'a.', tenut
 
 export function StaffView({
   notes, measures, clef, shift, flats, labelMode, chords, currentIndex, selectedIndex = -1,
+  zoom = 1, fitHeight,
   selectedMeasure = -1, onSelectMeasure,
   notation = 'staff', guitarPosition = 'auto', guitarOpenStrings = true,
 }: Props) {
@@ -215,10 +226,14 @@ export function StaffView({
       prevHighlight.current = [];
       prevSelected.current = [];
 
-      const width = container.clientWidth || 600;
+      const avail = container.clientWidth || 600;
       const noteClef = clef === 'bass' ? 'bass' : 'treble';
       const showStaff = notation !== 'tab';
       const showTab = notation === 'tab' || notation === 'staff-tab';
+      const isGrand = clef === 'grand' && showStaff;
+      const lineHeight = isGrand ? 210 : showStaff && showTab ? 235 : showTab ? 120 : 130;
+      const tabOffsetY = showStaff ? 95 : 0;
+      const topPad = 24;
 
       // TAB: 実音MIDIを時系列で弦・フレットへ変換(globalIndexで引けるようにする)
       const tabByGi: (TabPosition | undefined)[] = [];
@@ -306,29 +321,41 @@ export function StaffView({
         const required = 50 + items.length * 32 + accCount * 12;
         if (required > maxRequired) maxRequired = required;
       }
-      // 1行あたりの小節数の上限。広い画面ではもっと横に並べて、譜面の縦を短くする
-      const hardCap = width < 620 ? 2 : width < 860 ? 4 : 6;
-      // 実際の数は内容の密度で決める。ここを内容より多くすると音符が重なって印刷されるので、
-      // 「1行に何小節」より優先する。行頭の音部記号ぶん(約60px)は音符に使えない
-      const byDensity = Math.floor(Math.max(120, width - 60) / maxRequired);
-      const cap = Math.max(1, Math.min(measures, hardCap, byDensity));
-      // 最終行だけ1〜2小節になると見づらいので、割り切れる/最終行が長い並べ方を選ぶ
-      // (例: 8小節を 6+2 ではなく 4+4 にする)
-      let perLine = cap;
-      if (cap > 1 && measures > cap) {
-        let best = -1;
-        for (let p = 1; p <= cap; p++) {
-          const rem = measures % p;
-          const score = rem === 0 ? p : rem;
-          if (score >= best) { best = score; perLine = p; }
+      /** 論理幅から「1行の小節数・行数・高さ」を決める(拡大率を変えると論理幅が変わる) */
+      const layoutFor = (logicalW: number) => {
+        // 1行あたりの小節数の上限。広い画面ではもっと横に並べて、譜面の縦を短くする
+        const hardCap = logicalW < 620 ? 2 : logicalW < 860 ? 4 : 6;
+        // 実際の数は内容の密度で決める。ここを内容より多くすると音符が重なって印刷されるので、
+        // 「1行に何小節」より優先する。行頭の音部記号ぶん(約60px)は音符に使えない
+        const byDensity = Math.floor(Math.max(120, logicalW - 60) / maxRequired);
+        const cap = Math.max(1, Math.min(measures, hardCap, byDensity));
+        // 最終行だけ1〜2小節になると見づらいので、割り切れる/最終行が長い並べ方を選ぶ
+        // (例: 8小節を 6+2 ではなく 4+4 にする)
+        let per = cap;
+        if (cap > 1 && measures > cap) {
+          let best = -1;
+          for (let x = 1; x <= cap; x++) {
+            const rem = measures % x;
+            const score = rem === 0 ? x : rem;
+            if (score >= best) { best = score; per = x; }
+          }
+        }
+        const ln = Math.ceil(measures / per);
+        return { perLine: per, lines: ln, height: ln * lineHeight + topPad };
+      };
+
+      // 拡大率の決定。fitHeight があれば、その高さに収まる中でいちばん大きい率を選ぶ
+      // (拡大すると1行に入る小節が減って行数が増えるため、候補を大きい方から試す)
+      let scale = Math.max(0.5, zoom);
+      if (fitHeight && fitHeight > 0) {
+        const candidates = [3, 2.5, 2.2, 2, 1.8, 1.6, 1.4, 1.25, 1.1, 1];
+        scale = 1;
+        for (const z of candidates) {
+          if (layoutFor(Math.round(avail / z)).height * z <= fitHeight) { scale = z; break; }
         }
       }
-      const lines = Math.ceil(measures / perLine);
-      const isGrand = clef === 'grand' && showStaff;
-      const lineHeight = isGrand ? 210 : showStaff && showTab ? 235 : showTab ? 120 : 130;
-      const tabOffsetY = showStaff ? 95 : 0;
-      const topPad = 24;
-      const height = lines * lineHeight + topPad;
+      const width = Math.max(160, Math.round(avail / scale));
+      const { perLine, height } = layoutFor(width);
 
       const renderer = new Renderer(container, Renderer.Backends.SVG);
       renderer.resize(width, height);
@@ -511,7 +538,7 @@ export function StaffView({
 
       // 小節の選択枠とクリック領域。選択枠は音符の後ろ、クリック領域は一番手前に置く
       measureRectsRef.current = [];
-      const svgEl = container.querySelector('svg');
+      const svgEl = container.querySelector('svg') as SVGSVGElement | null;
       if (svgEl && onSelectMeasureRef.current) {
         const NS = 'http://www.w3.org/2000/svg';
         for (const box of measureBoxes) {
@@ -539,6 +566,12 @@ export function StaffView({
         if (sm >= 0) measureRectsRef.current[sm]?.classList.add('on');
       }
 
+      // 論理サイズで組んだSVGを、表示サイズだけ拡大する(viewBoxはVexFlowが付けている)
+      if (scale !== 1 && svgEl) {
+        svgEl.style.width = `${Math.round(width * scale)}px`;
+        svgEl.style.height = `${Math.round(height * scale)}px`;
+      }
+
       // 再描画後にハイライト(再生位置・編集の選択)を復元
       const ci = currentIndexRef.current;
       if (ci >= 0) {
@@ -558,7 +591,7 @@ export function StaffView({
     const ro = new ResizeObserver(() => render());
     ro.observe(container);
     return () => ro.disconnect();
-  }, [displayNotes, measures, clef, flats, labelMode, chords, notation, guitarPosition, guitarOpenStrings]);
+  }, [displayNotes, measures, clef, flats, labelMode, chords, notation, guitarPosition, guitarOpenStrings, zoom, fitHeight]);
 
   // 選択中の小節(再描画せずクラス切替)
   useEffect(() => {

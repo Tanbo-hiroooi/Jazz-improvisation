@@ -3,10 +3,11 @@
 // - 編集STEP: 拍グリッドで作る課題(形式条件+操作課題をdraftから毎レンダー導出)
 // - テンポ/キーのはしご: クリアしたらユーザーが自分で上げる(ゲートにはしない)
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { GridEditor } from './GridEditor';
 import { StaffView, type ChordDisplay, type LabelMode } from './StaffView';
 import { VolumeControls } from './VolumeControls';
+import { FocusStage, focusFitHeight } from './FocusStage';
 import type { Bi, Lesson, StepContent, StepEditable } from '../data/courses';
 import { usePracticePlayback, type PlaybackOverrides } from '../hooks/usePracticePlayback';
 import { chordSymbol } from '../theory/chords';
@@ -155,6 +156,54 @@ interface SharedProps {
   labelMode: LabelMode;
   setLabelMode: (m: LabelMode) => void;
   registerStop: (fn: (() => void) | null) => void;
+  /** 集中モード(譜面だけを全画面表示) */
+  focus: boolean;
+  setFocus: (v: boolean) => void;
+  /** メトロノーム等の再生オプション(集中モードでは譜面と一緒に前面へ出す) */
+  optionsNode: ReactNode;
+  /** 集中モードの上部に出す1行 */
+  focusTitle: string;
+}
+
+/**
+ * 集中モードで譜面に使える高さ。
+ * 開いたあとは実際の枠を測る(再生ボタンの折り返しなどで高さが変わるため)。
+ * 枠は flex で高さが決まっていて中身の量に左右されないので、測り直しても振動しない。
+ */
+function useFitHeight(focus: boolean): number | undefined {
+  const [h, setH] = useState(() => focusFitHeight());
+  useEffect(() => {
+    if (!focus) return;
+    const measure = () => {
+      const card = document.querySelector('.focus-stage .staff-card');
+      const real = card ? Math.round(card.getBoundingClientRect().height) : 0;
+      setH(real > 120 ? real : focusFitHeight());
+    };
+    measure();
+    const id = window.setTimeout(measure, 60);
+    window.addEventListener('resize', measure);
+    return () => {
+      window.clearTimeout(id);
+      window.removeEventListener('resize', measure);
+    };
+  }, [focus]);
+  return focus ? h : undefined;
+}
+
+/** 譜面の見出し(表示切替+集中モードボタン) */
+function StaffHead({ lang, labelMode, setLabelMode, onFocus }: {
+  lang: Lang; labelMode: LabelMode; setLabelMode: (m: LabelMode) => void; onFocus: () => void;
+}) {
+  const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
+  return (
+    <div className="staff-head">
+      <h4>{t('staffTitle')}</h4>
+      <div className="staff-head-tools">
+        <LabelModeToggle lang={lang} labelMode={labelMode} setLabelMode={setLabelMode} />
+        <button className="btn tiny focus-open-btn" onClick={onFocus}>⛶ {t('focusOpen')}</button>
+      </div>
+    </div>
+  );
 }
 
 function LabelModeToggle({ lang, labelMode, setLabelMode }: { lang: Lang; labelMode: LabelMode; setLabelMode: (m: LabelMode) => void }) {
@@ -185,9 +234,11 @@ function chordDisplaysFor(prog: Progression, keyPc: number, shift: number, flats
 function FixedStepBody({
   lang, content, progression, keyPc, shift, flats, clef, notation, guitarPosition, guitarOpenStrings,
   bpm, countIn, metronomeOn, clickPattern, compOn, labelMode, setLabelMode, registerStop,
+  focus, setFocus, optionsNode, focusTitle,
 }: SharedProps & { content: StepContent }) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
 
+  const fitHeight = useFitHeight(focus);
   const displayedNotes = useMemo(() => generateStepNotes(content, progression, keyPc), [content, progression, keyPc]);
   const chordDisplays = useMemo(() => chordDisplaysFor(progression, keyPc, shift, flats), [progression, keyPc, shift, flats]);
 
@@ -201,17 +252,14 @@ function FixedStepBody({
     return () => registerStop(null);
   }, [stopAll, registerStop]);
 
-  return (
+  const stage = (
     <>
-      <div className="staff-head">
-        <h4>{t('staffTitle')}</h4>
-        <LabelModeToggle lang={lang} labelMode={labelMode} setLabelMode={setLabelMode} />
-      </div>
       <div className="staff-card">
         <StaffView
           notes={displayedNotes} measures={progression.measures} clef={clef} shift={shift} flats={flats}
           labelMode={labelMode} chords={chordDisplays} currentIndex={currentNoteIndex}
           notation={notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings}
+          fitHeight={fitHeight}
         />
       </div>
       <div className="transport-main">
@@ -227,6 +275,17 @@ function FixedStepBody({
           ♪ {t('checkThisNote')}
         </button>
       </div>
+      {optionsNode}
+    </>
+  );
+
+  if (focus) {
+    return <FocusStage lang={lang} title={focusTitle} onClose={() => setFocus(false)}>{stage}</FocusStage>;
+  }
+  return (
+    <>
+      <StaffHead lang={lang} labelMode={labelMode} setLabelMode={setLabelMode} onFocus={() => setFocus(true)} />
+      {stage}
     </>
   );
 }
@@ -240,6 +299,7 @@ interface EditableStepBodyProps extends SharedProps {
 function EditableStepBody({
   lang, editable, progression, keyPc, shift, flats, clef, notation, guitarPosition, guitarOpenStrings,
   bpm, countIn, metronomeOn, clickPattern, compOn, labelMode, setLabelMode, registerStop,
+  focus, setFocus, optionsNode, focusTitle,
   draft, onDraftChange,
 }: EditableStepBodyProps) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
@@ -269,6 +329,7 @@ function EditableStepBody({
     if (window.confirm(t('resetConfirm'))) onDraftChange({ keyPc, history: [initial], hIdx: 0 });
   };
 
+  const fitHeight = useFitHeight(focus);
   const displayedNotes = useMemo(() => gridToNoteEvents(grid), [grid]);
   const chordDisplays = useMemo(() => chordDisplaysFor(prog, keyPc, shift, flats), [prog, keyPc, shift, flats]);
 
@@ -310,14 +371,43 @@ function EditableStepBody({
   if (c.requireArticulation) reqItems.push({ key: 'artic', label: pick(lang, '表情記号を1つ以上', 'Use an articulation'), met: !condErrors.has('artic') });
   if (c.requireEndOn3rd) reqItems.push({ key: 'end3rd', label: pick(lang, '最後の音は3度で着地', 'End on the 3rd'), met: !condErrors.has('end3rd') });
 
+  const transport = (
+    <div className="transport-main">
+      {playing ? (
+        <button className="btn big stop" onClick={stopAll}>■ Stop</button>
+      ) : (
+        <>
+          <button className="btn big example" onClick={() => check({ compOn: false })}>♪ {t('checkSingle')}</button>
+          <button className="btn big example" onClick={() => check({ compOn: true })}>♪ {t('checkWithChord')}</button>
+          <button className="btn big start" onClick={() => startPlayback('backing')}>▶ {t('playBacking')}</button>
+        </>
+      )}
+    </div>
+  );
+
+  // 集中モードでは、作ったフレーズの譜面と再生だけを全画面に出す(入力グリッドは出さない)
+  if (focus) {
+    return (
+      <FocusStage lang={lang} title={focusTitle} onClose={() => setFocus(false)}>
+        <div className="staff-card">
+          <StaffView
+            notes={displayedNotes} measures={prog.measures} clef={clef} shift={shift} flats={flats}
+            labelMode={labelMode} chords={chordDisplays} currentIndex={currentNoteIndex}
+            notation={notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings}
+            fitHeight={fitHeight}
+          />
+        </div>
+        {transport}
+        {optionsNode}
+      </FocusStage>
+    );
+  }
+
   return (
     <>
       {/* 編集中も譜面が見えるよう、画面上部に貼り付ける(sticky) */}
       <div className="staff-sticky">
-        <div className="staff-head">
-          <h4>{t('staffTitle')}</h4>
-          <LabelModeToggle lang={lang} labelMode={labelMode} setLabelMode={setLabelMode} />
-        </div>
+        <StaffHead lang={lang} labelMode={labelMode} setLabelMode={setLabelMode} onFocus={() => setFocus(true)} />
         <div className="staff-card">
           <StaffView
             notes={displayedNotes} measures={prog.measures} clef={clef} shift={shift} flats={flats}
@@ -373,17 +463,8 @@ function EditableStepBody({
         </div>
       </div>
 
-      <div className="transport-main">
-        {playing ? (
-          <button className="btn big stop" onClick={stopAll}>■ Stop</button>
-        ) : (
-          <>
-            <button className="btn big example" onClick={() => check({ compOn: false })}>♪ {t('checkSingle')}</button>
-            <button className="btn big example" onClick={() => check({ compOn: true })}>♪ {t('checkWithChord')}</button>
-            <button className="btn big start" onClick={() => startPlayback('backing')}>▶ {t('playBacking')}</button>
-          </>
-        )}
-      </div>
+      {transport}
+      {optionsNode}
       <p className="hint-text">{t('playSelfHint')}</p>
     </>
   );
@@ -430,6 +511,8 @@ export function StepPractice({
   const [currentStep, setCurrentStep] = useState(0);
   // 練習の長さ(4小節の課題だけ8小節に伸ばせる)。レッスン内の全STEPで共通
   const [barsChoice, setBarsChoice] = useState(BAR_CHOICES[0]);
+  // 集中モード(譜面だけを全画面に出す)
+  const [focus, setFocus] = useState(false);
   const [drafts, setDrafts] = useState<Record<number, StepDraftState>>({});
   const initialVisited = (): Record<number, boolean> => (lesson.steps[0]?.editable ? {} : { 0: true });
   const [visitedFixed, setVisitedFixed] = useState<Record<number, boolean>>(initialVisited);
@@ -534,6 +617,31 @@ export function StepPractice({
   };
 
   const fallbackContent: StepContent = { source: 'chord-tones', rhythm: 'basic' };
+
+  // 再生オプション。通常時は譜面の下、集中モードでは全画面の中に出る
+  const optionsNode = (
+    <div className="transport-opts">
+      <label className="toggle"><input type="checkbox" checked={countIn} onChange={(e) => setCountIn(e.target.checked)} /> 4 Count In</label>
+      <label className="toggle"><input type="checkbox" checked={metronomeOn} onChange={(e) => setMetronomeOn(e.target.checked)} /> {t('metronome')}</label>
+      <div className="seg-group">
+        <button
+          className={`seg${clickPattern === 'all' ? ' on' : ''}`} aria-pressed={clickPattern === 'all'}
+          disabled={!metronomeOn} onClick={() => setClickPattern('all')}
+        >{t('clickAllBeats')}</button>
+        <button
+          className={`seg${clickPattern === 'backbeat' ? ' on' : ''}`} aria-pressed={clickPattern === 'backbeat'}
+          disabled={!metronomeOn} onClick={() => setClickPattern('backbeat')}
+        >{t('clickBackbeat')}</button>
+      </div>
+      <label className="toggle"><input type="checkbox" checked={compOn} onChange={(e) => setCompOn(e.target.checked)} /> {t('compSound')}</label>
+      <div className="field focus-bpm">
+        <label htmlFor="focus-bpm">{t('tempoLabel')}: <strong>{bpm} BPM</strong></label>
+        <input id="focus-bpm" type="range" min={40} max={220} value={bpm} onChange={(e) => setBpm(Number(e.target.value))} />
+      </div>
+    </div>
+  );
+  // 集中モードの見出しは「いまやること」1行
+  const focusLine = `${p(step.title)} — ${p(step.editable ? step.editable.task : step.instruction)}`;
 
   return (
     <section className="panel step-practice">
@@ -677,6 +785,7 @@ export function StepPractice({
           bpm={bpm} countIn={countIn} metronomeOn={metronomeOn} clickPattern={clickPattern} compOn={compOn}
           labelMode={labelMode} setLabelMode={setLabelMode}
           registerStop={registerStop}
+          focus={focus} setFocus={setFocus} optionsNode={optionsNode} focusTitle={focusLine}
           draft={activeDraft}
           onDraftChange={(next) => setDrafts((d) => ({ ...d, [currentStep]: next }))}
         />
@@ -688,24 +797,9 @@ export function StepPractice({
           bpm={bpm} countIn={countIn} metronomeOn={metronomeOn} clickPattern={clickPattern} compOn={compOn}
           labelMode={labelMode} setLabelMode={setLabelMode}
           registerStop={registerStop}
+          focus={focus} setFocus={setFocus} optionsNode={optionsNode} focusTitle={focusLine}
         />
       )}
-
-      <div className="transport-opts">
-        <label className="toggle"><input type="checkbox" checked={countIn} onChange={(e) => setCountIn(e.target.checked)} /> 4 Count In</label>
-        <label className="toggle"><input type="checkbox" checked={metronomeOn} onChange={(e) => setMetronomeOn(e.target.checked)} /> {t('metronome')}</label>
-        <div className="seg-group">
-          <button
-            className={`seg${clickPattern === 'all' ? ' on' : ''}`} aria-pressed={clickPattern === 'all'}
-            disabled={!metronomeOn} onClick={() => setClickPattern('all')}
-          >{t('clickAllBeats')}</button>
-          <button
-            className={`seg${clickPattern === 'backbeat' ? ' on' : ''}`} aria-pressed={clickPattern === 'backbeat'}
-            disabled={!metronomeOn} onClick={() => setClickPattern('backbeat')}
-          >{t('clickBackbeat')}</button>
-        </div>
-        <label className="toggle"><input type="checkbox" checked={compOn} onChange={(e) => setCompOn(e.target.checked)} /> {t('compSound')}</label>
-      </div>
 
       <VolumeControls lang={lang} />
 

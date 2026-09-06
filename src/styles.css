@@ -886,6 +886,53 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
 }
 .grid-bar-chord { font-weight: 700; font-size: 14px; color: var(--accent); }
 .grid-copy-btn { margin-left: auto; }
+/* ---- 集中モード(譜面だけを全画面に出す) ---- */
+body.focus-open { overflow: hidden; }
+.focus-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.focus-stage-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+.focus-stage-title {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 譜面は残り全部を使う。中身は上下中央に置く */
+.focus-stage .staff-card {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  margin: 0;
+}
+.focus-stage .transport-main,
+.focus-stage .transport-opts { flex: 0 0 auto; }
+.focus-stage .transport-opts { justify-content: center; }
+.focus-bpm { min-width: 180px; }
+.staff-head-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.focus-open-btn { white-space: nowrap; }
+
 /* ---- ピアノロール(縦=音の高さ / 横=拍) ---- */
 .pianoroll {
   border: 1px solid var(--border);
