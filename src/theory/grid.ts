@@ -413,6 +413,16 @@ export interface GridConditions {
   requireCrossBarHoldInto?: number[];
 }
 
+/**
+ * 数値の条件を長さに比例させる(4小節の課題を8小節で使うときなど)。
+ * 「各小節に○拍の休み」は小節あたりの条件なので変えない。
+ */
+export function scaleConditions(c: GridConditions | undefined, factor: number): GridConditions | undefined {
+  if (!c || factor === 1) return c;
+  const s = (v?: number) => (v === undefined ? undefined : Math.max(1, Math.round(v * factor)));
+  return { ...c, minNotes: s(c.minNotes), maxNotes: s(c.maxNotes), minRestBeats: s(c.minRestBeats) };
+}
+
 export type GridAction = 'any-change' | 'rhythm-change' | 'pitch-change';
 
 export const GRID_ACTION_LABEL: Record<GridAction, { ja: string; en: string }> = {

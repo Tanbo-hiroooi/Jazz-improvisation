@@ -1227,3 +1227,57 @@ export function lessonsOfChapter(chapterId: string): Lesson[] {
 export function courseLessonIds(course: Course): string[] {
   return course.chapterIds.flatMap((cid) => lessonsOfChapter(cid).map((l) => l.id));
 }
+
+// ---- 章まとめ練習 ----
+// 章の編集課題はどれも同じ進行・同じ小節数の上で、条件だけを変えている。
+// そこで「1つの譜面」を作り、章の各レッスンの条件を同時にチェックできるようにする。
+
+export interface WorkoutTask {
+  lessonId: string;
+  /** そのレッスンの課題文({minNotes}などの差し込みを含む) */
+  label: Bi;
+  conditions?: GridConditions;
+}
+
+export interface ChapterWorkout {
+  chapterId: string;
+  progressionId: ProgressionId;
+  /** 既定の長さ */
+  bars: number;
+  /** 選べる長さ(4小節の章は8小節でも通せる) */
+  barOptions: number[];
+  /** 章で使う素材(狭い順) */
+  materials: GridMaterial[];
+  divisions: Division[];
+  tasks: WorkoutTask[];
+}
+
+/**
+ * 章のレッスンから「まとめ練習」の設定を作る。
+ * 章の中で最も多く使われている(進行×小節数)を主役にし、それに載っている課題だけを集める。
+ */
+export function chapterWorkout(chapterId: string): ChapterWorkout | null {
+  const steps = lessonsOfChapter(chapterId).flatMap((l) =>
+    l.steps.filter((s) => s.editable).map((s) => ({ lesson: l, e: s.editable! })));
+  if (steps.length === 0) return null;
+
+  const count = new Map<string, number>();
+  for (const { lesson, e } of steps) {
+    const key = `${lesson.progressionId}|${e.bars}`;
+    count.set(key, (count.get(key) ?? 0) + 1);
+  }
+  const top = [...count.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  const [progressionId, barsText] = top.split('|');
+  const bars = Number(barsText);
+
+  const main = steps.filter(({ lesson, e }) => lesson.progressionId === progressionId && e.bars === bars);
+  return {
+    chapterId,
+    progressionId: progressionId as ProgressionId,
+    bars,
+    barOptions: bars === 4 ? [4, 8] : [bars],
+    materials: [...new Set(main.map(({ e }) => e.material))],
+    divisions: [...new Set(main.flatMap(({ e }) => e.divisions))].sort((a, b) => a - b),
+    tasks: main.map(({ lesson, e }) => ({ lessonId: lesson.id, label: e.task, conditions: e.conditions })),
+  };
+}

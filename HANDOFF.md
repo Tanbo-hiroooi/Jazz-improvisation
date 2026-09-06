@@ -142,6 +142,23 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
   選択枠(`vf-measure-sel`)は音符の後ろ、当たり判定は最前面。コールバックはrefで持ち描画depsに入れない(入れると無限再描画)。
   **注意**: 進行・小節数・素材を変えるとグリッドが作り直されるため、`selected`(編集中セル)と`visibleBar`が範囲外に残りうる。
   GridEditorは`cellExists()`で弾き、GridComposerは`focusBar`で弾く。ここを外すと`bars[n].beats`でクラッシュする。
+- **練習の長さ(4/8小節)**: `fitProgression(prog, bars)` が進行を繰り返して伸ばす(縮めるだけだった旧`progressionSlice`を置換)。
+  `resizeGrid`で下書きを捨てずに伸縮、`scaleConditions`で音符数・休符拍の条件を長さに比例させる。
+  courses.tsの文章は `{bars}` `{minNotes}` `{minRest}` を埋め込み、StepPracticeの`p()`が**実効値**に差し替える。
+  ここを守らないと「説明は4小節・譜面は8小節」のような不一致が起きる(このプロジェクトで最も嫌う種類のバグ)。
+  一覧に出るレッスン名・outcomeは長さが決まっていないので、数字を書かない言い回しにしてある。
+- **集中モード**(`FocusStage.tsx`): 譜面と再生だけをポータルで全画面表示する。
+  **画面を新設せず、STEPのbodyがJSXの出し先を変えるだけ**にしてある(`usePracticePlayback`は1画面1つという決まりを守るため。
+  別画面にすると再生フックが2つになり、過去に「音が出ない」バグが出た)。
+  譜面に使える高さは開いたあと実測する(`.focus-stage .staff-card`はflexで高さが決まり、中身に影響されないので振動しない)。
+- **譜面の拡大**(StaffView `zoom` / `fitHeight`): レイアウトは `幅 ÷ 拡大率` の論理幅で組み、最後にSVGのstyleだけ引き伸ばす。
+  VexFlowが付けるviewBoxのおかげで音符も当たり判定も一緒に拡大される。`fitHeight`を渡すと、
+  高さに収まる中で最大の拡大率を候補から選ぶ(拡大するほど1行の小節が減って行数が増えるので、大きい方から試す)。
+- **章まとめ練習**(`chapterWorkout()` + `ChapterWorkoutScreen`): 章の編集STEPから
+  「いちばん多い(進行×小節数)」を主役に選び、その上に載る課題だけを集めてチェックリストにする。
+  判定は各レッスンの`conditions`を**同じグリッドに**`validateGrid`でかけるだけ(新しい判定ロジックは無い)。
+  同時に成立しない組み合わせ(第3章の「1小節目を裏拍/頭から」)は意図的にA/B比較なので、両方を並べて出す。
+  UIは`GridComposer`の再利用(`materialOptions`/`barOptions`/`tasks`を渡すと章まとめ用の見た目になる)。
 - **1行あたりの小節数**(StaffView): 画面幅で上限(<620px:2 / <860px:4 / それ以上:6)。
   実際の数は**内容の密度で決める**(`maxRequired` = 50 + アイテム数×32 + 臨時記号×12、行頭の音部記号ぶん60pxを引く)。
   **ここに「最低○小節」の下限を入れてはいけない。** VexFlowは幅が足りないとき小節内で詰めるのではなく

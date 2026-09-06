@@ -19,6 +19,7 @@ import {
   initialGrid,
   palettesForGrid,
   resizeGrid,
+  scaleConditions,
   validateGrid,
   GRID_ACTION_LABEL,
   type GridPhrase,
@@ -95,19 +96,7 @@ const BAR_CHOICES = [4, 8];
 /** その長さでの課題設定を作る。音符数などの数値条件は長さに比例させる */
 function editableForBars(editable: StepEditable, bars: number): StepEditable {
   if (bars === editable.bars) return editable;
-  const f = bars / editable.bars;
-  const c = editable.conditions;
-  const scale = (v: number | undefined) => (v === undefined ? undefined : Math.max(1, Math.round(v * f)));
-  return {
-    ...editable,
-    bars,
-    conditions: c && {
-      ...c,
-      minNotes: scale(c.minNotes),
-      maxNotes: scale(c.maxNotes),
-      minRestBeats: scale(c.minRestBeats),
-    },
-  };
+  return { ...editable, bars, conditions: scaleConditions(editable.conditions, bars / editable.bars) };
 }
 
 interface ResolvedEditable {
