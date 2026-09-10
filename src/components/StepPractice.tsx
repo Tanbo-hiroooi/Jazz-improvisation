@@ -365,8 +365,8 @@ function EditableStepBody({
 
   return (
     <>
-      {/* 編集中も譜面が見えるよう、画面上部に貼り付ける(sticky) */}
-      <div className="staff-sticky">
+      {/* 全体譜で小節を選択。入力パネルは拡大した小節と一体で表示する。 */}
+      <div className="staff-sticky entry-overview">
         <StaffHead lang={lang} labelMode={labelMode} setLabelMode={setLabelMode} onFocus={() => setFocus(true)} />
         <div className="staff-card">
           <StaffView
@@ -395,6 +395,9 @@ function EditableStepBody({
         onSelectedIndexChange={setSelectedIndex}
         visibleBar={Math.min(editBar, grid.bars.length - 1)}
         onVisibleBarChange={setEditBar}
+        shift={shift} clef={clef} notation={notation}
+        guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings}
+        onUndo={undo} onRedo={redo} canUndo={hIdx > 0} canRedo={hIdx < history.length - 1}
       />
 
       {reqItems.length > 0 && (
@@ -417,8 +420,6 @@ function EditableStepBody({
 
       <div className="transport-opts composer-undo-row">
         <div className="seg-group">
-          <button className="seg" onClick={undo} disabled={hIdx === 0} aria-label={t('undoBtn')}>↩ {t('undoBtn')}</button>
-          <button className="seg" onClick={redo} disabled={hIdx >= history.length - 1} aria-label={t('redoBtn')}>↪ {t('redoBtn')}</button>
           <button className="seg" onClick={reset} aria-label={t('resetPhrase')}>⟲ {t('resetPhrase')}</button>
         </div>
       </div>

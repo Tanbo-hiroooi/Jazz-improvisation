@@ -80,6 +80,7 @@ export class AudioEngine {
   private melody: Tone.Synth | null = null;
   /** 編集中の単音プレビュー用(melodyを使うと再生中の音を奪うため別ノードにする) */
   private preview: Tone.Synth | null = null;
+  private lastPreviewTime = -Infinity;
   private clickHi: Tone.Synth | null = null;
   private clickLo: Tone.Synth | null = null;
   /** 2・4拍クリック専用(毎拍メトロノームと音量を独立させるため別ノードにする) */
@@ -116,6 +117,8 @@ export class AudioEngine {
   async ensureStarted(): Promise<void> {
     if (!this.started) {
       await Tone.start();
+      // Several first taps can await the same audio-context resume.
+      if (this.started) return;
       const master = new Tone.Gain(0.9).toDestination();
       this.master = master;
       // チャンネルごとに音量ノードを挟む(velocityではなくゲインで制御する)
@@ -316,7 +319,12 @@ export class AudioEngine {
   async previewNote(midi: number): Promise<void> {
     if (this.running) return;
     await this.ensureStarted();
-    this.preview!.triggerAttackRelease(Tone.Frequency(midi, 'midi').toFrequency(), 0.35, Tone.now(), 0.8);
+    if (this.running) return;
+    // Tone.now() can be identical for rapid taps or a batch after context resume.
+    // A monophonic oscillator requires strictly increasing attack times.
+    const time = Math.max(Tone.now(), this.lastPreviewTime + 0.005);
+    this.lastPreviewTime = time;
+    this.preview!.triggerAttackRelease(Tone.Frequency(midi, 'midi').toFrequency(), 0.35, time, 0.8);
   }
 
   stop(): void {

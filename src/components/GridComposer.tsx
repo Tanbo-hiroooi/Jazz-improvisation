@@ -72,8 +72,7 @@ export function GridComposer({
   // 編集で選択中の音(譜面上でハイライトする)
   const [selectedIndex, setSelectedIndex] = useState(-1);
   // 入力対象の小節。譜面をタップして切り替える(小節が多いとき入力欄が伸びすぎるため)
-  // -1 = 未選択。最初は譜面だけを見せ、小節を選んでから入力欄を出す
-  const [editBar, setEditBar] = useState(-1);
+  const [editBar, setEditBar] = useState(0);
 
   const instrument = getInstrument(session.instrumentId);
   const clef: Clef = session.clefOverride && instrument.clefs.includes(session.clefOverride) ? session.clefOverride : instrument.defaultClef;
@@ -86,7 +85,7 @@ export function GridComposer({
 
   const grid = history[hIdx];
   // 小節数を減らしたときに範囲外の小節を選んだままにしない
-  const focusBar = editBar >= 0 && editBar < bars ? editBar : -1;
+  const focusBar = editBar >= 0 && editBar < bars ? editBar : 0;
 
   // キー・進行・素材・小節数が変わったら、パレット外の音が残らないよう作り直す
   useEffect(() => {
@@ -216,8 +215,8 @@ export function GridComposer({
       )}
 
       <section className="panel">
-        {/* 編集中も譜面が見えるよう、譜面と編集を同じパネルに置き上部へ貼り付ける */}
-        <div className="staff-sticky">
+        {/* 全体譜で小節を選択。編集中はエディタ内の拡大譜面を使う。 */}
+        <div className="staff-sticky entry-overview">
           <div className="staff-head">
             <h2>{t('staffTitle')}</h2>
             <div className="staff-head-tools">
@@ -268,6 +267,9 @@ export function GridComposer({
           onSelectedIndexChange={setSelectedIndex}
           visibleBar={focusBar}
           onVisibleBarChange={setEditBar}
+          shift={shift} clef={clef} notation={effNotation}
+          guitarPosition={session.guitarPosition} guitarOpenStrings={session.guitarOpenStrings}
+          onUndo={undo} onRedo={redo} canUndo={hIdx > 0} canRedo={hIdx < history.length - 1}
         />
         {tasks && tasks.length > 0 && (
           <div className="workout-tasks">
@@ -283,8 +285,6 @@ export function GridComposer({
 
         <div className="transport-opts composer-undo-row">
           <div className="seg-group">
-            <button className="seg" onClick={undo} disabled={hIdx === 0} aria-label={t('undoBtn')}>↩ {t('undoBtn')}</button>
-            <button className="seg" onClick={redo} disabled={hIdx >= history.length - 1} aria-label={t('redoBtn')}>↪ {t('redoBtn')}</button>
             <button className="seg" onClick={reset} aria-label={t('resetPhrase')}>⟲ {t('resetPhrase')}</button>
           </div>
         </div>

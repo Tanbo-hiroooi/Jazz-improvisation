@@ -177,7 +177,7 @@ export const LESSONS: Lesson[] = [
       },
       {
         title: b('自分のリズムを作る', 'Build your own rhythm'),
-        instruction: b('マスをタップして、4分音符と休みだけで{bars}小節を作ろう。', 'Tap the cells and build {bars} bars from quarter notes and rests.'),
+        instruction: b('4分音符を選び、音符と休符を順に入力して{bars}小節を作ろう。', 'Choose quarter notes, then enter notes and rests to build {bars} bars.'),
         rules: [b('4分音符と休みだけ', 'Quarters and rests only'), b('音の高さは考えない', 'Ignore pitch for now')],
         editable: {
           material: 'root-only', bars: 4, divisions: [1], initial: 'empty', initialDivision: 1, fixedPitch: true,
@@ -221,7 +221,7 @@ export const LESSONS: Lesson[] = [
       },
       {
         title: b('裏拍入りのリズムを作る', 'Build with offbeats'),
-        instruction: b('8分のマスを使って、裏拍(各拍の2つ目のマス)から始まる音を入れよう。', 'Using 8th cells, include a note that starts on an offbeat cell.'),
+        instruction: b('8分休符を入れてから8分音符を入力し、裏拍から始まる音を入れよう。', 'Enter an eighth rest followed by an eighth note to start on an offbeat.'),
         rules: [b('裏拍から始まる音を1つ以上', 'At least one note starting on an offbeat')],
         editable: {
           material: 'root-only', bars: 4, divisions: [1, 2], initial: 'empty', fixedPitch: true,
@@ -299,13 +299,13 @@ export const LESSONS: Lesson[] = [
       },
       {
         title: b('食いを作る', 'Build an anticipation'),
-        instruction: b('「→のばす」で、小節線をまたぐ音を作ろう。', 'Use “hold” to carry a note across a barline.'),
+        instruction: b('小節の最後の裏拍から4分音符を入力して、小節線をまたぐ音を作ろう。', 'Enter a quarter note on the final offbeat to carry it across the barline.'),
         rules: [b('小節線をまたぐ音を1つ以上', 'At least one note across a barline')],
         editable: {
           material: 'root-only', bars: 4, divisions: [1, 2], initial: 'empty', fixedPitch: true,
           conditions: { minNotes: 4, requireCrossBarHold: true },
           requiredAction: 'any-change',
-          task: b('「→のばす」で小節線をまたぐ音を作ってみよう。', 'Use “hold” to carry a note over a barline.'),
+          task: b('小節の最後の裏拍から長い音を入力し、小節線をまたいでみよう。', 'Enter a long note on the final offbeat to cross the barline.'),
         },
       },
     ],
@@ -625,7 +625,7 @@ export const LESSONS: Lesson[] = [
     steps: [
       {
         title: b('食い込ませる', 'Anticipate the landing'),
-        instruction: b('2小節目から3小節目へ、「→のばす」で音を食い込ませよう。', 'Use “hold” to carry a note from bar 2 into bar 3.'),
+        instruction: b('2小節目の最後の裏拍から4分音符を入力し、3小節目へ音を食い込ませよう。', 'Enter a quarter note on the final offbeat of bar 2 to carry it into bar 3.'),
         rules: [b('2小節目から3小節目へ食い込む', 'A note must cross from bar 2 into bar 3')],
         editable: {
           material: 'chord-tone', bars: 4, divisions: [1, 2], initial: 'empty',

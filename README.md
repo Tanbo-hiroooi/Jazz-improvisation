@@ -55,22 +55,21 @@ First Chorusは、楽器を演奏でき、楽譜も読める人が、コード�
 
 **Practice with the full score**: Starting the backing opens a full-screen score in lessons, chapter workouts, fundamentals and the phrase editor. Use “Practice with full score” to open it before playing. All bars fit the available space, including after rotation or opening “Tempo & playback settings.” Close the view or press Esc to return to editing with your phrase and undo history intact. Try landscape orientation when notes look small on a phone.
 
-## フレーズ作成(拍グリッドエディタ)
+## フレーズ作成（音符の順番入力）
 
-1小節=4拍の**固定の枠**をマスで埋める方式です。合計は構造上つねにぴったり4拍×小節数になるため、拍数の計算や「どこが超過しているか探し」は不要です。
+音符の長さを選び、音名ボタンを押して順に入力します。休符も同じ長さで入力でき、カーソルは入力した長さだけ自動で進みます。
 
-**縦=音の高さ / 横=拍**の表になっていて、置きたい高さの行と鳴らしたい位置が交わるマスをタップすると、その音がそこに置かれます。
+- 2分・4分・8分・16分音符と付点に対応。課題で使えない音価は表示しません（付点16分は非対応）。
+- コード・素材に合う大きな音名ボタンと、オクターブ切替。音名とコード名は楽器の表示ピッチに対応し、保存・再生は実音のままです。
+- 全体譜で小節を選び、拡大した小節の音符をタップして修正します。修正中はカーソルが進みません。「この音の次から入力」で順番入力に戻れます。
+- 長さを縮めた余白は休符になります。別の音に重なる変更やフレーズ末尾を越える入力は、説明を表示して止めます。小節線をまたぐ長音は全体譜で自動的にタイになります。
+- 「この拍を3連にする」は、既存の音があれば変換後の譜面を確認してから適用。音が重なる変換はできません。3連の拍の境界をまたぐ長音は非対応です。
+- 音程だけの課題はリズムを固定し、リズムだけの課題は音名選択を隠します。表情記号も編集できます。
+- 入力パネルにUndo／Redoを常設。前の小節のコピーは確認付きで、Undoできます。保存済みフレーズは従来どおり読み込めます。
+- スマートフォンでは拡大譜面と入力パネルをひとまとまりで表示し、スクロール時に上端へ保持します。高さの小さい画面では通常スクロールです。TabとEnter／Spaceでも操作できます。
+- 内部の「1小節＝4拍」の構造は維持しています。未入力部分は休符です。伴奏を始めると、編集パネルを隠して譜面全体で練習できます。
 
-- 行に並ぶのは**そのコードで使える音だけ**(コードトーン/ガイドトーン/スケール/ブルース)。コードトーンの行には色が付き、Root/3rd/5th/♭7thの役割ラベルが出ます
-- 音の高さを変える: 同じ位置の**別の行をタップ**。左の音名をタップすると、その音だけ鳴らして確かめられます(選択中は▲▼でも動かせます)
-- 表示する音域は既定でG3〜D5。左上の▲▼で1オクターブずつずらせます(音が置いてある行は範囲外でも残ります)
-- 音の長さ: **→のばす / ←縮める**。伸ばした音は同じ行の横棒としてつながって見えます。拍・小節線もまたげます(譜面はタイで表示)
-- 拍ごとに分割を切替: **♩ / ♫ / ♫³ / ♬**(4分・8分・3連・16分)を音符の記号から選びます。レッスンごとに選べる分割が変わります
-- キーボードでも操作できます: 矢印キーでマスを移動、Enter/Spaceで置く
-- **アーティキュレーション**: 普通 / アクセント(>) / 短く(スタッカート) / 長く(テヌート)。譜面記号と再生(音量・音価)の両方に反映
-- **⧉前の小節をコピー**: モチーフやリフを4小節・12小節へ一気に展開(音は各小節のコードの度数へ自動対応)
-- 編集内容とUndo/Redo履歴はSTEPごとに保持。キー変更時は確認のうえ新しいキーで作り直します
-- 小節数は課題に応じて4〜12小節。自由練習の「🎼 フレーズを作る」タブでも同じエディタを使えます(素材はグリッドのすぐ上で切替: コードトーン/ガイドトーン/スケール/ブルース。小節数は選択した進行の長さまで自由)
+**Step entry:** Choose a duration, then press pitch buttons. The cursor advances automatically; rests use the same value. Tap a note in the enlarged bar to edit without advancing. Half, quarter, eighth, sixteenth and dotted values are supported (except dotted sixteenths), subject to lesson constraints. Octave buttons and written-pitch labels match your instrument. Longer notes tie across barlines; overlaps and entries past the phrase end are blocked. Triplet conversion previews existing notes before applying, and cannot cross tied beat boundaries. Undo/Redo stays in the input panel, and saved phrases remain compatible. On phones the enlarged score and input panel stay together and stick to the top while scrolling; short screens scroll normally.
 
 **「音を確認」は見本演奏ではありません。** ユーザー自身が編集した楽譜を、設定したBPMと正しい音程で再生して内容を確認するための機能です。
 

@@ -61,6 +61,8 @@ interface Props {
   selectedMeasure?: number;
   /** 小節をクリックしたときの通知。渡すと譜面がクリック可能になる */
   onSelectMeasure?: (measure: number) => void;
+  onSelectNote?: (index: number) => void;
+  noteSelectLabel?: (index: number) => string;
   /**
    * 譜面の拡大率(1=等倍)。レイアウトは「表示幅 ÷ 拡大率」で組み、最後に表示サイズだけ引き伸ばす。
    * 音符・音部記号・タイまで一緒に大きくなる。
@@ -163,7 +165,7 @@ const ARTIC_CODE: Record<string, string> = { accent: 'a>', staccato: 'a.', tenut
 export function StaffView({
   notes, measures, clef, shift, flats, labelMode, chords, currentIndex, selectedIndex = -1,
   zoom = 1, fitHeight, fitMaxZoom,
-  selectedMeasure = -1, onSelectMeasure,
+  selectedMeasure = -1, onSelectMeasure, onSelectNote, noteSelectLabel,
   notation = 'staff', guitarPosition = 'auto', guitarOpenStrings = true,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -180,6 +182,10 @@ export function StaffView({
   // refで持ち、描画のdepsには入れない(入れると無限に再描画される)
   const onSelectMeasureRef = useRef(onSelectMeasure);
   onSelectMeasureRef.current = onSelectMeasure;
+  const onSelectNoteRef = useRef(onSelectNote);
+  onSelectNoteRef.current = onSelectNote;
+  const noteSelectLabelRef = useRef(noteSelectLabel);
+  noteSelectLabelRef.current = noteSelectLabel;
   const selectedMeasureRef = useRef(selectedMeasure);
   selectedMeasureRef.current = selectedMeasure;
   const measureRectsRef = useRef<SVGRectElement[]>([]);
@@ -574,6 +580,29 @@ export function StaffView({
         }
         const sm = selectedMeasureRef.current;
         if (sm >= 0) measureRectsRef.current[sm]?.classList.add('on');
+      }
+
+      // Note hit areas are above measure hit areas; keyboard users get the same action.
+      if (svgEl && onSelectNoteRef.current) {
+        noteElsRef.current.forEach((els, index) => els.forEach((el, segment) => {
+          const box = (el as SVGGraphicsElement).getBBox();
+          if (!box.width || !box.height) return;
+          const hit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          hit.setAttribute('x', String(box.x - 4));
+          hit.setAttribute('y', String(box.y - 5));
+          hit.setAttribute('width', String(box.width + 8));
+          hit.setAttribute('height', String(box.height + 10));
+          hit.setAttribute('class', 'vf-note-hit');
+          if (segment === 0) hit.setAttribute('role', 'button');
+          else hit.setAttribute('aria-hidden', 'true');
+          hit.setAttribute('tabindex', segment === 0 ? '0' : '-1');
+          hit.setAttribute('aria-label', noteSelectLabelRef.current?.(index) ?? String(index + 1));
+          hit.addEventListener('click', e => { e.stopPropagation(); onSelectNoteRef.current?.(index); });
+          hit.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectNoteRef.current?.(index); }
+          });
+          svgEl.appendChild(hit);
+        }));
       }
 
       // 論理サイズで組んだSVGを、表示サイズだけ拡大する(viewBoxはVexFlowが付けている)

@@ -504,7 +504,7 @@ export function validateGrid(
     }
   }
   if (c.requireCrossBarHold && !hasCrossBarHold(grid)) {
-    errors.push(err('crossBar', '「→のばす」で小節線をまたぐ音を1つ作ってください。', 'Use “hold” to carry one note across a barline.'));
+    errors.push(err('crossBar', '小節の最後の裏拍から長い音を入力し、小節線をまたぐ音を1つ作ってください。', 'Enter a long note on a final offbeat to carry it across a barline.'));
   }
   if (c.requireOffbeatAttack && !hasOffbeatAttack(grid)) {
     errors.push(err('offbeat', '裏拍(拍の2番目のマス)から始まる音を1つ以上置いてください。', 'Start at least one note on an offbeat cell.'));
@@ -513,7 +513,7 @@ export function validateGrid(
     errors.push(err('triplet', '3連に切り替えた拍で音を1つ以上鳴らしてください。', 'Play at least one note in a triplet beat.'));
   }
   if (c.requireSixteenth && !usesSixteenth(grid)) {
-    errors.push(err('sixteenth', '16分に切り替えた拍で音を1つ以上鳴らしてください。', 'Play at least one note in a 16th beat.'));
+    errors.push(err('sixteenth', '16分音符を1つ以上入力してください。', 'Enter at least one sixteenth note.'));
   }
   if (c.requireArticulation && !usesArticulation(grid)) {
     errors.push(err('artic', 'アクセント・短く・長くのどれかを1音以上に付けてください。', 'Apply accent, staccato or tenuto to at least one note.'));
@@ -530,7 +530,7 @@ export function validateGrid(
   }
   for (const bar of c.requireCrossBarHoldInto ?? []) {
     if (!holdsIntoBar(grid, bar)) {
-      errors.push(err('crossInto', `${bar - 1}小節目から${bar}小節目へ、「→のばす」で音を食い込ませてください。`, `Use “hold” to carry a note from bar ${bar - 1} into bar ${bar}.`));
+      errors.push(err('crossInto', `${bar - 1}小節目の最後の裏拍から長い音を入力し、${bar}小節目へ食い込ませてください。`, `Enter a long note on the final offbeat of bar ${bar - 1} to carry it into bar ${bar}.`));
     }
   }
   if (c.requireEndOn3rd && ctx) {
