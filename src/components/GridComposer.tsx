@@ -7,7 +7,6 @@ import { GridEditor } from './GridEditor';
 import { StaffView, type ChordDisplay, type LabelMode } from './StaffView';
 import { VolumeControls } from './VolumeControls';
 import { FocusStage } from './FocusStage';
-import { focusFitHeight, staffBoxHeight } from './staffSizing';
 import { usePracticePlayback, type PlaybackOverrides } from '../hooks/usePracticePlayback';
 import type { MyInstrumentSettings } from '../state/storage';
 import { chordSymbol } from '../theory/chords';
@@ -70,19 +69,6 @@ export function GridComposer({
   const [labelMode, setLabelMode] = useState<LabelMode>('degree');
   // 集中モード(譜面と再生だけを全画面に出す)
   const [focus, setFocus] = useState(false);
-  const [fitH, setFitH] = useState(() => staffBoxHeight());
-  useEffect(() => {
-    const measure = () => {
-      if (!focus) { setFitH(staffBoxHeight()); return; }
-      const card = document.querySelector('.focus-stage .staff-card');
-      const real = card ? Math.round(card.getBoundingClientRect().height) : 0;
-      setFitH(real > 120 ? real : focusFitHeight());
-    };
-    measure();
-    const id = window.setTimeout(measure, 60);
-    window.addEventListener('resize', measure);
-    return () => { window.clearTimeout(id); window.removeEventListener('resize', measure); };
-  }, [focus]);
   // 編集で選択中の音(譜面上でハイライトする)
   const [selectedIndex, setSelectedIndex] = useState(-1);
   // 入力対象の小節。譜面をタップして切り替える(小節が多いとき入力欄が伸びすぎるため)
@@ -148,7 +134,7 @@ export function GridComposer({
         <>
           <button className="btn big example" onClick={() => check({ compOn: false })}>♪ {t('checkSingle')}</button>
           <button className="btn big example" onClick={() => check({ compOn: true })}>♪ {t('checkWithChord')}</button>
-          <button className="btn big start" onClick={() => startPlayback('backing')}>▶ {t('playBacking')}</button>
+          <button className="btn big start" onClick={() => { setFocus(true); startPlayback('backing'); }}>▶ {t('playBacking')}</button>
         </>
       )}
     </div>
@@ -182,11 +168,10 @@ export function GridComposer({
             notes={displayedNotes} measures={prog.measures} clef={clef} shift={shift} flats={flats}
             labelMode={labelMode} chords={chordDisplays} currentIndex={currentNoteIndex}
             notation={effNotation} guitarPosition={session.guitarPosition} guitarOpenStrings={session.guitarOpenStrings}
-            fitHeight={fitH}
           />
         </div>
         {transport}
-        {transportOpts}
+        <details className="focus-settings"><summary>{t('focusSettings')}</summary>{transportOpts}</details>
       </FocusStage>
     );
   }
@@ -251,7 +236,6 @@ export function GridComposer({
               selectedIndex={selectedIndex}
               selectedMeasure={focusBar} onSelectMeasure={setEditBar}
               notation={effNotation} guitarPosition={session.guitarPosition} guitarOpenStrings={session.guitarOpenStrings}
-              fitHeight={fitH} fitMaxZoom={1}
             />
           </div>
         </div>

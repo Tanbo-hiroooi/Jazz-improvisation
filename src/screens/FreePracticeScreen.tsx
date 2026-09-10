@@ -7,6 +7,7 @@ import { CustomProgressionEditor, DEFAULT_CUSTOM, isSplitBar, type CustomChord }
 import { PracticeLogPanel } from '../components/PracticeLogPanel';
 import { StaffView, type ChordDisplay, type LabelMode } from '../components/StaffView';
 import { notationLabel, positionLabel } from '../components/SessionSetupPanel';
+import { FocusStage } from '../components/FocusStage';
 import { GridComposer } from '../components/GridComposer';
 import { SavedPhrasesPanel } from '../components/SavedPhrasesPanel';
 import type { SavedPhrase } from '../state/savedPhrases';
@@ -74,6 +75,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
   const [scaleView, setScaleView] = useState<'scale' | 'tension'>(initial?.scaleView ?? 'scale');
   // やること: 譜面をなぞる(false) / フレーズを作る(true)
   const [composeMode, setComposeMode] = useState(false);
+  const [focus, setFocus] = useState(false);
   // 作成中のフレーズは親が保持する。タブを行き来しても作りかけが消えないようにするため。
   const [composerMaterial, setComposerMaterial] = useState<GridMaterial>('chord-tone');
   const [composerBars, setComposerBars] = useState(() => getProgression(initial?.progressionId ?? 'ii-V-I').measures);
@@ -206,6 +208,87 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
 
   const keyName = KEYS.find((k) => k.pc === keyPc)!.name;
 
+
+  const transportButtons = (
+    <div className="transport-main">
+      {playing ? (
+        <button className="btn big stop" onClick={stopAll}>■ Stop</button>
+      ) : (
+        <button className="btn big start" onClick={() => { setFocus(true); startPlayback(staffGuide ? 'rhythm' : 'backing'); }}>▶ {t('playBacking')}</button>
+      )}
+      <button
+        className={`btn big example${playing === 'example' ? ' active' : ''}`}
+        onClick={() => (playing === 'example' ? stopAll() : startPlayback('example'))}
+      >
+        ♪ {t('checkNotes')}
+      </button>
+    </div>
+  );
+  const transportOptions = (
+    <>
+      <div className="transport-opts">
+        <label className="toggle"><input type="checkbox" checked={loopEnabled} onChange={(e) => setLoopEnabled(e.target.checked)} /> Loop</label>
+        <label className="toggle"><input type="checkbox" checked={countIn} onChange={(e) => setCountIn(e.target.checked)} /> 4 Count In</label>
+        <label className="toggle"><input type="checkbox" checked={metronomeOn} onChange={(e) => setMetronomeOn(e.target.checked)} /> {t('metronome')}</label>
+        <div className="seg-group">
+          <button
+            className={`seg${clickPattern === 'all' ? ' on' : ''}`} aria-pressed={clickPattern === 'all'}
+            disabled={!metronomeOn} onClick={() => setClickPattern('all')}
+          >{t('clickAllBeats')}</button>
+          <button
+            className={`seg${clickPattern === 'backbeat' ? ' on' : ''}`} aria-pressed={clickPattern === 'backbeat'}
+            disabled={!metronomeOn} onClick={() => setClickPattern('backbeat')}
+          >{t('clickBackbeat')}</button>
+        </div>
+        <label className="toggle"><input type="checkbox" checked={compOn} onChange={(e) => setCompOn(e.target.checked)} /> {t('compSound')}</label>
+        <label className="toggle"><input type="checkbox" checked={staffGuide} onChange={(e) => setStaffGuide(e.target.checked)} /> {t('staffGuide')}</label>
+      </div>
+      <p className="hint-text">{t('staffGuideHint')}</p>
+      <div className="transport-opts">
+        <span className="opt-label">{t('loopRangeLabel')}</span>
+        <div className="seg-group">
+          <button className={`seg${loopRange === 'full' ? ' on' : ''}`} aria-pressed={loopRange === 'full'} onClick={() => setLoopRange('full')}>{t('loopFull')}</button>
+          <button className={`seg${loopRange === '2' ? ' on' : ''}`} aria-pressed={loopRange === '2'} onClick={() => setLoopRange('2')}>{t('loop2')}</button>
+          <button className={`seg${loopRange === '1' ? ' on' : ''}`} aria-pressed={loopRange === '1'} onClick={() => setLoopRange('1')}>{t('loop1')}</button>
+        </div>
+      </div>
+      <VolumeControls lang={lang} />
+    </>
+  );
+  const score = (
+    <div className="staff-card">
+      <StaffView
+        notes={displayedNotes}
+        measures={progression.measures}
+        clef={clef}
+        shift={shift}
+        flats={flats}
+        labelMode={labelMode}
+        chords={chordDisplays}
+        currentIndex={currentNoteIndex}
+        notation={effNotation}
+        guitarPosition={session.guitarPosition}
+        guitarOpenStrings={session.guitarOpenStrings}
+      />
+    </div>
+  );
+
+  if (focus) {
+    return (
+      <FocusStage lang={lang} title={pick(lang, progression.label, progression.labelEn)} onClose={() => setFocus(false)}>
+        {score}
+        {transportButtons}
+        <details className="focus-settings">
+          <summary>{t('focusSettings')}</summary>
+          <div className="field focus-bpm">
+            <label htmlFor="free-focus-bpm">{t('tempoLabel')}: {bpm} BPM</label>
+            <input id="free-focus-bpm" type="range" min={40} max={220} value={bpm} onChange={(e) => { setBpm(Number(e.target.value)); setBpmText(e.target.value); }} />
+          </div>
+          {transportOptions}
+        </details>
+      </FocusStage>
+    );
+  }
 
   return (
     <main className="layout">
@@ -511,46 +594,8 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
 
           {/* 再生コントロール */}
           <div className="transport">
-            <div className="transport-main">
-              {playing ? (
-                <button className="btn big stop" onClick={stopAll}>■ Stop</button>
-              ) : (
-                <button className="btn big start" onClick={() => startPlayback(staffGuide ? 'rhythm' : 'backing')}>▶ {t('playBacking')}</button>
-              )}
-              <button
-                className={`btn big example${playing === 'example' ? ' active' : ''}`}
-                onClick={() => (playing === 'example' ? stopAll() : startPlayback('example'))}
-              >
-                ♪ {t('checkNotes')}
-              </button>
-            </div>
-            <div className="transport-opts">
-              <label className="toggle"><input type="checkbox" checked={loopEnabled} onChange={(e) => setLoopEnabled(e.target.checked)} /> Loop</label>
-              <label className="toggle"><input type="checkbox" checked={countIn} onChange={(e) => setCountIn(e.target.checked)} /> 4 Count In</label>
-              <label className="toggle"><input type="checkbox" checked={metronomeOn} onChange={(e) => setMetronomeOn(e.target.checked)} /> {t('metronome')}</label>
-              <div className="seg-group">
-                <button
-                  className={`seg${clickPattern === 'all' ? ' on' : ''}`} aria-pressed={clickPattern === 'all'}
-                  disabled={!metronomeOn} onClick={() => setClickPattern('all')}
-                >{t('clickAllBeats')}</button>
-                <button
-                  className={`seg${clickPattern === 'backbeat' ? ' on' : ''}`} aria-pressed={clickPattern === 'backbeat'}
-                  disabled={!metronomeOn} onClick={() => setClickPattern('backbeat')}
-                >{t('clickBackbeat')}</button>
-              </div>
-              <label className="toggle"><input type="checkbox" checked={compOn} onChange={(e) => setCompOn(e.target.checked)} /> {t('compSound')}</label>
-              <label className="toggle"><input type="checkbox" checked={staffGuide} onChange={(e) => setStaffGuide(e.target.checked)} /> {t('staffGuide')}</label>
-            </div>
-            <p className="hint-text">{t('staffGuideHint')}</p>
-            <div className="transport-opts">
-              <span className="opt-label">{t('loopRangeLabel')}</span>
-              <div className="seg-group">
-                <button className={`seg${loopRange === 'full' ? ' on' : ''}`} aria-pressed={loopRange === 'full'} onClick={() => setLoopRange('full')}>{t('loopFull')}</button>
-                <button className={`seg${loopRange === '2' ? ' on' : ''}`} aria-pressed={loopRange === '2'} onClick={() => setLoopRange('2')}>{t('loop2')}</button>
-                <button className={`seg${loopRange === '1' ? ' on' : ''}`} aria-pressed={loopRange === '1'} onClick={() => setLoopRange('1')}>{t('loop1')}</button>
-              </div>
-            </div>
-            <VolumeControls lang={lang} />
+            {transportButtons}
+            {transportOptions}
           </div>
         </section>
 
@@ -575,22 +620,9 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
               <button className={`seg${labelMode === 'solfege' ? ' on' : ''}`} aria-pressed={labelMode === 'solfege'} onClick={() => setLabelMode('solfege')}>{t('labelSolfege')}</button>
               <button className={`seg${labelMode === 'degree' ? ' on' : ''}`} aria-pressed={labelMode === 'degree'} onClick={() => setLabelMode('degree')}>{t('labelDegree')}</button>
             </div>
+            <button className="btn tiny focus-open-btn" onClick={() => setFocus(true)}>⛶ {t('focusOpen')}</button>
           </div>
-          <div className="staff-card">
-            <StaffView
-              notes={displayedNotes}
-              measures={progression.measures}
-              clef={clef}
-              shift={shift}
-              flats={flats}
-              labelMode={labelMode}
-              chords={chordDisplays}
-              currentIndex={currentNoteIndex}
-              notation={effNotation}
-              guitarPosition={session.guitarPosition}
-              guitarOpenStrings={session.guitarOpenStrings}
-            />
-          </div>
+          {score}
           {pitchMode === 'written' && shift % 12 !== 0 && (
             <p className="hint-text">{t('writtenNotice')}</p>
           )}

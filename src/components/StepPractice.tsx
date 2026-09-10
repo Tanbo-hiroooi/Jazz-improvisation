@@ -8,7 +8,6 @@ import { GridEditor } from './GridEditor';
 import { StaffView, type ChordDisplay, type LabelMode } from './StaffView';
 import { VolumeControls } from './VolumeControls';
 import { FocusStage } from './FocusStage';
-import { focusFitHeight, staffBoxHeight } from './staffSizing';
 import type { Bi, Lesson, StepContent, StepEditable } from '../data/courses';
 import { usePracticePlayback, type PlaybackOverrides } from '../hooks/usePracticePlayback';
 import { chordSymbol } from '../theory/chords';
@@ -155,31 +154,6 @@ interface SharedProps {
   focusTitle: string;
 }
 
-/**
- * 譜面に使える高さ。通常表示は譜面枠の高さ、集中モードは全画面の残り。
- * 集中モードでは開いたあとに実枠を測る(再生ボタンの折り返しで高さが変わるため)。
- * 枠は flex で高さが決まり中身に左右されないので、測り直しても振動しない。
- */
-function useFitHeight(focus: boolean): number {
-  const [h, setH] = useState(() => (focus ? focusFitHeight() : staffBoxHeight()));
-  useEffect(() => {
-    const measure = () => {
-      if (!focus) { setH(staffBoxHeight()); return; }
-      const card = document.querySelector('.focus-stage .staff-card');
-      const real = card ? Math.round(card.getBoundingClientRect().height) : 0;
-      setH(real > 120 ? real : focusFitHeight());
-    };
-    measure();
-    const id = window.setTimeout(measure, 60);
-    window.addEventListener('resize', measure);
-    return () => {
-      window.clearTimeout(id);
-      window.removeEventListener('resize', measure);
-    };
-  }, [focus]);
-  return h;
-}
-
 /** 譜面の見出し(表示切替+集中モードボタン) */
 function StaffHead({ lang, labelMode, setLabelMode, onFocus }: {
   lang: Lang; labelMode: LabelMode; setLabelMode: (m: LabelMode) => void; onFocus: () => void;
@@ -228,7 +202,6 @@ function FixedStepBody({
 }: SharedProps & { content: StepContent }) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
 
-  const fitHeight = useFitHeight(focus);
   const displayedNotes = useMemo(() => generateStepNotes(content, progression, keyPc), [content, progression, keyPc]);
   const chordDisplays = useMemo(() => chordDisplaysFor(progression, keyPc, shift, flats), [progression, keyPc, shift, flats]);
 
@@ -249,14 +222,13 @@ function FixedStepBody({
           notes={displayedNotes} measures={progression.measures} clef={clef} shift={shift} flats={flats}
           labelMode={labelMode} chords={chordDisplays} currentIndex={currentNoteIndex}
           notation={notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings}
-          fitHeight={fitHeight} fitMaxZoom={focus ? 3 : 1}
         />
       </div>
       <div className="transport-main">
         {playing ? (
           <button className="btn big stop" onClick={stopAll}>■ Stop</button>
         ) : (
-          <button className="btn big start" onClick={() => startPlayback('backing')}>▶ {t('playBacking')}</button>
+          <button className="btn big start" onClick={() => { setFocus(true); startPlayback('backing'); }}>▶ {t('playBacking')}</button>
         )}
         <button
           className={`btn big example${playing === 'example' ? ' active' : ''}`}
@@ -265,7 +237,7 @@ function FixedStepBody({
           ♪ {t('checkThisNote')}
         </button>
       </div>
-      {optionsNode}
+      {focus ? <details className="focus-settings"><summary>{t('focusSettings')}</summary>{optionsNode}</details> : optionsNode}
     </>
   );
 
@@ -319,7 +291,6 @@ function EditableStepBody({
     if (window.confirm(t('resetConfirm'))) onDraftChange({ keyPc, history: [initial], hIdx: 0 });
   };
 
-  const fitHeight = useFitHeight(focus);
   const displayedNotes = useMemo(() => gridToNoteEvents(grid), [grid]);
   const chordDisplays = useMemo(() => chordDisplaysFor(prog, keyPc, shift, flats), [prog, keyPc, shift, flats]);
 
@@ -369,7 +340,7 @@ function EditableStepBody({
         <>
           <button className="btn big example" onClick={() => check({ compOn: false })}>♪ {t('checkSingle')}</button>
           <button className="btn big example" onClick={() => check({ compOn: true })}>♪ {t('checkWithChord')}</button>
-          <button className="btn big start" onClick={() => startPlayback('backing')}>▶ {t('playBacking')}</button>
+          <button className="btn big start" onClick={() => { setFocus(true); startPlayback('backing'); }}>▶ {t('playBacking')}</button>
         </>
       )}
     </div>
@@ -384,11 +355,10 @@ function EditableStepBody({
             notes={displayedNotes} measures={prog.measures} clef={clef} shift={shift} flats={flats}
             labelMode={labelMode} chords={chordDisplays} currentIndex={currentNoteIndex}
             notation={notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings}
-            fitHeight={fitHeight}
           />
         </div>
         {transport}
-        {optionsNode}
+        <details className="focus-settings"><summary>{t('focusSettings')}</summary>{optionsNode}</details>
       </FocusStage>
     );
   }
@@ -405,7 +375,6 @@ function EditableStepBody({
             selectedIndex={selectedIndex}
             selectedMeasure={Math.min(editBar, grid.bars.length - 1)} onSelectMeasure={setEditBar}
             notation={notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings}
-            fitHeight={fitHeight} fitMaxZoom={1}
           />
         </div>
       </div>

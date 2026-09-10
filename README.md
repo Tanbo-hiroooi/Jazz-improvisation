@@ -51,7 +51,9 @@ First Chorusは、楽器を演奏でき、楽譜も読める人が、コード�
 
 **譜面は1画面に収める**: 譜面は、割り当てられた高さに**全体が収まるように自動で組み直します**。小節数が多いときは1行あたりの小節数を増やして(必要なら少し縮小して)、演奏しながらスクロールしなくて済むようにします。例えば音を詰めた12小節は、以前は譜面の高さが1284pxになり730pxぶんスクロールが必要でしたが、いまは392pxに収まります(1行4小節×3行)。
 
-**集中モード**: 譜面の右上「⛶ 大きく表示」で、譜面と再生ボタンだけの全画面になります。説明・設定・入力グリッドは隠れ、譜面は画面に収まる範囲で自動的に拡大されます(1280×800の画面で4小節なら音符が約2倍)。小節数が多いときは全体が入るように縮小するので、**演奏中にスクロールする必要はありません**。Escか「✕ 閉じる」で戻ります。
+**譜面全体で練習**: 「▶ 伴奏を流す」を押すと、譜面と再生ボタンを中心にした全画面表示へ切り替わります。音を出さずに準備する場合は、譜面の「⛶ 譜面全体で練習」から開けます。練習コース・章まとめ・自由練習の基礎練習とフレーズ作成すべてで使えます。譜面は実際の空きスペースに合わせて全小節が収まる大きさに調整され、スマートフォンの縦横切替にも追従します。「テンポ・再生設定」は必要なときだけ開けます。Escか「✕ 閉じる」で編集に戻り、作りかけとUndo履歴は保持されます。画面の小さい端末で音符が細かく感じる場合は、横向き表示も試してください。
+
+**Practice with the full score**: Starting the backing opens a full-screen score in lessons, chapter workouts, fundamentals and the phrase editor. Use “Practice with full score” to open it before playing. All bars fit the available space, including after rotation or opening “Tempo & playback settings.” Close the view or press Esc to return to editing with your phrase and undo history intact. Try landscape orientation when notes look small on a phone.
 
 ## フレーズ作成(拍グリッドエディタ)
 

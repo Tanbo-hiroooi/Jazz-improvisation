@@ -34,7 +34,7 @@ export function ChapterWorkoutScreen({ lang, session, chapter, workout, onBack }
   const grid = history[hIdx];
 
   // 章の各レッスンの条件を、同じ1つのフレーズに当てる
-  const tasks = useMemo(() => workout.tasks.map((task) => {
+  const tasks = useMemo(() => workout.tasks.map((task, index) => {
     const cond = scaleConditions(task.conditions, bars / workout.bars);
     const result = validateGrid(grid, cond, undefined, grid, { progression: prog, keyPc });
     const label = pick(lang, task.label.ja, task.label.en)
@@ -42,7 +42,8 @@ export function ChapterWorkoutScreen({ lang, session, chapter, workout, onBack }
       .replace(/\{minNotes\}/g, String(cond?.minNotes ?? ''))
       .replace(/\{maxNotes\}/g, String(cond?.maxNotes ?? ''))
       .replace(/\{minRest\}/g, String(cond?.minRestBeats ?? ''));
-    return { key: task.lessonId, label, met: result.stepCompleted };
+    // 同じレッスンにA/Bなど複数の編集STEPがあるため、課題ごとに区別する。
+    return { key: `${task.lessonId}-${index}`, label, met: result.stepCompleted };
   }), [workout.tasks, workout.bars, bars, grid, prog, keyPc, lang]);
 
   const doneCount = tasks.filter((x) => x.met).length;

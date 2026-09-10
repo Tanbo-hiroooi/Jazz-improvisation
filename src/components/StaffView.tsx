@@ -8,6 +8,7 @@
 // - アーティキュレーション(>・スタッカート・テヌート)を表示する
 
 import { useEffect, useMemo, useRef } from 'react';
+import { staffBoxHeight } from './staffSizing';
 import {
   Accidental,
   Annotation,
@@ -66,11 +67,11 @@ interface Props {
    */
   zoom?: number;
   /**
-   * 使える高さ(px)。渡すと、その高さに収まる範囲で自動的にいちばん大きい拡大率を選ぶ。
+   * 使える高さ(px)。省略時はカードと画面から実測。全体が収まる最大倍率を選ぶ。
    * 入りきらないときは縮小して収める(演奏しながら譜面をスクロールさせないため)。
    */
   fitHeight?: number;
-  /** fitHeight使用時の拡大率の上限(既定3)。通常表示では1=「拡大はせず、必要なら縮小だけ」 */
+  /** 拡大率の上限。省略時は全画面3、通常表示はzoom(既定1)。 */
   fitMaxZoom?: number;
   /** 譜面表示(TABはギター用。既定は五線譜のみ) */
   notation?: NotationMode;
@@ -161,7 +162,7 @@ const ARTIC_CODE: Record<string, string> = { accent: 'a>', staccato: 'a.', tenut
 
 export function StaffView({
   notes, measures, clef, shift, flats, labelMode, chords, currentIndex, selectedIndex = -1,
-  zoom = 1, fitHeight, fitMaxZoom = 3,
+  zoom = 1, fitHeight, fitMaxZoom,
   selectedMeasure = -1, onSelectMeasure,
   notation = 'staff', guitarPosition = 'auto', guitarOpenStrings = true,
 }: Props) {
@@ -222,13 +223,20 @@ export function StaffView({
     const container = containerRef.current;
     if (!container) return;
 
+    let lastSize = '';
     const render = () => {
+      const avail = container.clientWidth;
+      if (avail <= 0) return;
+      const targetHeight = fitHeight ?? staffBoxHeight(container);
+      const maxZoom = fitMaxZoom ?? (container.closest('.focus-stage') ? 3 : zoom);
+      const size = `${avail}:${targetHeight}:${maxZoom}`;
+      if (size === lastSize) return;
+      lastSize = size;
       container.innerHTML = '';
       noteElsRef.current = [];
       prevHighlight.current = [];
       prevSelected.current = [];
 
-      const avail = container.clientWidth || 600;
       const noteClef = clef === 'bass' ? 'bass' : 'treble';
       const showStaff = notation !== 'tab';
       const showTab = notation === 'tab' || notation === 'staff-tab';
@@ -346,20 +354,17 @@ export function StaffView({
         return { perLine: per, lines: ln, height: ln * lineHeight + topPad };
       };
 
-      // 拡大率の決定。fitHeight があれば、その高さに収まる中でいちばん大きい率を選ぶ。
+      // 拡大率の決定。利用できる高さに収まる中でいちばん大きい率を選ぶ。
       // 拡大すると1行に入る小節が減って行数が増え、縮小すると逆に1行へ多く入るので、
       // 候補を大きい方から試して最初に収まったものを採用する。
       // 1未満まで許すのは、小節数が多いときに全体を1画面へ収めるため(スクロールしながらの演奏を避ける)。
-      let scale = Math.max(0.5, zoom);
-      if (fitHeight && fitHeight > 0) {
-        const candidates = [3, 2.5, 2.2, 2, 1.8, 1.6, 1.4, 1.25, 1.1, 1, 0.9, 0.8, 0.7, 0.6];
-        const usable = candidates.filter((z) => z <= fitMaxZoom);
-        scale = usable[usable.length - 1];
-        for (const z of usable) {
-          if (layoutFor(Math.round(avail / z)).height * z <= fitHeight) { scale = z; break; }
-        }
+      // 密な1小節も横にはみ出さない幅を確保。60%の下限は設けず全小節を収める。
+      const upper = Math.max(0.001, Math.min(maxZoom, avail / (maxRequired + 60)));
+      let scale = Math.min(upper, targetHeight / (measures * lineHeight + topPad));
+      for (let z = upper; z >= scale; z -= 0.01) {
+        if (layoutFor(Math.floor(avail / z)).height * z <= targetHeight) { scale = z; break; }
       }
-      const width = Math.max(160, Math.round(avail / scale));
+      const width = Math.floor(avail / scale);
       const { perLine, height } = layoutFor(width);
 
       const renderer = new Renderer(container, Renderer.Backends.SVG);
@@ -572,9 +577,9 @@ export function StaffView({
       }
 
       // 論理サイズで組んだSVGを、表示サイズだけ拡大する(viewBoxはVexFlowが付けている)
-      if (scale !== 1 && svgEl) {
-        svgEl.style.width = `${Math.round(width * scale)}px`;
-        svgEl.style.height = `${Math.round(height * scale)}px`;
+      if (svgEl) {
+        svgEl.style.width = `${Math.floor(width * scale)}px`;
+        svgEl.style.height = `${Math.floor(height * scale)}px`;
       }
 
       // 再描画後にハイライト(再生位置・編集の選択)を復元
@@ -595,7 +600,16 @@ export function StaffView({
     render();
     const ro = new ResizeObserver(() => render());
     ro.observe(container);
-    return () => ro.disconnect();
+    if (container.closest('.focus-stage') && container.parentElement) ro.observe(container.parentElement);
+    const heading = container.closest('.staff-sticky')?.querySelector('.staff-head');
+    if (heading) ro.observe(heading);
+    window.addEventListener('resize', render);
+    window.visualViewport?.addEventListener('resize', render);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', render);
+      window.visualViewport?.removeEventListener('resize', render);
+    };
   }, [displayNotes, measures, clef, flats, labelMode, chords, notation, guitarPosition, guitarOpenStrings, zoom, fitHeight, fitMaxZoom]);
 
   // 選択中の小節(再描画せずクラス切替)
