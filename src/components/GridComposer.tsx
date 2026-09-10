@@ -69,8 +69,6 @@ export function GridComposer({
   const [labelMode, setLabelMode] = useState<LabelMode>('degree');
   // 集中モード(譜面と再生だけを全画面に出す)
   const [focus, setFocus] = useState(false);
-  // 編集で選択中の音(譜面上でハイライトする)
-  const [selectedIndex, setSelectedIndex] = useState(-1);
   // 入力対象の小節。譜面をタップして切り替える(小節が多いとき入力欄が伸びすぎるため)
   const [editBar, setEditBar] = useState(0);
 
@@ -215,31 +213,7 @@ export function GridComposer({
       )}
 
       <section className="panel">
-        {/* 全体譜で小節を選択。編集中はエディタ内の拡大譜面を使う。 */}
-        <div className="staff-sticky entry-overview">
-          <div className="staff-head">
-            <h2>{t('staffTitle')}</h2>
-            <div className="staff-head-tools">
-            <div className="seg-group">
-              <button className={`seg${labelMode === 'none' ? ' on' : ''}`} aria-pressed={labelMode === 'none'} onClick={() => setLabelMode('none')}>{t('labelNone')}</button>
-              <button className={`seg${labelMode === 'name' ? ' on' : ''}`} aria-pressed={labelMode === 'name'} onClick={() => setLabelMode('name')}>C D E</button>
-              <button className={`seg${labelMode === 'degree' ? ' on' : ''}`} aria-pressed={labelMode === 'degree'} onClick={() => setLabelMode('degree')}>{t('labelDegree')}</button>
-            </div>
-            <button className="btn tiny focus-open-btn" onClick={() => setFocus(true)}>⛶ {t('focusOpen')}</button>
-            </div>
-          </div>
-          <div className="staff-card">
-            <StaffView
-              notes={displayedNotes} measures={prog.measures} clef={clef} shift={shift} flats={flats}
-              labelMode={labelMode} chords={chordDisplays} currentIndex={currentNoteIndex}
-              selectedIndex={selectedIndex}
-              selectedMeasure={focusBar} onSelectMeasure={setEditBar}
-              notation={effNotation} guitarPosition={session.guitarPosition} guitarOpenStrings={session.guitarOpenStrings}
-            />
-          </div>
-        </div>
-
-        <h2 className="composer-edit-title">{t('phraseEditTitle')}</h2>
+        <h2>{t('phraseEditTitle')}</h2>
         <p className="hint-text">{t('gridComposeIntro')}</p>
         {(materialOptions ?? DEFAULT_MATERIALS).length > 1 && (
           <div className="field grid-material">
@@ -264,7 +238,7 @@ export function GridComposer({
           divisions={[1, 2, 3, 4]}
           allowArticulation
           currentIndex={currentNoteIndex}
-          onSelectedIndexChange={setSelectedIndex}
+          labelMode={labelMode} onLabelModeChange={setLabelMode} onFocus={() => setFocus(true)}
           visibleBar={focusBar}
           onVisibleBarChange={setEditBar}
           shift={shift} clef={clef} notation={effNotation}

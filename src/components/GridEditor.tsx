@@ -8,7 +8,7 @@ import type { GuitarPosition } from '../theory/guitar';
 import { chordForBar, copyBarMapped, defaultPitch, gridToNoteEvents, palettesForGrid, type Articulation, type Division, type GridMaterial, type GridPhrase } from '../theory/grid';
 import { convertEntryBeat, enterNote, entryNotes, type EntryError } from '../theory/gridEntry';
 import { pick, t as tr, type Lang } from '../i18n';
-import { StaffView } from './StaffView';
+import { StaffView, type LabelMode } from './StaffView';
 
 export interface GridEditorProps {
   lang: Lang; grid: GridPhrase; onChange: (next: GridPhrase) => void;
@@ -19,6 +19,8 @@ export interface GridEditorProps {
   shift?: number; clef?: Clef; notation?: NotationMode;
   guitarPosition?: GuitarPosition; guitarOpenStrings?: boolean;
   onUndo?: () => void; onRedo?: () => void; canUndo?: boolean; canRedo?: boolean;
+  labelMode?: LabelMode; onLabelModeChange?: (mode: LabelMode) => void;
+  onFocus?: () => void;
 }
 const VALUES = [
   { ticks: 24, ja: '2分', en: 'Half' },
@@ -45,11 +47,13 @@ function DurationGlyph({ ticks }: { ticks: number }) {
 export function GridEditor({ lang, grid, onChange: onGridChange, progression, keyPc, flats, material, divisions,
   fixedRhythm, fixedPitch, allowArticulation, currentIndex = -1, onSelectedIndexChange,
   visibleBar, onVisibleBarChange, shift = 0, clef = 'treble', notation = 'staff', guitarPosition, guitarOpenStrings,
-  onUndo, onRedo, canUndo, canRedo,
+  onUndo, onRedo, canUndo, canRedo, labelMode = 'name', onLabelModeChange, onFocus,
 }: GridEditorProps) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
   const p = (ja: string, en: string) => pick(lang, ja, en);
   const [localBar, setLocalBar] = useState(0);
+  const [view, setView] = useState<'edit' | 'overview'>('edit');
+  const editViewButton = useRef<HTMLButtonElement>(null);
   const bar = Math.max(0, Math.min(grid.bars.length - 1, visibleBar ?? localBar));
   const [cursor, setCursor] = useState(0);
   const [editing, setEditing] = useState(false);
@@ -171,6 +175,11 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
     else { onChange(result.grid, beatIndex * 12, false); move(beatIndex * 12); }
   };
   const scoreGrid = preview?.base === grid ? preview.next : grid;
+  const overviewNotes = useMemo(() => gridToNoteEvents(grid), [grid]);
+  const overviewChords = useMemo(() => progression.chords.map(c => ({
+    measure: c.measure, beat: c.beat, rootPc: mod12(keyPc + c.rootOffset + shift), quality: c.quality,
+    symbol: chordSymbol(mod12(keyPc + c.rootOffset + shift), c.quality, flats),
+  })), [progression, keyPc, shift, flats]);
   const entryDivisions = useMemo(() => scoreGrid.bars[bar].beats.map(bt => bt.division), [scoreGrid, bar]);
   const scoreNotes = useMemo(() => gridToNoteEvents(scoreGrid).flatMap((n, index) => {
     const start = Math.max(n.start, bar * 4), end = Math.min(n.start + n.duration, (bar + 1) * 4);
@@ -180,9 +189,8 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
     measure: 0, beat: c.beat, rootPc: mod12(keyPc + c.rootOffset + shift), quality: c.quality,
     symbol: chordSymbol(mod12(keyPc + c.rootOffset + shift), c.quality, flats),
   })), [progression, bar, keyPc, shift, flats]);
-  const ch = chordForBar(progression, bar);
   const detailScore = <div className="entry-detail" aria-label={p('編集中の小節の譜面', 'Score of the current bar')}>
-    <StaffView notes={scoreNotes} measures={1} clef={clef} shift={shift} flats={flats} labelMode="name" chords={chords}
+    <StaffView notes={scoreNotes} measures={1} clef={clef} shift={shift} flats={flats} labelMode={labelMode} chords={chords}
       currentIndex={scoreNotes.findIndex(n => n.originalIndex === currentIndex)} selectedIndex={scoreNotes.findIndex(n => n.originalIndex === selectedIndex)}
       onSelectNote={index => { if (!preview) select(notes[scoreNotes[index].originalIndex].start); }}
       noteSelectLabel={index => p(`音符${index + 1}を編集`, `Edit note ${index + 1}`)}
@@ -193,6 +201,27 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
   </div>;
 
   return <div className="grid-editor step-entry">
+    <div className="entry-view-head">
+      <div className="seg-group entry-view-toggle" role="group" aria-label={t('editorViewLabel')}>
+        <button ref={editViewButton} className={`seg${view === 'edit' ? ' on' : ''}`} aria-pressed={view === 'edit'} onClick={() => setView('edit')}>{t('editorViewEdit')}</button>
+        <button className={`seg${view === 'overview' ? ' on' : ''}`} aria-pressed={view === 'overview'} onClick={() => { setPreview(null); setView('overview'); }}>{t('editorViewAll')}</button>
+      </div>
+      {onFocus && <button className="btn tiny focus-open-btn" onClick={onFocus}>⛶ {t('focusOpen')}</button>}
+    </div>
+    {onLabelModeChange && <div className="seg-group entry-label-mode" role="group" aria-label={t('staffTitle')}>
+      <button className={`seg${labelMode === 'none' ? ' on' : ''}`} aria-pressed={labelMode === 'none'} onClick={() => onLabelModeChange('none')}>{t('labelNone')}</button>
+      <button className={`seg${labelMode === 'name' ? ' on' : ''}`} aria-pressed={labelMode === 'name'} onClick={() => onLabelModeChange('name')}>C D E</button>
+      <button className={`seg${labelMode === 'degree' ? ' on' : ''}`} aria-pressed={labelMode === 'degree'} onClick={() => onLabelModeChange('degree')}>{t('labelDegree')}</button>
+    </div>}
+    {view === 'overview' ? <div className="entry-overview">
+      <p className="hint-text">{t('editorOverviewHint')}</p>
+      <div className="staff-card" aria-label={t('editorViewAll')}>
+        <StaffView notes={overviewNotes} measures={grid.bars.length} clef={clef} shift={shift} flats={flats}
+          labelMode={labelMode} chords={overviewChords} currentIndex={currentIndex} selectedIndex={selectedIndex}
+          selectedMeasure={bar} onSelectMeasure={b => { move(b * 48); setView('edit'); editViewButton.current?.focus({ preventScroll: true }); }}
+          notation={notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings} />
+      </div>
+    </div> : <>
     <details className="grid-help" open={helpOpen} onToggle={e => {
       const open = e.currentTarget.open; setHelpOpen(open);
       if (!open) try { localStorage.setItem('fc-grid-help-seen-v1', '1'); } catch { /* optional preference */ }
@@ -207,7 +236,15 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
     </details>
     <div className="grid-bar-nav">
       <button className="btn" disabled={bar === 0} onClick={() => move((bar - 1) * 48)}>← {p('前の小節', 'Prev bar')}</button>
-      <strong>{bar + 1} / {grid.bars.length} · {chordSymbol(mod12(keyPc + ch.rootOffset + shift), ch.quality, flats)}</strong>
+      <label className="entry-bar-picker">
+        <span>{t('editorBarLabel')}</span>
+        <select aria-label={t('editorBarLabel')} value={bar} onChange={e => move(Number(e.target.value) * 48)}>
+          {grid.bars.map((_, b) => {
+            const ch = chordForBar(progression, b);
+            return <option key={b} value={b}>{b + 1} / {grid.bars.length} · {chordSymbol(mod12(keyPc + ch.rootOffset + shift), ch.quality, flats)}</option>;
+          })}
+        </select>
+      </label>
       <button className="btn" disabled={bar === grid.bars.length - 1} onClick={() => move((bar + 1) * 48)}>{p('次の小節', 'Next bar')} →</button>
     </div>
     {preview && preview.base === grid ? <div className="entry-preview" role="group" aria-label={p('リズム変更の確認', 'Confirm rhythm change')}>
@@ -270,5 +307,6 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
     {bar > 0 && !fixedRhythm && <button className="btn" onClick={() => {
       if (window.confirm(p('この小節を前の小節の形で置き換えますか？ 元に戻すこともできます。', 'Replace this bar with the previous bar’s shape? You can undo this.'))) { onChange(copyBarMapped(grid, bar - 1, bar, palettes)); move(bar * 48); }
     }}>⧉ {t('copyPrevBar')}</button>}
+    </>}
   </div>;
 }

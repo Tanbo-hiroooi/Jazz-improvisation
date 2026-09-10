@@ -306,8 +306,6 @@ function EditableStepBody({
 
   const check = (overrides: PlaybackOverrides) => startPlayback('example', overrides);
 
-  // 編集で選択中の音(譜面上でハイライトして「今どれを触っているか」を示す)
-  const [selectedIndex, setSelectedIndex] = useState(-1);
   // 入力対象の小節。譜面をタップして切り替える(12小節などで入力欄が伸びすぎるため)
   const [editBar, setEditBar] = useState(0);
 
@@ -365,20 +363,6 @@ function EditableStepBody({
 
   return (
     <>
-      {/* 全体譜で小節を選択。入力パネルは拡大した小節と一体で表示する。 */}
-      <div className="staff-sticky entry-overview">
-        <StaffHead lang={lang} labelMode={labelMode} setLabelMode={setLabelMode} onFocus={() => setFocus(true)} />
-        <div className="staff-card">
-          <StaffView
-            notes={displayedNotes} measures={prog.measures} clef={clef} shift={shift} flats={flats}
-            labelMode={labelMode} chords={chordDisplays} currentIndex={currentNoteIndex}
-            selectedIndex={selectedIndex}
-            selectedMeasure={Math.min(editBar, grid.bars.length - 1)} onSelectMeasure={setEditBar}
-            notation={notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings}
-          />
-        </div>
-      </div>
-
       <GridEditor
         lang={lang}
         grid={grid}
@@ -392,7 +376,7 @@ function EditableStepBody({
         fixedPitch={editable.fixedPitch}
         allowArticulation={editable.allowArticulation}
         currentIndex={currentNoteIndex >= 0 && currentNoteIndex < attackPositions(grid).length ? currentNoteIndex : -1}
-        onSelectedIndexChange={setSelectedIndex}
+        labelMode={labelMode} onLabelModeChange={setLabelMode} onFocus={() => setFocus(true)}
         visibleBar={Math.min(editBar, grid.bars.length - 1)}
         onVisibleBarChange={setEditBar}
         shift={shift} clef={clef} notation={notation}

@@ -61,7 +61,8 @@ First Chorusは、楽器を演奏でき、楽譜も読める人が、コード�
 
 - 2分・4分・8分・16分音符と付点に対応。課題で使えない音価は表示しません（付点16分は非対応）。
 - コード・素材に合う大きな音名ボタンと、オクターブ切替。音名とコード名は楽器の表示ピッチに対応し、保存・再生は実音のままです。
-- 全体譜で小節を選び、拡大した小節の音符をタップして修正します。修正中はカーソルが進みません。「この音の次から入力」で順番入力に戻れます。
+- 譜面は1つの表示欄にまとめ、「小節を編集」と「全体を見る」で切り替えます。最初は編集中の小節だけを表示。小節番号の選択欄・前後ボタンで移動でき、全体譜の小節をタップしてもその編集へ戻れます。表示切替で入力位置・音価・Undo履歴は失われません。
+- 小節内の音符をタップして修正します。修正中はカーソルが進みません。「この音の次から入力」で順番入力に戻れます。
 - 入力場所は拡大譜面の休符をタップして選びます。オレンジの線が現在地です。「戻る／進む」で裏拍・16分・3連の位置にも移動でき、点のマスを数える必要はありません。TABのみの設定でも、編集中の拡大譜面には休符が見える五線譜を併記します。
 - 長さを縮めた余白は休符になります。別の音に重なる変更やフレーズ末尾を越える入力は、説明を表示して止めます。小節線をまたぐ長音は全体譜で自動的にタイになります。
 - 「この拍を3連にする」は、既存の音があれば変換後の譜面を確認してから適用。音が重なる変換はできません。3連の拍の境界をまたぐ長音は非対応です。
@@ -73,6 +74,8 @@ First Chorusは、楽器を演奏でき、楽譜も読める人が、コード�
 **Step entry:** Choose a duration, then press pitch buttons. The cursor advances automatically; rests use the same value. Tap a note in the enlarged bar to edit without advancing. Half, quarter, eighth, sixteenth and dotted values are supported (except dotted sixteenths), subject to lesson constraints. Octave buttons and written-pitch labels match your instrument. Longer notes tie across barlines; overlaps and entries past the phrase end are blocked. Triplet conversion previews existing notes before applying, and cannot cross tied beat boundaries. Undo/Redo stays in the input panel, and saved phrases remain compatible. On phones the enlarged score and input panel stay together and stick to the top while scrolling; short screens scroll normally.
 
 **Choosing a position:** Tap a rest in the enlarged score; the orange line marks where the next note will go. Back/Forward also reaches offbeats, sixteenths and triplets, without counting dot cells. In TAB-only mode, the enlarged editor adds a staff so rests remain visible; the full score keeps your chosen notation.
+
+**One score at a time:** Start in “Edit a bar” and switch to “View full phrase” in the same area. Choose a bar from the selector, use the previous/next buttons, or tap a bar in the full phrase to edit it. Switching views preserves the entry position, duration and undo history. This also applies to lesson exercises and chapter workouts.
 
 **「音を確認」は見本演奏ではありません。** ユーザー自身が編集した楽譜を、設定したBPMと正しい音程で再生して内容を確認するための機能です。
 
@@ -115,7 +118,7 @@ Guitarを選ぶと、譜面表示を **五線譜 / TAB譜 / 五線譜+TAB**(初�
   - ドミナント系: 7 / 9 / 7sus4 / 7(♭9)
   - その他: m7♭5 / dim7
 - **1小節に2コード**: 各小節の「＋2拍」を押すと、1拍目と3拍目で別のコードにできます
-- **入力する小節を譜面から選ぶ**: 「フレーズを作る」では最初は譜面だけを表示し、五線譜の小節をタップするとその小節の入力欄が現れます(前/次ボタンでも移動可)。12小節でも入力欄が縦に伸びません
+- **入力する小節を選ぶ**: 「フレーズを作る」では1小節ずつ編集します。小節番号・前後ボタンで移動でき、「全体を見る」から小節をタップしても編集に戻れます。12小節でも入力欄が縦に伸びません
 - **譜面の見やすさ**: 譜面エリアは画面の高さいっぱいまで使い、広い画面では1行に最大6小節を並べます。音符の多い小節があるときは、音符が重ならないように1行の小節数を自動で減らします(最終行だけ1〜2小節にならないよう、8小節は4+4のように分けます)
 - **フレーズの保存**: 「フレーズを作る」で作った譜面は名前を付けて保存できます。音符だけでなく進行・キー・使う音・小節数もまとめて保存するので、読み込むと作ったときの状態がそのまま戻ります(ブラウザに保存・最大50件)
 - キー変更(12キー、全表示が自動移調)
