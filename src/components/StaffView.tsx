@@ -63,6 +63,11 @@ interface Props {
   onSelectMeasure?: (measure: number) => void;
   onSelectNote?: (index: number) => void;
   noteSelectLabel?: (index: number) => string;
+  /** Editing only: show rests by beat, and make them selectable. */
+  entryDivisions?: number[];
+  entryCursor?: number;
+  onSelectRest?: (start: number) => void;
+  restSelectLabel?: (start: number) => string;
   /**
    * 譜面の拡大率(1=等倍)。レイアウトは「表示幅 ÷ 拡大率」で組み、最後に表示サイズだけ引き伸ばす。
    * 音符・音部記号・タイまで一緒に大きくなる。
@@ -137,8 +142,8 @@ function noteSegments(start: number, duration: number): { start: number; dur: nu
 }
 
 /** 休符を分割して並べる(3連の位置は1/3拍の休符にする) */
-function restSegments(gapStart: number, gapEnd: number): { dur: string; dots: number; triplet: boolean }[] {
-  const out: { dur: string; dots: number; triplet: boolean }[] = [];
+function restSegments(gapStart: number, gapEnd: number): { start: number; dur: string; dots: number; triplet: boolean }[] {
+  const out: { start: number; dur: string; dots: number; triplet: boolean }[] = [];
   let pos = gapStart;
   while (gapEnd - pos > 0.04) {
     const beatOff = pos - Math.floor(pos + 1e-3);
@@ -147,13 +152,13 @@ function restSegments(gapStart: number, gapEnd: number): { dur: string; dots: nu
     const remFrac = rem - Math.floor(rem + 1e-3);
     const remIsThird = near(remFrac, 1 / 3) || near(remFrac, 2 / 3);
     if (thirdAligned || (near(beatOff, 0) && remIsThird && rem < 0.9)) {
-      out.push({ dur: '8', dots: 0, triplet: true });
+      out.push({ start: pos, dur: '8', dots: 0, triplet: true });
       pos += 1 / 3;
     } else {
       const units = [4, 2, 1, 0.5, 0.25];
       const u = units.find((x) => x <= rem + 0.01) ?? 0.25;
       const d = nearestDur(u);
-      out.push({ dur: d.dur, dots: d.dots, triplet: false });
+      out.push({ start: pos, dur: d.dur, dots: d.dots, triplet: false });
       pos += u;
     }
   }
@@ -166,6 +171,7 @@ export function StaffView({
   notes, measures, clef, shift, flats, labelMode, chords, currentIndex, selectedIndex = -1,
   zoom = 1, fitHeight, fitMaxZoom,
   selectedMeasure = -1, onSelectMeasure, onSelectNote, noteSelectLabel,
+  entryDivisions, entryCursor, onSelectRest, restSelectLabel,
   notation = 'staff', guitarPosition = 'auto', guitarOpenStrings = true,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -186,6 +192,10 @@ export function StaffView({
   onSelectNoteRef.current = onSelectNote;
   const noteSelectLabelRef = useRef(noteSelectLabel);
   noteSelectLabelRef.current = noteSelectLabel;
+  const onSelectRestRef = useRef(onSelectRest);
+  onSelectRestRef.current = onSelectRest;
+  const restSelectLabelRef = useRef(restSelectLabel);
+  restSelectLabelRef.current = restSelectLabel;
   const selectedMeasureRef = useRef(selectedMeasure);
   selectedMeasureRef.current = selectedMeasure;
   const measureRectsRef = useRef<SVGRectElement[]>([]);
@@ -272,6 +282,7 @@ export function StaffView({
 
       // 小節ごとの表示アイテム(休符詰め)
       interface Item {
+        start: number;
         keys: string[];
         dur: string;
         dots: number;
@@ -292,8 +303,23 @@ export function StaffView({
         const items: Item[] = [];
         let t = m * 4;
         const pushRests = (from: number, to: number) => {
-          for (const r of restSegments(from, to)) {
-            items.push({ keys: restKeys, dur: r.dur + 'r', dots: r.dots, isRest: true, acc: '', globalIndex: -1, segIdx: 0, label: '', triplet: r.triplet });
+          // The editor exposes real rests instead of a second row of abstract cells.
+          // Only split silent space; never change the rhythm of an existing note.
+          const cuts = [from, to];
+          if (entryDivisions) {
+            for (let beat = Math.floor(from); beat < to; beat++) {
+              const d = entryDivisions[beat] === 3 ? 3 : 1;
+              for (let c = 0; c < d; c++) {
+                const time = beat + c / d;
+                if (time > from + 0.01 && time < to - 0.01) cuts.push(time);
+              }
+            }
+            if (entryCursor !== undefined && entryCursor > from + 0.01 && entryCursor < to - 0.01) cuts.push(entryCursor);
+          }
+          cuts.sort((a, b) => a - b);
+          for (let i = 0; i < cuts.length - 1; i++) for (const r of restSegments(cuts[i], cuts[i + 1])) {
+            const triplet = r.triplet || entryDivisions?.[Math.floor(r.start + 0.001)] === 3;
+            items.push({ start: r.start, keys: restKeys, dur: r.dur + 'r', dots: r.dots, isRest: true, acc: '', globalIndex: -1, segIdx: 0, label: '', triplet });
           }
         };
         for (const s of inMeasure) {
@@ -309,6 +335,7 @@ export function StaffView({
           }
           const { dur, dots } = s.triplet ? { dur: '8', dots: 0 } : nearestDur(s.dur);
           items.push({
+            start: s.start,
             keys: [`${p.letter.toLowerCase()}${p.accidental}/${p.octave}`],
             dur,
             dots,
@@ -322,8 +349,8 @@ export function StaffView({
           });
           t = s.start + s.dur;
         }
-        if (items.length === 0) {
-          items.push({ keys: restKeys, dur: 'wr', dots: 0, isRest: true, acc: '', globalIndex: -1, segIdx: 0, label: '', triplet: false });
+        if (items.length === 0 && !entryDivisions) {
+          items.push({ start: m * 4, keys: restKeys, dur: 'wr', dots: 0, isRest: true, acc: '', globalIndex: -1, segIdx: 0, label: '', triplet: false });
         } else if (t < m * 4 + 3.95) {
           pushRests(t, m * 4 + 4);
         }
@@ -381,6 +408,7 @@ export function StaffView({
       const tieNotes: Map<number, { segIdx: number; line: number; sn: StaveNote }[]> = new Map();
       // 小節クリック用の当たり判定(描画後にSVGへ重ねる)
       const measureBoxes: { m: number; x: number; y: number; w: number; h: number }[] = [];
+      const entryAnchors: { start: number; x: number; y: number; endX: number; height: number; rest: boolean }[] = [];
 
       for (let m = 0; m < measures; m++) {
         const line = Math.floor(m / perLine);
@@ -523,6 +551,12 @@ export function StaffView({
           return id ? (container.querySelector(`#vf-${id}`) as SVGElement | null) : null;
         };
         items.forEach((item, i) => {
+          if (entryDivisions) {
+            const tickables = showStaff ? staveNotes : tabTickables;
+            entryAnchors.push({ start: item.start, x: tickables[i].getAbsoluteX(), y: y + 14,
+              endX: i + 1 < items.length ? tickables[i + 1].getAbsoluteX() : x + baseW - 14,
+              height: isGrand ? 150 : showStaff && showTab ? 165 : 76, rest: item.isRest });
+          }
           if (item.globalIndex < 0) return;
           const els: SVGElement[] = noteElsRef.current[item.globalIndex] ?? [];
           if (showStaff) {
@@ -582,6 +616,38 @@ export function StaffView({
         if (sm >= 0) measureRectsRef.current[sm]?.classList.add('on');
       }
 
+      if (svgEl && entryDivisions) {
+        const NS = 'http://www.w3.org/2000/svg';
+        for (const anchor of entryAnchors) {
+          if (!anchor.rest || !onSelectRestRef.current) continue;
+          const hit = document.createElementNS(NS, 'rect');
+          hit.setAttribute('x', String(anchor.x - 6));
+          hit.setAttribute('y', String(anchor.y));
+          hit.setAttribute('width', String(Math.max(18, anchor.endX - anchor.x - 3)));
+          hit.setAttribute('height', String(anchor.height));
+          hit.setAttribute('class', 'vf-rest-hit');
+          hit.setAttribute('role', 'button');
+          hit.setAttribute('tabindex', '0');
+          hit.setAttribute('aria-label', restSelectLabelRef.current?.(anchor.start) ?? String(anchor.start));
+          hit.addEventListener('click', () => onSelectRestRef.current?.(anchor.start));
+          hit.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectRestRef.current?.(anchor.start); }
+          });
+          svgEl.appendChild(hit);
+        }
+        const anchor = [...entryAnchors].reverse().find(a => a.start <= (entryCursor ?? -1) + 0.001);
+        if (anchor && entryCursor !== undefined) {
+          const next = entryAnchors.find(a => a.start > anchor.start + 0.001)?.start ?? measures * 4;
+          const ratio = Math.max(0, Math.min(1, (entryCursor - anchor.start) / (next - anchor.start)));
+          const cursorX = anchor.x + (anchor.endX - anchor.x) * ratio - 6;
+          const line = document.createElementNS(NS, 'line');
+          line.setAttribute('x1', String(cursorX)); line.setAttribute('x2', String(cursorX));
+          line.setAttribute('y1', String(anchor.y)); line.setAttribute('y2', String(anchor.y + anchor.height));
+          line.setAttribute('class', 'vf-entry-cursor');
+          svgEl.appendChild(line);
+        }
+      }
+
       // Note hit areas are above measure hit areas; keyboard users get the same action.
       if (svgEl && onSelectNoteRef.current) {
         noteElsRef.current.forEach((els, index) => els.forEach((el, segment) => {
@@ -639,7 +705,7 @@ export function StaffView({
       window.removeEventListener('resize', render);
       window.visualViewport?.removeEventListener('resize', render);
     };
-  }, [displayNotes, measures, clef, flats, labelMode, chords, notation, guitarPosition, guitarOpenStrings, zoom, fitHeight, fitMaxZoom]);
+  }, [displayNotes, measures, clef, flats, labelMode, chords, notation, guitarPosition, guitarOpenStrings, zoom, fitHeight, fitMaxZoom, entryDivisions, entryCursor]);
 
   // 選択中の小節(再描画せずクラス切替)
   useEffect(() => {

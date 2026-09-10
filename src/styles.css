@@ -20,12 +20,15 @@
 .staff-sticky.entry-overview { position: relative; top: auto; z-index: auto; }
 .step-entry { min-width: 0; }
 .entry-detail { background: var(--paper); border-radius: 10px; padding: 8px; margin: 10px 0; overflow: hidden; }
-.entry-beats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 8px 0 16px; }
-.entry-beat-start { width: 100%; border: 0; background: transparent; color: var(--text-dim); min-height: 36px; cursor: pointer; }
-.entry-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); gap: 4px; }
-.entry-slot { min-height: 44px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-panel-2); color: var(--text-dim); font-size: 18px; cursor: pointer; }
-.entry-slot.filled { color: var(--accent); }
-.entry-slot.on, .entry-pitch.on { border-color: var(--accent); background: var(--accent-soft); outline: 2px solid var(--accent); outline-offset: -2px; }
+.entry-pitch.on { border-color: var(--accent); background: var(--accent-soft); outline: 2px solid var(--accent); outline-offset: -2px; }
+.entry-position-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.entry-position-nav .btn { flex-shrink: 0; }
+.entry-position-label { display: flex; align-items: center; gap: 7px; font-size: 14px; color: var(--accent); text-align: center; }
+.entry-position-label i { display: inline-block; width: 3px; height: 22px; background: var(--accent); flex-shrink: 0; }
+.vf-entry-cursor { stroke: #d97706; stroke-width: 3; pointer-events: none; vector-effect: non-scaling-stroke; }
+.vf-rest-hit { fill: transparent; cursor: pointer; }
+.vf-rest-hit:hover { fill: #f59e0b15; }
+.vf-rest-hit:focus-visible { stroke: #b45309; stroke-width: 2; outline: none; }
 .entry-workbench { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
 .entry-workbench .entry-detail { margin: 0; border-radius: 0; }
 .entry-toolbar { padding: 12px; }
@@ -52,7 +55,6 @@
   .entry-toolbar { padding: 8px; }
   .entry-values .seg { padding: 4px; font-size: 12px; white-space: nowrap; }
   .entry-glyph { flex-shrink: 0; width: 16px; }
-  .entry-beats { gap: 5px; }
   .step-entry .grid-bar-nav { gap: 4px; }
   .step-entry .grid-bar-nav .btn { font-size: 11px; padding: 5px; }
   .step-entry .grid-bar-nav strong { font-size: 12px; }

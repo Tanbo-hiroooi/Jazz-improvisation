@@ -460,7 +460,7 @@ export const LESSONS: Lesson[] = [
       },
       {
         title: b('リズムと音を組み合わせる', 'Combine rhythm and pitch'),
-        instruction: b('リズムを作ってから、▲▼で音を選ぼう。表情も1つ以上付けてみよう。', 'Build the rhythm first, then pick pitches with ▲▼. Add at least one articulation.'),
+        instruction: b('音符の長さを選び、音名ボタンで音を入れよう。表情も1つ以上付けてみよう。', 'Choose a duration and enter notes with the pitch buttons. Add at least one articulation.'),
         rules: [b('休みを{minRest}拍以上', 'At least {minRest} beats of rest'), b('表情を1つ以上', 'At least one articulation')],
         editable: {
           material: 'chord-tone', bars: 4, divisions: [1, 2], initial: 'empty', allowArticulation: true,
@@ -804,7 +804,7 @@ export const LESSONS: Lesson[] = [
     ],
     trivia: {
       why: b('「コードが変わる瞬間に正しい音に居る」— これがコード感のあるアドリブの正体です。途中は多少外れても、着地さえ合っていればコードは伝わります。', 'Being on the right note at the moment of change is what “playing the changes” means. The middle can wander; the landing is what people hear.'),
-      mistakes: [b('最後の音が3度にならない → 度数表示をオンにして▲▼で合わせる', 'Missing the 3rd — turn on degrees and adjust with ▲▼')],
+      mistakes: [b('最後の音が3度にならない → 度数表示をオンにして、最後の音符を選び、3度の音名ボタンで直す', 'Missing the 3rd — turn on degrees, select the final note, and choose the pitch button for the 3rd')],
     },
     estimatedMinutes: 9,
   },

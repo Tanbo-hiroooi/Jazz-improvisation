@@ -507,7 +507,7 @@ export function validateGrid(
     errors.push(err('crossBar', '小節の最後の裏拍から長い音を入力し、小節線をまたぐ音を1つ作ってください。', 'Enter a long note on a final offbeat to carry it across a barline.'));
   }
   if (c.requireOffbeatAttack && !hasOffbeatAttack(grid)) {
-    errors.push(err('offbeat', '裏拍(拍の2番目のマス)から始まる音を1つ以上置いてください。', 'Start at least one note on an offbeat cell.'));
+    errors.push(err('offbeat', '8分休符のあとに音符を入力し、裏拍から始まる音を1つ以上置いてください。', 'Enter a note after an eighth rest to start on an offbeat.'));
   }
   if (c.requireTriplet && !usesTriplet(grid)) {
     errors.push(err('triplet', '3連に切り替えた拍で音を1つ以上鳴らしてください。', 'Play at least one note in a triplet beat.'));
@@ -525,7 +525,7 @@ export function validateGrid(
   }
   for (const bar of c.requireOffbeatStartOnBar ?? []) {
     if (!startsOffbeatOnBar(grid, bar)) {
-      errors.push(err('offbeatBar', `${bar}小節目の最初の音を、裏拍(拍の2番目のマス)から始めてください。`, `Start the first note of bar ${bar} on an offbeat cell.`));
+      errors.push(err('offbeatBar', `${bar}小節目を8分休符で始め、最初の音を裏拍から入力してください。`, `Begin bar ${bar} with an eighth rest and enter its first note on an offbeat.`));
     }
   }
   for (const bar of c.requireCrossBarHoldInto ?? []) {

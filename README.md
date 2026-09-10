@@ -62,6 +62,7 @@ First Chorusは、楽器を演奏でき、楽譜も読める人が、コード�
 - 2分・4分・8分・16分音符と付点に対応。課題で使えない音価は表示しません（付点16分は非対応）。
 - コード・素材に合う大きな音名ボタンと、オクターブ切替。音名とコード名は楽器の表示ピッチに対応し、保存・再生は実音のままです。
 - 全体譜で小節を選び、拡大した小節の音符をタップして修正します。修正中はカーソルが進みません。「この音の次から入力」で順番入力に戻れます。
+- 入力場所は拡大譜面の休符をタップして選びます。オレンジの線が現在地です。「戻る／進む」で裏拍・16分・3連の位置にも移動でき、点のマスを数える必要はありません。TABのみの設定でも、編集中の拡大譜面には休符が見える五線譜を併記します。
 - 長さを縮めた余白は休符になります。別の音に重なる変更やフレーズ末尾を越える入力は、説明を表示して止めます。小節線をまたぐ長音は全体譜で自動的にタイになります。
 - 「この拍を3連にする」は、既存の音があれば変換後の譜面を確認してから適用。音が重なる変換はできません。3連の拍の境界をまたぐ長音は非対応です。
 - 音程だけの課題はリズムを固定し、リズムだけの課題は音名選択を隠します。表情記号も編集できます。
@@ -70,6 +71,8 @@ First Chorusは、楽器を演奏でき、楽譜も読める人が、コード�
 - 内部の「1小節＝4拍」の構造は維持しています。未入力部分は休符です。伴奏を始めると、編集パネルを隠して譜面全体で練習できます。
 
 **Step entry:** Choose a duration, then press pitch buttons. The cursor advances automatically; rests use the same value. Tap a note in the enlarged bar to edit without advancing. Half, quarter, eighth, sixteenth and dotted values are supported (except dotted sixteenths), subject to lesson constraints. Octave buttons and written-pitch labels match your instrument. Longer notes tie across barlines; overlaps and entries past the phrase end are blocked. Triplet conversion previews existing notes before applying, and cannot cross tied beat boundaries. Undo/Redo stays in the input panel, and saved phrases remain compatible. On phones the enlarged score and input panel stay together and stick to the top while scrolling; short screens scroll normally.
+
+**Choosing a position:** Tap a rest in the enlarged score; the orange line marks where the next note will go. Back/Forward also reaches offbeats, sixteenths and triplets, without counting dot cells. In TAB-only mode, the enlarged editor adds a staff so rests remain visible; the full score keeps your chosen notation.
 
 **「音を確認」は見本演奏ではありません。** ユーザー自身が編集した楽譜を、設定したBPMと正しい音程で再生して内容を確認するための機能です。
 

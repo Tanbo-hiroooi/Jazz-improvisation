@@ -65,12 +65,31 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
   // Musical time survives subdivision changes. A final end cursor belongs to the last bar.
   const at = cursor >= bar * 48 && (cursor < (bar + 1) * 48 || cursor === grid.bars.length * 48) ? cursor : bar * 48;
   const endOfPhrase = at >= grid.bars.length * 48;
-  const fraction = ({ 3: '1/4', 4: '1/3', 6: '1/2', 8: '2/3', 9: '3/4' } as Record<number, string>)[at % 12];
+  const positionLabel = (time: number) => {
+    const beat = Math.floor(time % 48 / 12) + 1;
+    const off = time % 12;
+    if (off === 6) return p(`${beat}拍目の裏`, `Beat ${beat}, and`);
+    if (off === 4 || off === 8) return p(`${beat}拍目・3連の${off / 4 + 1}つ目`, `Beat ${beat}, triplet ${off / 4 + 1}`);
+    if (off) return p(`${beat}拍目・16分の${off / 3 + 1}つ目`, `Beat ${beat}, sixteenth ${off / 3 + 1}`);
+    return p(`${beat}拍目`, `Beat ${beat}`);
+  };
   const selected = editing ? notes.find(n => n.start === at) : undefined;
   const selectedIndex = selected ? notes.indexOf(selected) : -1;
   const beatIndex = Math.min(grid.bars.length * 4 - 1, Math.floor(at / 12));
   const triplet = grid.bars[Math.floor(beatIndex / 4)].beats[beatIndex % 4].division === 3;
   const duration = triplet ? 4 : (value === 4 ? 12 : value) * (dotted ? 1.5 : 1);
+  const entryPositions = useMemo(() => {
+    if (fixedRhythm) return notes.map(n => n.start);
+    const times = new Set<number>([grid.bars.length * 48]);
+    grid.bars.forEach((b, bi) => b.beats.forEach((bt, beat) => {
+      const division = bt.division === 3 ? 3 : Math.max(bt.division, value === 3 ? 4 : value === 6 ? 2 : 1);
+      for (let c = 0; c < division; c++) times.add(bi * 48 + beat * 12 + c * 12 / division);
+    }));
+    notes.forEach(n => { times.add(n.start); times.add(n.start + n.duration); });
+    return [...times].filter(time => !notes.some(n => n.start < time && time < n.start + n.duration)).sort((a, b) => a - b);
+  }, [grid, notes, fixedRhythm, value]);
+  const previousPosition = [...entryPositions].reverse().find(time => time < at);
+  const nextPosition = entryPositions.find(time => time > at);
   const palettes = useMemo(() => palettesForGrid(progression, keyPc, grid.bars.length, material, flats), [progression, keyPc, grid.bars.length, material, flats]);
   const pal = palettes[bar];
   const label = (midi: number) => `${pcName(mod12(midi + shift), flats)}${Math.floor((midi + shift) / 12) - 1}`;
@@ -152,6 +171,7 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
     else { onChange(result.grid, beatIndex * 12, false); move(beatIndex * 12); }
   };
   const scoreGrid = preview?.base === grid ? preview.next : grid;
+  const entryDivisions = useMemo(() => scoreGrid.bars[bar].beats.map(bt => bt.division), [scoreGrid, bar]);
   const scoreNotes = useMemo(() => gridToNoteEvents(scoreGrid).flatMap((n, index) => {
     const start = Math.max(n.start, bar * 4), end = Math.min(n.start + n.duration, (bar + 1) * 4);
     return end > start ? [{ ...n, start: start - bar * 4, duration: end - start, chordIndex: 0, originalIndex: index }] : [];
@@ -166,7 +186,10 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
       currentIndex={scoreNotes.findIndex(n => n.originalIndex === currentIndex)} selectedIndex={scoreNotes.findIndex(n => n.originalIndex === selectedIndex)}
       onSelectNote={index => { if (!preview) select(notes[scoreNotes[index].originalIndex].start); }}
       noteSelectLabel={index => p(`音符${index + 1}を編集`, `Edit note ${index + 1}`)}
-      notation={notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings} fitHeight={notation === 'staff-tab' ? 230 : 150} fitMaxZoom={1.4} />
+      entryDivisions={entryDivisions} entryCursor={preview ? undefined : (at - bar * 48) / 12}
+      onSelectRest={fixedRhythm || preview ? undefined : start => move(bar * 48 + Math.round(start * 12))}
+      restSelectLabel={start => p(`${positionLabel(Math.round(start * 12))}の休符から入力`, `Enter at the rest: ${positionLabel(Math.round(start * 12))}`)}
+      notation={notation === 'tab' ? 'staff-tab' : notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings} fitHeight={notation !== 'staff' ? 230 : 150} fitMaxZoom={1.4} />
   </div>;
 
   return <div className="grid-editor step-entry">
@@ -194,23 +217,16 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
       <button className="btn" onClick={() => setPreview(null)}>{p('キャンセル', 'Cancel')}</button>
     </div> : <>
       <p className="hint-text">{t('gridTapHint')}</p>
-      <div className="entry-beats" aria-label={p('入力位置', 'Entry position')}>
-        {grid.bars[bar].beats.map((bt, b) => <div className="entry-beat" key={b}>
-          <button className="entry-beat-start" onClick={() => select(bar * 48 + b * 12)}>{p(`${b + 1}拍`, `Beat ${b + 1}`)}{bt.division === 3 ? ' ³' : ''}</button>
-          <div className="entry-slots">{bt.cells.map((_, c) => {
-            const time = bar * 48 + b * 12 + c * 12 / bt.division;
-            const n = notes.find(n => n.start <= time && time < n.start + n.duration);
-            return <button key={c} className={`entry-slot${at === time ? ' on' : ''}${n ? ' filled' : ''}`} aria-pressed={at === time} disabled={fixedRhythm && !n}
-              aria-label={p(`${bar + 1}小節 ${b + 1}拍 ${c + 1}/${bt.division} ${n ? label(n.midi) : '休符'}`, `Bar ${bar + 1} beat ${b + 1} ${c + 1}/${bt.division} ${n ? label(n.midi) : 'rest'}`)}
-              onClick={() => select(time)}>{n ? n.start === time ? '●' : '—' : '·'}</button>;
-          })}</div>
-        </div>)}
-      </div>
       <div className="entry-workbench">
       {detailScore}
       <div className="entry-toolbar">
+        <div className="entry-position-nav" role="group" aria-label={p('入力場所を移動', 'Move entry position')}>
+          <button className="btn" disabled={previousPosition === undefined} onClick={() => previousPosition !== undefined && select(previousPosition)}>← {p('戻る', 'Back')}</button>
+          <span className="entry-position-label" aria-live="polite"><i aria-hidden="true" />{endOfPhrase ? p('フレーズの終わり', 'End of phrase') : positionLabel(at)}</span>
+          <button className="btn" disabled={nextPosition === undefined} onClick={() => nextPosition !== undefined && select(nextPosition)}>{p('進む', 'Forward')} →</button>
+        </div>
         <div className="entry-status">
-          <strong>{endOfPhrase ? p('入力完了', 'End of phrase') : p(`${bar + 1}小節 ${Math.floor(at % 48 / 12) + 1}拍${fraction ? ` + ${fraction}` : ''} · ${selected ? '音を修正' : '順に入力'}`, `Bar ${bar + 1}, beat ${Math.floor(at % 48 / 12) + 1}${fraction ? ` + ${fraction}` : ''} · ${selected ? 'Edit note' : 'Step entry'}`)}</strong>
+          <strong>{endOfPhrase ? p('入力完了', 'End of phrase') : p(`${bar + 1}小節 · ${selected ? '選んだ音を修正' : 'オレンジの線から入力'}`, `Bar ${bar + 1} · ${selected ? 'Edit selected note' : 'Enter at the orange line'}`)}</strong>
           <div className="seg-group">
             <button className="seg" onClick={() => { onUndo?.(); setEditing(false); }} disabled={!canUndo} aria-label={t('undoBtn')}>↩ {t('undoBtn')}</button>
             <button className="seg" onClick={() => { onRedo?.(); setEditing(false); }} disabled={!canRedo} aria-label={t('redoBtn')}>↪ {t('redoBtn')}</button>
