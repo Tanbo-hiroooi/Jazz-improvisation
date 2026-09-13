@@ -57,25 +57,19 @@ First Chorusは、楽器を演奏でき、楽譜も読める人が、コード�
 
 ## フレーズ作成（音符の順番入力）
 
-音符の長さを選び、音名ボタンを押して順に入力します。休符も同じ長さで入力でき、カーソルは入力した長さだけ自動で進みます。
+**フレーズ全体の譜面が、そのまま編集面です。** 見る・入力する・直すを1つの譜面の上で行います。
 
-- 2分・4分・8分・16分音符と付点に対応。課題で使えない音価は表示しません（付点16分は非対応）。
-- コード・素材に合う大きな音名ボタンと、オクターブ切替。音名とコード名は楽器の表示ピッチに対応し、保存・再生は実音のままです。
-- 譜面は1つの表示欄にまとめ、「小節を編集」と「全体を見る」で切り替えます。最初は編集中の小節だけを表示。小節番号の選択欄・前後ボタンで移動でき、全体譜の小節をタップしてもその編集へ戻れます。表示切替で入力位置・音価・Undo履歴は失われません。
-- 小節内の音符をタップして修正します。修正中はカーソルが進みません。「この音の次から入力」で順番入力に戻れます。
-- 入力場所は拡大譜面の休符をタップして選びます。オレンジの線が現在地です。「戻る／進む」で裏拍・16分・3連の位置にも移動でき、点のマスを数える必要はありません。TABのみの設定でも、編集中の拡大譜面には休符が見える五線譜を併記します。
-- 長さを縮めた余白は休符になります。別の音に重なる変更やフレーズ末尾を越える入力は、説明を表示して止めます。小節線をまたぐ長音は全体譜で自動的にタイになります。
-- 「この拍を3連にする」は、既存の音があれば変換後の譜面を確認してから適用。音が重なる変換はできません。3連の拍の境界をまたぐ長音は非対応です。
-- 音程だけの課題はリズムを固定し、リズムだけの課題は音名選択を隠します。表情記号も編集できます。
-- 入力パネルにUndo／Redoを常設。前の小節のコピーは確認付きで、Undoできます。保存済みフレーズは従来どおり読み込めます。
-- スマートフォンでは拡大譜面と入力パネルをひとまとまりで表示し、スクロール時に上端へ保持します。高さの小さい画面では通常スクロールです。TabとEnter／Spaceでも操作できます。
+- **入力**: 音符の長さ（2分・4分・8分・16分・付点。課題で使えない音価は表示しません）を選び、音名ボタン（そのコードで使える音だけ。オクターブ±1で音域移動）を押すと順に入力されます。休符も同じ長さで入ります。オレンジの縦線が入力位置で、「戻る／進む」で裏拍・16分・3連の位置へ動かせます。
+- **譜面のどこでも**: 休符をタップするとそこから入力（他の小節の全休符も、タップした位置の拍から）。音符をタップすると修正モードになり、修正中はカーソルが進みません。「この音の次から入力」で順番入力に戻れます。編集中の小節は薄い色で示され、その小節だけ休符が拍ごとに分かれます。
+- **音の高さ**: 音符を**上下にドラッグ**すると、使える音の次の音へ吸い付き、動かすたびに音が鳴ります。選択中は **▲▼ボタン／↑↓キー**でも1段ずつ動かせます。
+- **リズム**: 音符を**左右にドラッグ**すると、8分・16分・3連の位置へ吸い付いて前後に移動します（他の音と重なる位置には置けません）。長さは音価ボタンで変えます。「この拍を3連にする」で拍単位に3連へ切り替え（既存の音があるときはプレビューして適用。3連の拍の境界をまたぐ長音は非対応）。
+- 止められる操作は理由が出ます: フレーズの終わりを越える／別の音と重なる／その位置で使えない音価／3連の拍をまたぐ。既存の音を勝手に消したり動かしたりはしません。縮めた余白は休符になり、小節線をまたぐ長音は自動でタイになります。
+- 「この小節を拡大」で編集中の小節だけを大きく出せます（狭い画面では既定でON。TABのみの設定でも拡大譜には休符が見える五線譜を併記）。「⧉前の小節をコピー」は確認付きで、Undoできます。
+- 音程だけの課題はリズムを固定し、リズムだけの課題は音名選択を隠します。表情記号も編集できます。音名とコード名は楽器の表示ピッチに対応し、保存・再生は実音のままです。
+- 広い画面では全体譜を上に貼り付け、入力パネルへスクロールしても見え続けます。スマートフォンでは入力パネル側を上端に保持します。Tab／Enter／↑↓でも操作できます。
 - 内部の「1小節＝4拍」の構造は維持しています。未入力部分は休符です。伴奏を始めると、編集パネルを隠して譜面全体で練習できます。
 
-**Step entry:** Choose a duration, then press pitch buttons. The cursor advances automatically; rests use the same value. Tap a note in the enlarged bar to edit without advancing. Half, quarter, eighth, sixteenth and dotted values are supported (except dotted sixteenths), subject to lesson constraints. Octave buttons and written-pitch labels match your instrument. Longer notes tie across barlines; overlaps and entries past the phrase end are blocked. Triplet conversion previews existing notes before applying, and cannot cross tied beat boundaries. Undo/Redo stays in the input panel, and saved phrases remain compatible. On phones the enlarged score and input panel stay together and stick to the top while scrolling; short screens scroll normally.
-
-**Choosing a position:** Tap a rest in the enlarged score; the orange line marks where the next note will go. Back/Forward also reaches offbeats, sixteenths and triplets, without counting dot cells. In TAB-only mode, the enlarged editor adds a staff so rests remain visible; the full score keeps your chosen notation.
-
-**One score at a time:** Start in “Edit a bar” and switch to “View full phrase” in the same area. Choose a bar from the selector, use the previous/next buttons, or tap a bar in the full phrase to edit it. Switching views preserves the entry position, duration and undo history. This also applies to lesson exercises and chapter workouts.
+**The full score is the editor.** Choose a duration, then press pitch buttons; the cursor advances automatically and rests use the same value. Tap a rest anywhere in the score to enter there (a whole rest in another bar takes the beat you tapped), or tap a note to edit it without advancing. Drag a note up or down to change its pitch — it snaps to the allowed notes and sounds as it moves — or left and right to move it in time, snapping to eighths, sixteenths and triplets; ▲▼ and the arrow keys nudge the selected note one step. Longer notes tie across barlines; overlaps and entries past the phrase end are blocked with an explanation. “Enlarge this bar” adds a close-up of the editing bar (on by default on narrow screens). Undo/Redo stays in the input panel, and saved phrases remain compatible.
 
 **「音を確認」は見本演奏ではありません。** ユーザー自身が編集した楽譜を、設定したBPMと正しい音程で再生して内容を確認するための機能です。
 

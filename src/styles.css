@@ -57,7 +57,7 @@
 .entry-error { color: var(--red); font-size: 13px; margin: 8px 0; }
 .entry-preview { padding: 12px; border: 1px solid var(--accent); border-radius: 8px; margin-bottom: 12px; }
 .entry-preview .btn { margin: 4px; min-height: 44px; }
-.vf-note-hit { fill: transparent; cursor: pointer; }
+.vf-note-hit { fill: transparent; cursor: grab; touch-action: none; }
 .vf-note-hit:focus-visible { stroke: #b45309; stroke-width: 2; outline: none; }
 @media (max-width: 620px) {
   .entry-workbench { position: sticky; top: 8px; z-index: 6; box-shadow: 0 -4px 18px #0003; }

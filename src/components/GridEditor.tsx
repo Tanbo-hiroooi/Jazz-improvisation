@@ -5,8 +5,8 @@ import { mod12, pcName } from '../theory/notes';
 import type { Progression } from '../theory/progressions';
 import type { Clef, NotationMode } from '../theory/instruments';
 import type { GuitarPosition } from '../theory/guitar';
-import { chordForBar, copyBarMapped, defaultPitch, gridToNoteEvents, palettesForGrid, type Articulation, type Division, type GridMaterial, type GridPhrase } from '../theory/grid';
-import { convertEntryBeat, enterNote, entryNotes, type EntryError } from '../theory/gridEntry';
+import { chordForBar, copyBarMapped, defaultPitch, gridToNoteEvents, palettesForGrid, stepPitch, type Articulation, type Division, type GridMaterial, type GridPhrase } from '../theory/grid';
+import { convertEntryBeat, enterNote, entryNotes, moveNote, type EntryError } from '../theory/gridEntry';
 import { pick, t as tr, type Lang } from '../i18n';
 import { StaffView, type LabelMode } from './StaffView';
 
@@ -70,6 +70,9 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
   const [octave, setOctave] = useState(5); // concert MIDI 60–71
   const [error, setError] = useState<EntryError | null>(null);
   const [preview, setPreview] = useState<{ base: GridPhrase; next: GridPhrase; beat: number } | null>(null);
+  // ドラッグ中の仮の譜面(指を離したときだけ履歴に入れる)
+  const [dragGrid, setDragGrid] = useState<GridPhrase | null>(null);
+  const dragRef = useRef<{ start: number; cur: number; duration: number; midi: number; articulation?: Articulation; lastMidi: number; grid: GridPhrase } | null>(null);
   const [helpOpen, setHelpOpen] = useState(() => {
     try { return !localStorage.getItem('fc-grid-help-seen-v1'); } catch { return true; }
   });
@@ -182,7 +185,71 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
     else if (notes.some(n => n.start >= beatIndex * 12 && n.start < beatIndex * 12 + 12)) setPreview({ base: grid, next: result.grid, beat: beatIndex });
     else { onChange(result.grid, beatIndex * 12, false); move(beatIndex * 12); }
   };
-  const scoreGrid = preview?.base === grid ? preview.next : grid;
+  const scoreGrid = dragGrid ?? (preview?.base === grid ? preview.next : grid);
+
+  /** 選んだ音の高さをパレット上で1段動かす(▲▼ボタン・↑↓キー) */
+  const nudge = (start: number, dir: 1 | -1) => {
+    if (fixedPitch) return;
+    const n = notes.find(x => x.start === start);
+    if (!n) return;
+    const next = stepPitch(palettes[Math.floor(start / 48)], n.midi, dir);
+    if (next === n.midi) return;
+    const result = enterNote(grid, start, n.duration, next, divisions, n.articulation);
+    if ('error' in result) { setError(result.error); return; }
+    onChange(result.grid, start, true);
+    move(start, true);
+    setOctave(Math.floor(next / 12));
+    void engine.previewNote(next);
+  };
+
+  /** 位置のドラッグ先を、その音価に合う位置(8分・16分・3連)へ丸める */
+  const snapTime = (beats: number, duration: number) => {
+    const total = grid.bars.length * 48;
+    const ticks = Math.round(beats * 12);
+    const beat = Math.max(0, Math.min(grid.bars.length * 4 - 1, Math.floor(ticks / 12)));
+    const division = grid.bars[Math.floor(beat / 4)].beats[beat % 4].division;
+    const q = division === 3 ? 4 : duration % 6 === 0 ? 6 : 3;
+    return Math.max(0, Math.min(total - duration, Math.round(ticks / q) * q));
+  };
+
+  const onDragNote = (index: number, d: { steps: number; time: number | null; phase: 'move' | 'end' }) => {
+    if (preview) return;
+    if (d.phase === 'end') {
+      const drag = dragRef.current;
+      dragRef.current = null;
+      setDragGrid(null);
+      if (drag && drag.grid !== grid) { onChange(drag.grid, drag.cur, true); move(drag.cur, true); }
+      return;
+    }
+    if (!dragRef.current) {
+      const n = notes[index];
+      if (!n) return;
+      dragRef.current = { start: n.start, cur: n.start, duration: n.duration, midi: n.midi, articulation: n.articulation, lastMidi: n.midi, grid };
+      select(n.start);
+    }
+    const drag = dragRef.current;
+    if (d.time === null) {
+      if (fixedPitch) return;
+      const pal = palettes[Math.floor(drag.start / 48)];
+      let i0 = pal.findIndex(x => x.midi === drag.midi);
+      if (i0 < 0) i0 = pal.reduce((b, x, i) => (Math.abs(x.midi - drag.midi) < Math.abs(pal[b].midi - drag.midi) ? i : b), 0);
+      const target = pal[Math.max(0, Math.min(pal.length - 1, i0 + d.steps))].midi;
+      if (target === drag.lastMidi) return;
+      const result = enterNote(grid, drag.start, drag.duration, target, divisions, drag.articulation);
+      if ('error' in result) return;
+      drag.lastMidi = target; drag.grid = result.grid; drag.cur = drag.start;
+      setDragGrid(result.grid);
+      void engine.previewNote(target);
+    } else {
+      if (fixedRhythm) return;
+      const to = snapTime(d.time, drag.duration);
+      if (to === drag.cur) return;
+      const result = moveNote(grid, drag.start, to, divisions);
+      if ('error' in result) return;
+      drag.cur = to; drag.grid = result.grid;
+      setDragGrid(result.grid);
+    }
+  };
   const overviewChords = useMemo(() => progression.chords.map(c => ({
     measure: c.measure, beat: c.beat, rootPc: mod12(keyPc + c.rootOffset + shift), quality: c.quality,
     symbol: chordSymbol(mod12(keyPc + c.rootOffset + shift), c.quality, flats),
@@ -202,11 +269,13 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
   const fullScore = <div className="entry-full staff-card" aria-label={p('フレーズ全体の譜面', 'Score of the whole phrase')}>
     <StaffView notes={fullScoreNotes} measures={grid.bars.length} clef={clef} shift={shift} flats={flats} labelMode={labelMode} chords={overviewChords}
       currentIndex={preview ? -1 : currentIndex} selectedIndex={preview ? -1 : selectedIndex}
-      selectedMeasure={bar} onSelectMeasure={b => { if (!preview) move(b * 48); }}
-      onSelectNote={index => { if (!preview) select(notes[index].start); }}
+      selectedMeasure={bar} onSelectMeasure={b => { if (!preview && !dragGrid) move(b * 48); }}
+      onSelectNote={index => { if (!preview && !dragGrid) select(notes[index].start); }}
       noteSelectLabel={index => p(`音符${index + 1}を編集`, `Edit note ${index + 1}`)}
+      onDragNote={onDragNote}
+      onNudgeNote={(index, dir) => { if (!preview && !dragGrid && notes[index]) nudge(notes[index].start, dir); }}
       entryDivisions={allDivisions} entryCursor={preview ? undefined : at / 12} entryFocusMeasure={bar}
-      onSelectRest={fixedRhythm || preview ? undefined : start => move(Math.round(start * 12))}
+      onSelectRest={fixedRhythm || preview || dragGrid ? undefined : start => move(Math.round(start * 12))}
       restSelectLabel={start => p(`${Math.floor(start / 4) + 1}小節${positionLabel(Math.round(start * 12))}の休符から入力`, `Enter at the rest: bar ${Math.floor(start / 4) + 1}, ${positionLabel(Math.round(start * 12))}`)}
       notation={notation === 'tab' ? 'staff-tab' : notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings}
       fitHeight={fullScoreHeight} fitMaxZoom={1.3} />
@@ -309,6 +378,10 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
           {!fixedRhythm && <button className="btn" disabled={endOfPhrase} onClick={() => submit(null)}>{selected ? t('toRest') : p('休符を入力', 'Enter rest')}</button>}
         </div>
         {selected && <div className="entry-edit-actions">
+          {!fixedPitch && <div className="seg-group" role="group" aria-label={p('音の高さを1段ずつ', 'Nudge pitch')}>
+            <button className="seg" onClick={() => nudge(selected.start, 1)} disabled={stepPitch(pal, selected.midi, 1) === selected.midi}>▲ {t('pitchUp')}</button>
+            <button className="seg" onClick={() => nudge(selected.start, -1)} disabled={stepPitch(pal, selected.midi, -1) === selected.midi}>▼ {t('pitchDown')}</button>
+          </div>}
           {!fixedRhythm && <button className="btn" onClick={() => move(selected.start + selected.duration)}>{p('この音の次から入力 →', 'Continue after this note →')}</button>}
           {allowArticulation && <div className="seg-group" role="group" aria-label={t('articLabel')}>
             {([undefined, 'accent', 'staccato', 'tenuto'] as const).map((a, i) => <button className={`seg${selected.articulation === a ? ' on' : ''}`} key={a ?? 'normal'} aria-pressed={selected.articulation === a} onClick={() => editCell(c => { c.articulation = a; })}>{[t('articNormal'), `> ${t('articAccent')}`, `· ${t('articStaccato')}`, `– ${t('articTenuto')}`][i]}</button>)}

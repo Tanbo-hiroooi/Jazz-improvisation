@@ -63,6 +63,13 @@ interface Props {
   onSelectMeasure?: (measure: number) => void;
   onSelectNote?: (index: number) => void;
   noteSelectLabel?: (index: number) => string;
+  /**
+   * 音符のドラッグ。上下は steps(パレット上の段数、上が正)、左右は time(拍。譜面上の位置から換算)。
+   * 最初に動いた向きで軸を決め、片方だけを送る。指を離したら phase 'end'。
+   */
+  onDragNote?: (index: number, drag: { steps: number; time: number | null; phase: 'move' | 'end' }) => void;
+  /** 音符にフォーカスして↑↓を押したとき(1段ずつ高さを変える) */
+  onNudgeNote?: (index: number, dir: 1 | -1) => void;
   /** Editing only: show rests by beat, and make them selectable. */
   entryDivisions?: number[];
   entryCursor?: number;
@@ -176,7 +183,7 @@ const ARTIC_CODE: Record<string, string> = { accent: 'a>', staccato: 'a.', tenut
 export function StaffView({
   notes, measures, clef, shift, flats, labelMode, chords, currentIndex, selectedIndex = -1,
   zoom = 1, fitHeight, fitMaxZoom,
-  selectedMeasure = -1, onSelectMeasure, onSelectNote, noteSelectLabel,
+  selectedMeasure = -1, onSelectMeasure, onSelectNote, noteSelectLabel, onDragNote, onNudgeNote,
   entryDivisions, entryCursor, entryFocusMeasure, onSelectRest, restSelectLabel,
   notation = 'staff', guitarPosition = 'auto', guitarOpenStrings = true,
 }: Props) {
@@ -200,6 +207,15 @@ export function StaffView({
   noteSelectLabelRef.current = noteSelectLabel;
   const onSelectRestRef = useRef(onSelectRest);
   onSelectRestRef.current = onSelectRest;
+  const onDragNoteRef = useRef(onDragNote);
+  onDragNoteRef.current = onDragNote;
+  const onNudgeNoteRef = useRef(onNudgeNote);
+  onNudgeNoteRef.current = onNudgeNote;
+  // ドラッグ中に譜面が描き直されても座標変換できるよう、最後の描画の拡大率と位置表を持つ
+  const scaleRef = useRef(1);
+  const anchorsRef = useRef<{ start: number; x: number; y: number; endX: number }[]>([]);
+  // ドラッグ直後の click で選択が二重に走らないようにする
+  const suppressClickRef = useRef(false);
   const restSelectLabelRef = useRef(restSelectLabel);
   restSelectLabelRef.current = restSelectLabel;
   const selectedMeasureRef = useRef(selectedMeasure);
@@ -406,6 +422,7 @@ export function StaffView({
       }
       const width = Math.floor(avail / scale);
       const { perLine, height } = layoutFor(width);
+      scaleRef.current = scale;
 
       const renderer = new Renderer(container, Renderer.Backends.SVG);
       renderer.resize(width, height);
@@ -623,6 +640,7 @@ export function StaffView({
         if (sm >= 0) measureRectsRef.current[sm]?.classList.add('on');
       }
 
+      anchorsRef.current = entryAnchors;
       if (svgEl && entryDivisions) {
         const NS = 'http://www.w3.org/2000/svg';
         for (const anchor of entryAnchors) {
@@ -662,6 +680,23 @@ export function StaffView({
         }
       }
 
+      /** 画面座標を拍へ。ポインタのある行の項目(音符・休符)の区間内での割合で決める */
+      const timeAtPointer = (clientX: number, clientY: number): number | null => {
+        const anchors = anchorsRef.current;
+        const el = container.querySelector('svg');
+        if (!anchors.length || !el) return null;
+        const box = el.getBoundingClientRect();
+        const lx = (clientX - box.left) / scaleRef.current;
+        const ly = (clientY - box.top) / scaleRef.current;
+        const lineYs = [...new Set(anchors.map((a) => a.y))];
+        const lineY = lineYs.reduce((best, y) => (Math.abs(y - ly) < Math.abs(best - ly) ? y : best), lineYs[0]);
+        const line = anchors.filter((a) => a.y === lineY).sort((a, b) => a.x - b.x);
+        const a = [...line].reverse().find((it) => it.x <= lx) ?? line[0];
+        const next = anchors.find((b) => b.start > a.start + 0.001)?.start ?? measures * 4;
+        const ratio = Math.max(0, Math.min(1, (lx - a.x) / Math.max(1, a.endX - a.x)));
+        return a.start + ratio * (next - a.start);
+      };
+
       // Note hit areas are above measure hit areas; keyboard users get the same action.
       if (svgEl && onSelectNoteRef.current) {
         noteElsRef.current.forEach((els, index) => els.forEach((el, segment) => {
@@ -677,9 +712,44 @@ export function StaffView({
           else hit.setAttribute('aria-hidden', 'true');
           hit.setAttribute('tabindex', segment === 0 ? '0' : '-1');
           hit.setAttribute('aria-label', noteSelectLabelRef.current?.(index) ?? String(index + 1));
-          hit.addEventListener('click', e => { e.stopPropagation(); onSelectNoteRef.current?.(index); });
+          hit.addEventListener('click', e => {
+            e.stopPropagation();
+            if (suppressClickRef.current) { suppressClickRef.current = false; return; }
+            onSelectNoteRef.current?.(index);
+          });
           hit.addEventListener('keydown', e => {
             if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectNoteRef.current?.(index); }
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); onNudgeNoteRef.current?.(index, e.key === 'ArrowUp' ? 1 : -1); }
+          });
+          // ドラッグ: 上下=高さ、左右=位置。描き直しで要素が消えてもよいよう window で追う
+          hit.addEventListener('pointerdown', e => {
+            if (!onDragNoteRef.current || e.button !== 0) return;
+            const startX = e.clientX, startY = e.clientY;
+            let axis: 'x' | 'y' | null = null;
+            const onMove = (ev: PointerEvent) => {
+              const dx = ev.clientX - startX, dy = ev.clientY - startY;
+              if (!axis) {
+                if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+                axis = Math.abs(dy) >= Math.abs(dx) ? 'y' : 'x';
+                suppressClickRef.current = true;
+              }
+              if (axis === 'y') {
+                // 論理座標で約8pxごとにパレットの次の音へ(五線の間隔=10px)
+                onDragNoteRef.current?.(index, { steps: Math.round(-dy / scaleRef.current / 8), time: null, phase: 'move' });
+              } else {
+                onDragNoteRef.current?.(index, { steps: 0, time: timeAtPointer(ev.clientX, ev.clientY), phase: 'move' });
+              }
+            };
+            const onUp = () => {
+              window.removeEventListener('pointermove', onMove);
+              window.removeEventListener('pointerup', onUp);
+              window.removeEventListener('pointercancel', onUp);
+              if (axis) onDragNoteRef.current?.(index, { steps: 0, time: null, phase: 'end' });
+              else suppressClickRef.current = false;
+            };
+            window.addEventListener('pointermove', onMove);
+            window.addEventListener('pointerup', onUp);
+            window.addEventListener('pointercancel', onUp);
           });
           svgEl.appendChild(hit);
         }));

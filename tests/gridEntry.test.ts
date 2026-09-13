@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { emptyGrid, initialGrid, gridToNoteEvents, type GridPhrase } from '../src/theory/grid';
-import { enterNote, entryNotes, convertEntryBeat, type EntryResult } from '../src/theory/gridEntry';
+import { enterNote, entryNotes, convertEntryBeat, moveNote, type EntryResult } from '../src/theory/gridEntry';
 import { LESSONS } from '../src/data/courses';
 import { PROGRESSIONS } from '../src/theory/progressions';
 const divs = [1, 2, 3, 4] as const;
@@ -36,6 +36,17 @@ for (let at = 0; at < 192; at += 3) for (const dur of [3, 6, 9, 12, 18, 24, 36])
   eq(entryNotes(x).map(n => [n.start, n.duration]), [[at, dur]]);
   eq(x.bars.every(b => b.beats.length === 4 && b.beats.every(bt => bt.cells.length === bt.division)), true);
 }
+// Moving a note keeps its length, pitch and articulation, and refuses to land on another note.
+g = enter(emptyGrid(2), 0, 12, 60); g = enter(g, 24, 12, 67);
+g = ok(moveNote(g, 0, 6, [...divs]));
+eq(entryNotes(g).map(n => [n.start, n.duration, n.midi]), [[6, 12, 60], [24, 12, 67]]); // slid onto the offbeat
+eq(moveNote(g, 6, 20, [...divs]), { error: 'occupied' }); // would overlap the note at 24
+eq(moveNote(g, 6, 6, [...divs]).hasOwnProperty('grid'), true); // no-op stays valid
+g = ok(moveNote(g, 24, 84, [...divs])); eq(entryNotes(g).at(-1)?.start, 84); // into the next bar
+eq(moveNote(g, 84, 90, [...divs]), { error: 'end' }); // past the phrase end
+const acc = ok(enterNote(emptyGrid(1), 0, 12, 62, [...divs], 'accent'));
+eq(entryNotes(ok(moveNote(acc, 0, 12, [...divs])))[0].articulation, 'accent');
+
 // All curriculum initial phrases: changing one pitch must preserve other notes and timing.
 let steps = 0;
 for (const lesson of LESSONS) for (const step of lesson.steps) {

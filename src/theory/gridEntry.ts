@@ -66,3 +66,13 @@ export function convertEntryBeat(grid: GridPhrase, beat: number, division: Divis
   const encoded = encode(grid, converted, divisions, { beat, division });
   return encoded ? { grid: encoded, end: start } : { error: 'division' };
 }
+
+/** Move the note starting at `start` to `to`, keeping its length, pitch and articulation. */
+export function moveNote(grid: GridPhrase, start: number, to: number, divisions: Division[]): EntryResult {
+  const note = entryNotes(grid).find(n => n.start === start);
+  if (!note) return { error: 'occupied' };
+  if (to === start) return { grid, end: start + note.duration };
+  const removed = enterNote(grid, start, note.duration, null, divisions);
+  if ('error' in removed) return removed;
+  return enterNote(removed.grid, to, note.duration, note.midi, divisions, note.articulation);
+}
