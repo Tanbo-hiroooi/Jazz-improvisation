@@ -4,6 +4,7 @@
 
 import * as Tone from 'tone';
 import type { NoteEvent } from '../theory/phrases';
+import { swingNotes } from '../theory/rhythms';
 
 export interface CompEvent {
   /** リージョン先頭からの拍 */
@@ -210,20 +211,9 @@ export class AudioEngine {
     // オモテ拍の8分はウラ拍まで伸ばして「タータ」のシャッフル感を出す。
     // 実際に鳴らすタイミング(スウィング適用後)を先に計算し、
     // 再生スケジュールとハイライト判定の両方で同じものを使う。
-    const sw = opts.swing ?? 0;
-    const isOffbeat = (b: number) => Math.abs((b % 1) - 0.5) < 0.02;
-    const isOnbeat = (b: number) => b % 1 < 0.02 || b % 1 > 0.98;
-    const timedNotes = (opts.notes ?? []).map((nt) => {
-      let start = nt.start;
-      let duration = nt.duration;
-      if (sw > 0) {
-        if (isOffbeat(start)) {
-          start += sw;
-          if (Math.abs(duration - 0.5) < 0.02) duration = Math.max(0.2, duration - sw);
-        } else if (isOnbeat(start) && Math.abs(duration - 0.5) < 0.02) {
-          duration += sw;
-        }
-      }
+    // 16分が入っている拍はイーブンのまま(swingNotes 参照)
+    const timedNotes = swingNotes(opts.notes ?? [], opts.swing ?? 0).map((nt) => {
+      const { start, duration } = nt;
       // アーティキュレーション: アクセント=強く / スタッカート=半分に切る / テヌート=いっぱいに保つ
       let velocity = nt.velocity;
       let gate = 0.9;

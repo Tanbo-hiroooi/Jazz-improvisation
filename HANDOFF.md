@@ -195,7 +195,10 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
   素材の選択(コードトーン/ガイドトーン/スケール/ブルース)は入力パネルの「音の高さ」の隣(`entry-material`、GridEditorの`materialOptions`)に置く。
   レッスンは素材固定なので渡さない。当たり判定の`rect`には`stroke: none`を必ず付ける(SVGルートのstrokeを継承して枠が見える)。
 - engineはシングルトン。`StartOptions`: bpm/countIn/loop/regionBars/metronome/`clickPattern('all'|'backbeat')`/notes/rhythmOnly/comp/swing/コールバック群。
-- スウィング: ウラ拍(x.5)を遅らせる方式。再生とハイライト判定が**同じ**タイミング計算を共有(ズレ防止)。
+- スウィング(`theory/rhythms.ts` の `swingNotes`、純関数): ウラ拍(x.5)を遅らせる方式。再生とハイライト判定が**同じ**結果を使う(ズレ防止)。
+  **16分(x.25/x.75)に開始か終了がある拍はイーブンのまま**にする。x.5の16分まで遅らせると x.75 とぶつかって
+  「タタタタ」が崩れるため(2026-09-13 オーナー指摘「音を確認で16分のタイミングがおかしい」)。判定は拍ごと。
+  3連の拍は元々x.5が無いので影響なし。`tests/swing.test.ts` が `test:entry` で一緒に走る。
 - アーティキュレーション再生: accent=velocity×1.25 / staccato=gate0.45 / tenuto=gate1.0。
 - **チャンネル別音量** `engine.volumes {metronome, backbeat, comp}`: velocityへの乗算方式。localStorage('fc-volumes-v1')に保存、UIはVolumeControls.tsx。カウントインはmetronome音量に追従。
 - 再生ボタンは2つ: 「♪ 音を確認」(kind='example' 譜面の音が鳴る)と「▶ 伴奏を流す」(自分で演奏する用)。
