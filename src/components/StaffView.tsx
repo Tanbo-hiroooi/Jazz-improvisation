@@ -18,11 +18,13 @@ import {
   Dot,
   Formatter,
   GhostNote,
+  Modifier,
   Renderer,
   Stave,
   StaveConnector,
   StaveNote,
   StaveTie,
+  Stem,
   TabNote,
   TabStave,
   Tuplet,
@@ -178,6 +180,17 @@ function restSegments(gapStart: number, gapEnd: number): { start: number; dur: s
   return out;
 }
 
+/**
+ * 表情記号(アクセント・スタッカート・テヌート)を符頭の側へ置く(記譜の慣習)。
+ * 既定の「常に上」だと、上向きの音では符幹の先に乗り、3連の数字をコードネームの高さまで押し上げる。
+ */
+function articlesToNoteheadSide(notes: StaveNote[], artics: (VFArticulation | undefined)[]): void {
+  artics.forEach((a, i) => {
+    if (!a || !notes[i]) return;
+    a.setPosition(notes[i].getStemDirection() === Stem.UP ? Modifier.Position.BELOW : Modifier.Position.ABOVE);
+  });
+}
+
 const ARTIC_CODE: Record<string, string> = { accent: 'a>', staccato: 'a.', tenuto: 'a-' };
 
 export function StaffView({
@@ -281,7 +294,8 @@ export function StaffView({
       const isGrand = clef === 'grand' && showStaff;
       const lineHeight = isGrand ? 210 : showStaff && showTab ? 235 : showTab ? 120 : 130;
       const tabOffsetY = showStaff ? 95 : 0;
-      const topPad = 24;
+      // 1行目のコードネームを3連の数字の上へ持ち上げても切れないよう、少し余白を取る
+      const topPad = 28;
 
       // TAB: 実音MIDIを時系列で弦・フレットへ変換(globalIndexで引けるようにする)
       const tabByGi: (TabPosition | undefined)[] = [];
@@ -433,6 +447,22 @@ export function StaffView({
       // 小節クリック用の当たり判定(描画後にSVGへ重ねる)
       const measureBoxes: { m: number; x: number; y: number; w: number; h: number }[] = [];
       const entryAnchors: { start: number; x: number; y: number; endX: number; height: number; rest: boolean }[] = [];
+      // コードネームは最後に描く(その行の3連の数字の高さが分かってから位置を決めるため)
+      const chordDraws: { symbol: string; x: number; line: number; staveY: number }[] = [];
+      const tupletGroups: { g: SVGGElement | null; line: number }[] = [];
+      const drawTuplets = (list: Tuplet[], line: number) => {
+        for (const tp of list) {
+          // 数字は符幹(連桁)の側に置く。上向きなら上、下向きなら下。
+          // 既定の「常に上」だと、下向きの高い音や表情記号付きの音でコードネームの高さまで上がってしまう
+          const sounding = tp.getNotes().filter((n) => !n.isRest()) as StaveNote[];
+          const up = sounding.length === 0 || sounding[0].getStemDirection() === Stem.UP;
+          tp.setTupletLocation(up ? Tuplet.LOCATION_TOP : Tuplet.LOCATION_BOTTOM);
+          const g = ctx.openGroup('tuplet') as SVGGElement | undefined;
+          tp.setContext(ctx).draw();
+          ctx.closeGroup();
+          tupletGroups.push({ g: g ?? null, line });
+        }
+      };
 
       for (let m = 0; m < measures; m++) {
         const line = Math.floor(m / perLine);
@@ -476,27 +506,28 @@ export function StaffView({
 
         const anchor = (stave ?? tabStave)!;
 
-        // コードネーム
-        const chordsInMeasure = chords.filter((c) => c.measure === m);
-        ctx.save();
-        ctx.setFont('Helvetica', 13, 'bold');
-        ctx.setFillStyle('#1a1a2e');
-        for (const c of chordsInMeasure) {
+        // コードネーム(位置だけ記録し、描画は3連を描いた後にまとめて行う)
+        for (const c of chords.filter((ch) => ch.measure === m)) {
           const nx = anchor.getNoteStartX() + (c.beat / 4) * (anchor.getNoteEndX() - anchor.getNoteStartX());
-          ctx.fillText(c.symbol, nx, y - 2);
+          chordDraws.push({ symbol: c.symbol, x: nx, line, staveY: y });
         }
-        ctx.restore();
 
         const items = measureItems[m];
 
         // 五線譜ノート
         let staveNotes: StaveNote[] = [];
+        // 表情記号は、連桁で符幹の向きが決まってから符頭側へ置き直す
+        const articOf: (VFArticulation | undefined)[] = [];
         if (showStaff) {
-          staveNotes = items.map((item) => {
+          staveNotes = items.map((item, idx) => {
             const sn = new StaveNote({ keys: item.keys, duration: item.dur + (item.isRest ? '' : ''), clef: noteClef, auto_stem: true });
             if (item.acc && !item.isRest) sn.addModifier(new Accidental(item.acc), 0);
             if (item.dots > 0) Dot.buildAndAttach([sn], { all: true });
-            if (item.articulation) sn.addModifier(new VFArticulation(item.articulation), 0);
+            if (item.articulation) {
+              const art = new VFArticulation(item.articulation);
+              sn.addModifier(art, 0);
+              articOf[idx] = art;
+            }
             if (item.label) {
               const ann = new Annotation(item.label);
               ann.setFont('Helvetica', 9);
@@ -551,17 +582,19 @@ export function StaffView({
 
         if (showStaff && !showTab && stave) {
           const beams = Beam.generateBeams(staveNotes);
+          articlesToNoteheadSide(staveNotes, articOf);
           Formatter.FormatAndDraw(ctx, stave, staveNotes);
           beams.forEach((b) => b.setContext(ctx).draw());
-          tuplets.forEach((tp) => tp.setContext(ctx).draw());
+          drawTuplets(tuplets, line);
         } else if (showStaff && showTab && stave && tabStave) {
           const beams = Beam.generateBeams(staveNotes);
+          articlesToNoteheadSide(staveNotes, articOf);
           const voice = new Voice({ num_beats: 4, beat_value: 4 }).setMode(Voice.Mode.SOFT).addTickables(staveNotes);
           const tabVoice = new Voice({ num_beats: 4, beat_value: 4 }).setMode(Voice.Mode.SOFT).addTickables(tabTickables);
           new Formatter().joinVoices([voice]).joinVoices([tabVoice]).formatToStave([voice, tabVoice], stave);
           voice.draw(ctx, stave);
           beams.forEach((b) => b.setContext(ctx).draw());
-          tuplets.forEach((tp) => tp.setContext(ctx).draw());
+          drawTuplets(tuplets, line);
           tabVoice.draw(ctx, tabStave);
         } else if (showTab && tabStave) {
           const tabVoice = new Voice({ num_beats: 4, beat_value: 4 }).setMode(Voice.Mode.SOFT).addTickables(tabTickables);
@@ -609,6 +642,26 @@ export function StaffView({
             .draw();
         }
       });
+
+      // コードネーム。表情記号付きの3連は数字がコードネームの高さまで上がるので、
+      // その行の3連の数字より上へ行ごと持ち上げる(同じ行のコードネームは高さを揃える)
+      const rowTop = new Map<number, number>();
+      for (const { g, line } of tupletGroups) {
+        if (!g) continue;
+        const box = g.getBBox();
+        if (!box.height) continue;
+        const cur = rowTop.get(line);
+        if (cur === undefined || box.y < cur) rowTop.set(line, box.y);
+      }
+      ctx.save();
+      ctx.setFont('Helvetica', 13, 'bold');
+      ctx.setFillStyle('#1a1a2e');
+      for (const cd of chordDraws) {
+        const top = rowTop.get(cd.line);
+        const baseline = top === undefined ? cd.staveY - 2 : Math.min(cd.staveY - 2, top - 5);
+        ctx.fillText(cd.symbol, cd.x, Math.max(13, baseline));
+      }
+      ctx.restore();
 
       // 小節の選択枠とクリック領域。選択枠は音符の後ろ、クリック領域は一番手前に置く
       measureRectsRef.current = [];

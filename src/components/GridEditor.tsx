@@ -56,6 +56,13 @@ function DurationGlyph({ ticks }: { ticks: number }) {
   </svg>;
 }
 
+/** 4分休符の記号(音価ボタンと同じ見た目の小さなSVG) */
+function RestGlyph() {
+  return <svg className="entry-glyph" width="16" height="28" viewBox="0 0 16 28" aria-hidden="true">
+    <path d="M5 2 L11 9 Q7.5 12 8 14 L12 19 Q7 17.5 7.5 21 Q8 24 10.5 26 Q4 24.5 5 20.5 Q6 17.5 9.5 17.5 L4.5 12 Q8 10 7.5 8 Z" fill="currentColor" />
+  </svg>;
+}
+
 export function GridEditor({ lang, grid, onChange: onGridChange, progression, keyPc, flats, material, divisions,
   fixedRhythm, fixedPitch, allowArticulation, currentIndex = -1, onSelectedIndexChange,
   visibleBar, onVisibleBarChange, shift = 0, clef = 'treble', notation = 'staff', guitarPosition, guitarOpenStrings,
@@ -374,6 +381,10 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
             <button className={`seg${dotted && !triplet ? ' on' : ''}`} aria-pressed={dotted && !triplet}
               disabled={triplet || endOfPhrase || value === 48 || value === 3 || (value === 6 && !divisions.includes(4)) || (value === 12 && !divisions.some(d => d === 2 || d === 4))}
               onClick={() => chooseValue(value, !dotted)}>{p('付点', 'Dotted')} ·</button>
+            {/* 休符は選んだ長さで入る。修正中の音なら、その音を休符にする */}
+            <button className="seg entry-rest" disabled={endOfPhrase} onClick={() => submit(null)}>
+              <RestGlyph />{selected ? t('toRest') : p('休符を入力', 'Enter rest')}
+            </button>
           </div>
           {divisions.includes(3) && <button className="btn entry-triplet" disabled={endOfPhrase} onClick={convert}>{triplet ? p('この拍を通常に戻す', 'Use straight rhythm in this beat') : p('この拍を3連にする', 'Make this beat a triplet')}</button>}
           {triplet && <button className="btn" onClick={() => chooseValue(4, false)}>{p('3連8分音符（1/3拍）', 'Triplet eighth (1/3 beat)')}</button>}
@@ -393,7 +404,6 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
           {fixedPitch ? <button className="btn primary" disabled={endOfPhrase} onClick={() => submit(selected?.midi ?? defaultPitch(pal))}>{p('音符を入力', 'Enter note')}</button>
             : pitches.map(n => <button className={`btn entry-pitch${selected?.midi === n.midi ? ' on' : ''}`} key={n.midi} aria-pressed={selected?.midi === n.midi}
               disabled={endOfPhrase || (fixedRhythm && !selected)} onClick={() => submit(n.midi)}><strong>{label(n.midi)}</strong><small>{n.degree || '　'}</small></button>)}
-          {!fixedRhythm && <button className="btn" disabled={endOfPhrase} onClick={() => submit(null)}>{selected ? t('toRest') : p('休符を入力', 'Enter rest')}</button>}
         </div>
         {selected && <div className="entry-edit-actions">
           {!fixedPitch && <div className="seg-group" role="group" aria-label={p('音の高さを1段ずつ', 'Nudge pitch')}>
