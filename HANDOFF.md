@@ -3,7 +3,7 @@
 AIアシスタント(GPT / Claude / その他)や新規開発者が、このプロジェクトの開発を引き継ぐための資料です。
 **コードを変更する前に必ず通読してください。** 特に「絶対に守る方針」はプロダクトの根幹です。
 
-最終更新: 2026-09-08(それ以降の変更は git log を参照)
+最終更新: 2026-09-13（現在地の短い要約はCLAUDE.md、履歴はgit logを参照）
 
 ---
 
@@ -94,7 +94,7 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
   attackは`midi`(実音)と`articulation?`を持つ。**合計は構造上つねに4拍×小節数**(拍あふれ・不足が存在しない — これがブロック式から移行した理由)。
 - `hold`は直前の音を延長し、拍・小節線をまたげる(シンコペーション・食い)。ただし**3連の拍の境界はまたげない**(gridEntryで禁止。表記が崩れるため)。
 - `gridToNoteEvents()`: attack起点で連続holdを音価に合算。音の直後でないholdはrest扱い。
-- パレット: `paletteFor(keyPc, chord, material)` — material = root-only / chord-tone / guide-tone / blues(=0,3,5,6,7,10)。音域50〜84の連続リストで、▲▼移動用。
+- パレット: `paletteFor(keyPc, chord, material)` — material = root-only / chord-tone / guide-tone / blues(=0,3,5,6,7,10)。音域50〜84の連続リストで、音名ボタンとオクターブ切替に使う。
 - `copyBarMapped()`: 小節コピー。**パレットのインデックス対応**で移調先コードに写す。
 - 検証 `validateGrid(grid, conditions, requiredAction, initial, ctx)`:
   - conditions: minNotes/maxNotes/minRestBeats/minRestBeatsPerBar/requireCrossBarHold/requireOffbeatAttack/requireTriplet/requireSixteenth/requireArticulation/requireEndOn3rd
@@ -239,7 +239,7 @@ npm run preview    # 本番ビルドの確認
 ## 13. 既知の制限・意図的な未実装
 
 - 録音・振り返り: **作らない**(決定)。
-- フレーズの保存・一覧・再利用: 未実装(「次に実装予定」)。グリッドのデータ構造は保存可能な形。
+- フレーズの保存・一覧・再利用は実装済み（`state/savedPhrases.ts`、`SavedPhrasesPanel.tsx`）。進行・キー・素材・小節数とGridPhraseをまとめてlocalStorageへ最大50件保存する。
 - 行またぎのタイは半タイ表示(完全な弧は未対応)。
 - 3連の拍をまたぐholdは不可（拍内のholdは既存描画に対応）(表記の複雑化を回避した意図的制限)。
 - 自由練習の「基礎練習」タブは旧来の固定譜例方式のまま(グリッドは「フレーズを作る」タブのみ)。
