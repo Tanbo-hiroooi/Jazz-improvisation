@@ -66,6 +66,12 @@ interface Props {
   /** Editing only: show rests by beat, and make them selectable. */
   entryDivisions?: number[];
   entryCursor?: number;
+  /**
+   * 拍ごとに休符を分けるのはこの小節だけ(省略時は全小節)。
+   * 全体譜を編集面にしたとき、他の小節まで4分休符×4で埋まって騒がしくならないようにする。
+   * 他の小節の長い休符は、タップした位置から拍を割り出す。
+   */
+  entryFocusMeasure?: number;
   onSelectRest?: (start: number) => void;
   restSelectLabel?: (start: number) => string;
   /**
@@ -171,7 +177,7 @@ export function StaffView({
   notes, measures, clef, shift, flats, labelMode, chords, currentIndex, selectedIndex = -1,
   zoom = 1, fitHeight, fitMaxZoom,
   selectedMeasure = -1, onSelectMeasure, onSelectNote, noteSelectLabel,
-  entryDivisions, entryCursor, onSelectRest, restSelectLabel,
+  entryDivisions, entryCursor, entryFocusMeasure, onSelectRest, restSelectLabel,
   notation = 'staff', guitarPosition = 'auto', guitarOpenStrings = true,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -307,7 +313,8 @@ export function StaffView({
           // Only split silent space; never change the rhythm of an existing note.
           const cuts = [from, to];
           if (entryDivisions) {
-            for (let beat = Math.floor(from); beat < to; beat++) {
+            const splitByBeat = entryFocusMeasure === undefined || entryFocusMeasure === m;
+            for (let beat = Math.floor(from); splitByBeat && beat < to; beat++) {
               const d = entryDivisions[beat] === 3 ? 3 : 1;
               for (let c = 0; c < d; c++) {
                 const time = beat + c / d;
@@ -629,7 +636,14 @@ export function StaffView({
           hit.setAttribute('role', 'button');
           hit.setAttribute('tabindex', '0');
           hit.setAttribute('aria-label', restSelectLabelRef.current?.(anchor.start) ?? String(anchor.start));
-          hit.addEventListener('click', () => onSelectRestRef.current?.(anchor.start));
+          // 長い休符(他の小節の全休符など)は、タップした位置の拍から入力できるようにする
+          const span = (entryAnchors.find(a => a.start > anchor.start + 0.001)?.start ?? measures * 4) - anchor.start;
+          hit.addEventListener('click', e => {
+            const box = hit.getBoundingClientRect();
+            const ratio = box.width > 0 ? Math.max(0, Math.min(0.999, (e.clientX - box.left) / box.width)) : 0;
+            const beatOffset = span > 1.01 ? Math.floor(ratio * span) : 0;
+            onSelectRestRef.current?.(anchor.start + beatOffset);
+          });
           hit.addEventListener('keydown', e => {
             if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectRestRef.current?.(anchor.start); }
           });
@@ -705,7 +719,7 @@ export function StaffView({
       window.removeEventListener('resize', render);
       window.visualViewport?.removeEventListener('resize', render);
     };
-  }, [displayNotes, measures, clef, flats, labelMode, chords, notation, guitarPosition, guitarOpenStrings, zoom, fitHeight, fitMaxZoom, entryDivisions, entryCursor]);
+  }, [displayNotes, measures, clef, flats, labelMode, chords, notation, guitarPosition, guitarOpenStrings, zoom, fitHeight, fitMaxZoom, entryDivisions, entryCursor, entryFocusMeasure]);
 
   // 選択中の小節(再描画せずクラス切替)
   useEffect(() => {

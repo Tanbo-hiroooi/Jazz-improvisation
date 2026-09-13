@@ -18,8 +18,12 @@
 
 /* Step entry: switch between one editing bar and the full phrase in the same space. */
 .entry-view-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
-.entry-view-toggle .seg { min-height: 44px; padding: 8px 14px; }
-.entry-label-mode { align-self: flex-end; }
+.entry-head-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* 全体譜が編集面。広い画面では上に貼り付け、入力パネルへスクロールしても見え続ける */
+.entry-full { margin: 8px 0 10px; }
+@media (min-width: 621px) {
+  .entry-full { position: sticky; top: 0; z-index: 5; box-shadow: 0 6px 10px -8px rgba(0, 0, 0, 0.8); }
+}
 .entry-bar-picker { flex: 1; min-width: 0; max-width: 260px; text-align: center; }
 .entry-bar-picker span { display: block; color: var(--text-dim); font-size: 11px; margin-bottom: 4px; }
 .entry-bar-picker select { width: 100%; min-height: 44px; font-weight: 600; }

@@ -52,9 +52,17 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
   const p = (ja: string, en: string) => pick(lang, ja, en);
   const [localBar, setLocalBar] = useState(0);
-  const [view, setView] = useState<'edit' | 'overview'>('edit');
-  const editViewButton = useRef<HTMLButtonElement>(null);
   const bar = Math.max(0, Math.min(grid.bars.length - 1, visibleBar ?? localBar));
+  // 全体譜が編集面。狭い画面では音符が小さくなるので、編集中の小節の拡大を補助として出せる(既定: 狭い画面だけON)
+  const [zoomBar, setZoomBar] = useState(() => window.innerWidth < 620);
+  // 全体譜の高さ上限は画面の高さから決める(入力パネルが同じ画面に残るように)
+  const [viewportHeight, setViewportHeight] = useState(() => window.innerHeight);
+  useEffect(() => {
+    const onResize = () => setViewportHeight(window.innerHeight);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  const fullScoreHeight = Math.max(200, Math.min(440, Math.round(viewportHeight * 0.46)));
   const [cursor, setCursor] = useState(0);
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(12);
@@ -175,7 +183,6 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
     else { onChange(result.grid, beatIndex * 12, false); move(beatIndex * 12); }
   };
   const scoreGrid = preview?.base === grid ? preview.next : grid;
-  const overviewNotes = useMemo(() => gridToNoteEvents(grid), [grid]);
   const overviewChords = useMemo(() => progression.chords.map(c => ({
     measure: c.measure, beat: c.beat, rootPc: mod12(keyPc + c.rootOffset + shift), quality: c.quality,
     symbol: chordSymbol(mod12(keyPc + c.rootOffset + shift), c.quality, flats),
@@ -189,6 +196,21 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
     measure: 0, beat: c.beat, rootPc: mod12(keyPc + c.rootOffset + shift), quality: c.quality,
     symbol: chordSymbol(mod12(keyPc + c.rootOffset + shift), c.quality, flats),
   })), [progression, bar, keyPc, shift, flats]);
+  // 全体譜: ここが編集面。休符タップで入力位置、音符タップで修正、空いている場所のタップで小節移動
+  const allDivisions = useMemo(() => scoreGrid.bars.flatMap(b => b.beats.map(bt => bt.division)), [scoreGrid]);
+  const fullScoreNotes = useMemo(() => gridToNoteEvents(scoreGrid), [scoreGrid]);
+  const fullScore = <div className="entry-full staff-card" aria-label={p('フレーズ全体の譜面', 'Score of the whole phrase')}>
+    <StaffView notes={fullScoreNotes} measures={grid.bars.length} clef={clef} shift={shift} flats={flats} labelMode={labelMode} chords={overviewChords}
+      currentIndex={preview ? -1 : currentIndex} selectedIndex={preview ? -1 : selectedIndex}
+      selectedMeasure={bar} onSelectMeasure={b => { if (!preview) move(b * 48); }}
+      onSelectNote={index => { if (!preview) select(notes[index].start); }}
+      noteSelectLabel={index => p(`音符${index + 1}を編集`, `Edit note ${index + 1}`)}
+      entryDivisions={allDivisions} entryCursor={preview ? undefined : at / 12} entryFocusMeasure={bar}
+      onSelectRest={fixedRhythm || preview ? undefined : start => move(Math.round(start * 12))}
+      restSelectLabel={start => p(`${Math.floor(start / 4) + 1}小節${positionLabel(Math.round(start * 12))}の休符から入力`, `Enter at the rest: bar ${Math.floor(start / 4) + 1}, ${positionLabel(Math.round(start * 12))}`)}
+      notation={notation === 'tab' ? 'staff-tab' : notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings}
+      fitHeight={fullScoreHeight} fitMaxZoom={1.3} />
+  </div>;
   const detailScore = <div className="entry-detail" aria-label={p('編集中の小節の譜面', 'Score of the current bar')}>
     <StaffView notes={scoreNotes} measures={1} clef={clef} shift={shift} flats={flats} labelMode={labelMode} chords={chords}
       currentIndex={scoreNotes.findIndex(n => n.originalIndex === currentIndex)} selectedIndex={scoreNotes.findIndex(n => n.originalIndex === selectedIndex)}
@@ -202,26 +224,18 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
 
   return <div className="grid-editor step-entry">
     <div className="entry-view-head">
-      <div className="seg-group entry-view-toggle" role="group" aria-label={t('editorViewLabel')}>
-        <button ref={editViewButton} className={`seg${view === 'edit' ? ' on' : ''}`} aria-pressed={view === 'edit'} onClick={() => setView('edit')}>{t('editorViewEdit')}</button>
-        <button className={`seg${view === 'overview' ? ' on' : ''}`} aria-pressed={view === 'overview'} onClick={() => { setPreview(null); setView('overview'); }}>{t('editorViewAll')}</button>
+      {onLabelModeChange && <div className="seg-group entry-label-mode" role="group" aria-label={t('staffTitle')}>
+        <button className={`seg${labelMode === 'none' ? ' on' : ''}`} aria-pressed={labelMode === 'none'} onClick={() => onLabelModeChange('none')}>{t('labelNone')}</button>
+        <button className={`seg${labelMode === 'name' ? ' on' : ''}`} aria-pressed={labelMode === 'name'} onClick={() => onLabelModeChange('name')}>C D E</button>
+        <button className={`seg${labelMode === 'degree' ? ' on' : ''}`} aria-pressed={labelMode === 'degree'} onClick={() => onLabelModeChange('degree')}>{t('labelDegree')}</button>
+      </div>}
+      <div className="entry-head-tools">
+        <label className="toggle"><input type="checkbox" checked={zoomBar} onChange={e => setZoomBar(e.target.checked)} /> {t('entryZoomBar')}</label>
+        {onFocus && <button className="btn tiny focus-open-btn" onClick={onFocus}>⛶ {t('focusOpen')}</button>}
       </div>
-      {onFocus && <button className="btn tiny focus-open-btn" onClick={onFocus}>⛶ {t('focusOpen')}</button>}
     </div>
-    {onLabelModeChange && <div className="seg-group entry-label-mode" role="group" aria-label={t('staffTitle')}>
-      <button className={`seg${labelMode === 'none' ? ' on' : ''}`} aria-pressed={labelMode === 'none'} onClick={() => onLabelModeChange('none')}>{t('labelNone')}</button>
-      <button className={`seg${labelMode === 'name' ? ' on' : ''}`} aria-pressed={labelMode === 'name'} onClick={() => onLabelModeChange('name')}>C D E</button>
-      <button className={`seg${labelMode === 'degree' ? ' on' : ''}`} aria-pressed={labelMode === 'degree'} onClick={() => onLabelModeChange('degree')}>{t('labelDegree')}</button>
-    </div>}
-    {view === 'overview' ? <div className="entry-overview">
-      <p className="hint-text">{t('editorOverviewHint')}</p>
-      <div className="staff-card" aria-label={t('editorViewAll')}>
-        <StaffView notes={overviewNotes} measures={grid.bars.length} clef={clef} shift={shift} flats={flats}
-          labelMode={labelMode} chords={overviewChords} currentIndex={currentIndex} selectedIndex={selectedIndex}
-          selectedMeasure={bar} onSelectMeasure={b => { move(b * 48); setView('edit'); editViewButton.current?.focus({ preventScroll: true }); }}
-          notation={notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings} />
-      </div>
-    </div> : <>
+    <p className="hint-text">{t('gridTapHint')}</p>
+    {fullScore}
     <details className="grid-help" open={helpOpen} onToggle={e => {
       const open = e.currentTarget.open; setHelpOpen(open);
       if (!open) try { localStorage.setItem('fc-grid-help-seen-v1', '1'); } catch { /* optional preference */ }
@@ -248,14 +262,13 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
       <button className="btn" disabled={bar === grid.bars.length - 1} onClick={() => move((bar + 1) * 48)}>{p('次の小節', 'Next bar')} →</button>
     </div>
     {preview && preview.base === grid ? <div className="entry-preview" role="group" aria-label={p('リズム変更の確認', 'Confirm rhythm change')}>
-      {detailScore}
+      {zoomBar && detailScore}
       <p>{p('上の譜面は変更後のプレビューです。音の位置と長さを変更します。適用しますか？', 'The score above previews the new timing and lengths. Apply this change?')}</p>
       <button className="btn" onClick={() => { onChange(preview.next, preview.beat * 12, false); move(preview.beat * 12); }}>{p('このリズムを適用', 'Apply rhythm')}</button>
       <button className="btn" onClick={() => setPreview(null)}>{p('キャンセル', 'Cancel')}</button>
     </div> : <>
-      <p className="hint-text">{t('gridTapHint')}</p>
       <div className="entry-workbench">
-      {detailScore}
+      {zoomBar && detailScore}
       <div className="entry-toolbar">
         <div className="entry-position-nav" role="group" aria-label={p('入力場所を移動', 'Move entry position')}>
           <button className="btn" disabled={previousPosition === undefined} onClick={() => previousPosition !== undefined && select(previousPosition)}>← {p('戻る', 'Back')}</button>
@@ -307,6 +320,5 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
     {bar > 0 && !fixedRhythm && <button className="btn" onClick={() => {
       if (window.confirm(p('この小節を前の小節の形で置き換えますか？ 元に戻すこともできます。', 'Replace this bar with the previous bar’s shape? You can undo this.'))) { onChange(copyBarMapped(grid, bar - 1, bar, palettes)); move(bar * 48); }
     }}>⧉ {t('copyPrevBar')}</button>}
-    </>}
   </div>;
 }
