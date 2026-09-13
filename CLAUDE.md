@@ -10,11 +10,10 @@
 
 - 公開アプリ: https://tanbo-hiroooi.github.io/Jazz-improvisation/
 - ブランチ: `main`（pushでGitHub Pagesへ自動デプロイ）
-- アプリ本体の最新公開コミット: `12a0a10 Show one score while editing phrases`
-- その直前の関連コミット:
-  - `e7f7648 Make phrase entry positions intuitive`
-  - `76fabba Replace the phrase grid with step entry`
-  - `bf56f8f Keep the whole score visible while practising`
+- アプリ本体の最新公開コミット: `5eed7c6 Simplify the pitch row: one octave pair and always-visible articulation`
+- 2026-09-13 のセッション(7コミット: `929ff6d`〜`5eed7c6`)の一覧と操作モデルは [AGENTS.md](AGENTS.md) にまとめてある。
+  以後の修正は Codex が担当する予定なので、AGENTS.md を共通の引き継ぎとして更新し続けること。
+- その前の関連コミット: `12a0a10` / `e7f7648` / `76fabba` / `bf56f8f`(順番入力への刷新)
 - 作業開始時は必ず `git status --short` と `git log -5 --oneline` で、この記述より新しい変更やユーザーの未コミット差分がないか確認する。
 
 ## 直近で完成した変更
