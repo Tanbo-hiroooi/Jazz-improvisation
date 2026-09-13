@@ -55,8 +55,8 @@
 .entry-material { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
 .entry-material > span { font-size: 13px; color: var(--text-dim); }
 .entry-octave .btn { font-size: 12px; padding: 6px 9px; }
-.entry-edit-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.entry-edit-actions .seg { padding: 6px 8px; font-size: 12px; }
+.entry-articulation { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.entry-articulation > span, .entry-octave > span { font-size: 13px; color: var(--text-dim); }
 .entry-error { color: var(--red); font-size: 13px; margin: 8px 0; }
 .entry-preview { padding: 12px; border: 1px solid var(--accent); border-radius: 8px; margin-bottom: 12px; }
 .entry-preview .btn { margin: 4px; min-height: 44px; }

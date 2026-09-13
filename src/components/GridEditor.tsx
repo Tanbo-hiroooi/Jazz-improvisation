@@ -87,6 +87,8 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
   const [value, setValue] = useState(12);
   const [dotted, setDotted] = useState(false);
   const [octave, setOctave] = useState(5); // concert MIDI 60–71
+  // 次に入力する音に付ける表情(音を選んでいないときの表情ボタンの対象。音価と同じく選んだ状態が続く)
+  const [pendingArtic, setPendingArtic] = useState<Articulation | undefined>(undefined);
   const [error, setError] = useState<EntryError | null>(null);
   const [preview, setPreview] = useState<{ base: GridPhrase; next: GridPhrase; beat: number } | null>(null);
   // ドラッグ中の仮の譜面(指を離したときだけ履歴に入れる)
@@ -180,7 +182,7 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
       if (!selected || midi === null) return;
       editCell(c => { c.midi = midi; });
     } else {
-      const result = enterNote(grid, at, ticks, midi, divisions);
+      const result = enterNote(grid, at, ticks, midi, divisions, editing ? undefined : pendingArtic);
       if ('error' in result) { setError(result.error); return; }
       onChange(result.grid, editing ? at : result.end, editing && midi !== null);
       if (!editing) move(result.end);
@@ -415,31 +417,32 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
             {materialOptions.map(m => <button key={m} className={`seg${material === m ? ' on' : ''}`} aria-pressed={material === m} onClick={() => onMaterialChange(m)}>{t(MATERIAL_LABEL[m])}</button>)}
           </div>
         </div>}
-        {!fixedPitch && <div className="entry-octave">
+        {!fixedPitch && <div className="entry-octave" role="group" aria-label={p('音の高さ', 'Pitch')}>
           <span>{p('音の高さ', 'Pitch')}</span>
-          <button className="btn" disabled={!pal.some(n => n.midi < octave * 12)} onClick={() => setOctave(octave - 1)}>{p('−1オクターブ', '−1 octave')}</button>
-          <button className="btn" disabled={!pal.some(n => n.midi >= (octave + 1) * 12)} onClick={() => setOctave(octave + 1)}>{p('＋1オクターブ', '+1 octave')}</button>
+          {/* 音を選んでいればその音を1オクターブ動かし、選んでいなければ次に入力する音域を切り替える */}
+          <div className="seg-group">
+            <button className="seg" onClick={() => (selected ? shiftOctave(selected.start, 1) : setOctave(octave + 1))}
+              disabled={selected ? octaveTarget(selected.start, 1) === null : !pal.some(n => n.midi >= (octave + 1) * 12)}>⇧ {p('1オクターブ上へ', 'Octave up')}</button>
+            <button className="seg" onClick={() => (selected ? shiftOctave(selected.start, -1) : setOctave(octave - 1))}
+              disabled={selected ? octaveTarget(selected.start, -1) === null : !pal.some(n => n.midi < octave * 12)}>⇩ {p('1オクターブ下へ', 'Octave down')}</button>
+          </div>
+        </div>}
+        {allowArticulation && <div className="entry-articulation" role="group" aria-label={t('articLabel')}>
+          <span>{t('articLabel')}</span>
+          {/* 音を選んでいればその音の表情、選んでいなければ次に入力する音の表情 */}
+          <div className="seg-group">
+            {([undefined, 'accent', 'staccato', 'tenuto'] as const).map((a, i) => {
+              const current = selected ? selected.articulation : pendingArtic;
+              return <button className={`seg${current === a ? ' on' : ''}`} key={a ?? 'normal'} aria-pressed={current === a}
+                onClick={() => (selected ? editCell(c => { c.articulation = a; }) : setPendingArtic(a))}>{[t('articNormal'), `> ${t('articAccent')}`, `· ${t('articStaccato')}`, `– ${t('articTenuto')}`][i]}</button>;
+            })}
+          </div>
         </div>}
         <div className="entry-pitches" role="group" aria-label={p('音を入力', 'Enter a pitch')}>
           {fixedPitch ? <button className="btn primary" disabled={endOfPhrase} onClick={() => submit(selected?.midi ?? defaultPitch(pal))}>{p('音符を入力', 'Enter note')}</button>
             : pitches.map(n => <button className={`btn entry-pitch${selected?.midi === n.midi ? ' on' : ''}`} key={n.midi} aria-pressed={selected?.midi === n.midi}
               disabled={endOfPhrase || (fixedRhythm && !selected)} onClick={() => submit(n.midi)}><strong>{label(n.midi)}</strong><small>{n.degree || '　'}</small></button>)}
         </div>
-        {selected && <div className="entry-edit-actions">
-          {!fixedPitch && <div className="seg-group" role="group" aria-label={p('音の高さを1段ずつ', 'Nudge pitch')}>
-            <button className="seg" onClick={() => nudge(selected.start, 1)} disabled={stepPitch(pal, selected.midi, 1) === selected.midi}>▲ {t('pitchUp')}</button>
-            <button className="seg" onClick={() => nudge(selected.start, -1)} disabled={stepPitch(pal, selected.midi, -1) === selected.midi}>▼ {t('pitchDown')}</button>
-          </div>}
-          {/* 選んだ音をそのまま1オクターブ動かす(音域を切り替えて音名を押し直す手間をなくす) */}
-          {!fixedPitch && <div className="seg-group" role="group" aria-label={p('選んだ音をオクターブ移動', 'Move the note by an octave')}>
-            <button className="seg" onClick={() => shiftOctave(selected.start, 1)} disabled={octaveTarget(selected.start, 1) === null}>⇧ {p('1オクターブ上へ', 'Octave up')}</button>
-            <button className="seg" onClick={() => shiftOctave(selected.start, -1)} disabled={octaveTarget(selected.start, -1) === null}>⇩ {p('1オクターブ下へ', 'Octave down')}</button>
-          </div>}
-          {!fixedRhythm && <button className="btn" onClick={() => move(selected.start + selected.duration)}>{p('この音の次から入力 →', 'Continue after this note →')}</button>}
-          {allowArticulation && <div className="seg-group" role="group" aria-label={t('articLabel')}>
-            {([undefined, 'accent', 'staccato', 'tenuto'] as const).map((a, i) => <button className={`seg${selected.articulation === a ? ' on' : ''}`} key={a ?? 'normal'} aria-pressed={selected.articulation === a} onClick={() => editCell(c => { c.articulation = a; })}>{[t('articNormal'), `> ${t('articAccent')}`, `· ${t('articStaccato')}`, `– ${t('articTenuto')}`][i]}</button>)}
-          </div>}
-        </div>}
       </div>
       </div>
     </>}
