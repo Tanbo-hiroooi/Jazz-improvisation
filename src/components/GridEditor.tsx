@@ -221,6 +221,26 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
     void engine.previewNote(next);
   };
 
+  /** 選んだ音を1オクターブ上下へ(同じ音名が使える音域にあるときだけ) */
+  const octaveTarget = (start: number, dir: 1 | -1): number | null => {
+    const n = notes.find(x => x.start === start);
+    if (!n) return null;
+    const target = n.midi + 12 * dir;
+    return palettes[Math.floor(start / 48)].some(x => x.midi === target) ? target : null;
+  };
+  const shiftOctave = (start: number, dir: 1 | -1) => {
+    if (fixedPitch) return;
+    const n = notes.find(x => x.start === start);
+    const target = octaveTarget(start, dir);
+    if (!n || target === null) return;
+    const result = enterNote(grid, start, n.duration, target, divisions, n.articulation);
+    if ('error' in result) { setError(result.error); return; }
+    onChange(result.grid, start, true);
+    move(start, true);
+    setOctave(Math.floor(target / 12));
+    void engine.previewNote(target);
+  };
+
   /** 位置のドラッグ先を、その音価に合う位置(8分・16分・3連)へ丸める */
   const snapTime = (beats: number, duration: number) => {
     const total = grid.bars.length * 48;
@@ -409,6 +429,11 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
           {!fixedPitch && <div className="seg-group" role="group" aria-label={p('音の高さを1段ずつ', 'Nudge pitch')}>
             <button className="seg" onClick={() => nudge(selected.start, 1)} disabled={stepPitch(pal, selected.midi, 1) === selected.midi}>▲ {t('pitchUp')}</button>
             <button className="seg" onClick={() => nudge(selected.start, -1)} disabled={stepPitch(pal, selected.midi, -1) === selected.midi}>▼ {t('pitchDown')}</button>
+          </div>}
+          {/* 選んだ音をそのまま1オクターブ動かす(音域を切り替えて音名を押し直す手間をなくす) */}
+          {!fixedPitch && <div className="seg-group" role="group" aria-label={p('選んだ音をオクターブ移動', 'Move the note by an octave')}>
+            <button className="seg" onClick={() => shiftOctave(selected.start, 1)} disabled={octaveTarget(selected.start, 1) === null}>⇧ {p('1オクターブ上へ', 'Octave up')}</button>
+            <button className="seg" onClick={() => shiftOctave(selected.start, -1)} disabled={octaveTarget(selected.start, -1) === null}>⇩ {p('1オクターブ下へ', 'Octave down')}</button>
           </div>}
           {!fixedRhythm && <button className="btn" onClick={() => move(selected.start + selected.duration)}>{p('この音の次から入力 →', 'Continue after this note →')}</button>}
           {allowArticulation && <div className="seg-group" role="group" aria-label={t('articLabel')}>

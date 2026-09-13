@@ -145,7 +145,8 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
     ドラッグ中は`dragGrid`に仮の譜面を持ち、指を離した時だけ`onChange`で履歴に入れる(1操作=Undo 1回)。
     左右は`snapTime`で8分/16分/3連の位置へ丸め、`moveNote`(消して入れ直す純関数、`test:entry`で検証)で移動。重なる先には動かない。
     ドラッグ直後のclickは`suppressClickRef`で捨てる。`.vf-note-hit`は`touch-action: none`。
-    ▲▼ボタン・↑↓キー(`onNudgeNote`)は`stepPitch`で1段ずつ。
+    ▲▼ボタン・↑↓キー(`onNudgeNote`)は`stepPitch`で1段ずつ。「1オクターブ上へ/下へ」(`shiftOctave`)は選んだ音を±12(パレットにある時だけ有効)。
+    「−1/+1オクターブ」ボタンは**音名ボタンの表示音域**を変えるだけで、選んだ音は動かさない(役割が違う)。
   - 全体譜の高さは画面の46%(200〜440px)。広い画面では上に貼り付け(`.entry-full` sticky)、狭い画面は従来どおり入力パネル側(`.entry-workbench`)だけを貼り付ける(両方貼ると画面より高くなって届かない)。
   - labelModeは親から渡し、小節表示・全体表示・集中モードで揃える。再生と集中モードの管理は引き続き親が担当する。
   - StaffViewのentryDivisions/entryCursorは編集詳細だけに渡す。空白を拍ごとの休符（3連の拍は3分割）に分け、現在位置も休符の境界にする。変更するのは休符の表示だけで、元の音符・保存データ・全体譜のリズムは変えない。
