@@ -21,8 +21,20 @@ export interface GridEditorProps {
   onUndo?: () => void; onRedo?: () => void; canUndo?: boolean; canRedo?: boolean;
   labelMode?: LabelMode; onLabelModeChange?: (mode: LabelMode) => void;
   onFocus?: () => void;
+  /** 使う音の素材を切り替えられるとき(自由練習・章まとめ)の選択肢。「音の高さ」の隣に出す */
+  materialOptions?: GridMaterial[]; onMaterialChange?: (m: GridMaterial) => void;
 }
+export const MATERIAL_LABEL: Record<GridMaterial, Parameters<typeof tr>[1]> = {
+  'root-only': 'materialRoot',
+  'third-only': 'materialThird',
+  'chord-tone': 'materialChordTone',
+  'guide-tone': 'materialGuideTone',
+  scale: 'materialScale',
+  blues: 'materialBlues',
+  chromatic: 'materialChromatic',
+};
 const VALUES = [
+  { ticks: 48, ja: '全', en: 'Whole' },
   { ticks: 24, ja: '2分', en: 'Half' },
   { ticks: 12, ja: '4分', en: 'Quarter' },
   { ticks: 6, ja: '8分', en: '8th' },
@@ -37,8 +49,8 @@ const ERRORS: Record<EntryError, [string, string]> = {
 
 function DurationGlyph({ ticks }: { ticks: number }) {
   return <svg className="entry-glyph" width="20" height="28" viewBox="0 0 20 28" aria-hidden="true">
-    <ellipse cx="6" cy="22" rx="5" ry="3" transform="rotate(-20 6 22)" fill={ticks === 24 ? 'none' : 'currentColor'} stroke="currentColor" strokeWidth="1.8" />
-    <path d="M10 21 V3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+    <ellipse cx="6" cy="22" rx="5" ry="3" transform="rotate(-20 6 22)" fill={ticks >= 24 ? 'none' : 'currentColor'} stroke="currentColor" strokeWidth="1.8" />
+    {ticks < 48 && <path d="M10 21 V3" fill="none" stroke="currentColor" strokeWidth="1.8" />}
     {ticks <= 6 && <path d="M10 3 Q20 8 15 16 Q17 9 10 8Z" fill="currentColor" />}
     {ticks <= 3 && <path d="M10 9 Q20 14 15 22 Q17 15 10 14Z" fill="currentColor" />}
   </svg>;
@@ -47,7 +59,7 @@ function DurationGlyph({ ticks }: { ticks: number }) {
 export function GridEditor({ lang, grid, onChange: onGridChange, progression, keyPc, flats, material, divisions,
   fixedRhythm, fixedPitch, allowArticulation, currentIndex = -1, onSelectedIndexChange,
   visibleBar, onVisibleBarChange, shift = 0, clef = 'treble', notation = 'staff', guitarPosition, guitarOpenStrings,
-  onUndo, onRedo, canUndo, canRedo, labelMode = 'name', onLabelModeChange, onFocus,
+  onUndo, onRedo, canUndo, canRedo, labelMode = 'name', onLabelModeChange, onFocus, materialOptions, onMaterialChange,
 }: GridEditorProps) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
   const p = (ja: string, en: string) => pick(lang, ja, en);
@@ -356,16 +368,22 @@ export function GridEditor({ lang, grid, onChange: onGridChange, progression, ke
           <div className="entry-values" role="group" aria-label={p('音符の長さ', 'Note duration')}>
             {VALUES.filter(v => divisions.length === 1 && divisions[0] === 1 ? v.ticks === 12 : v.ticks >= 12 || (v.ticks === 6 ? divisions.includes(2) || divisions.includes(4) : divisions.includes(4))).map(v =>
               <button className={`seg${!triplet && value === v.ticks ? ' on' : ''}`} aria-pressed={!triplet && value === v.ticks} key={v.ticks} disabled={triplet || endOfPhrase}
-                onClick={() => chooseValue(v.ticks, dotted && v.ticks !== 3 && (v.ticks !== 6 || divisions.includes(4)))}>
+                onClick={() => chooseValue(v.ticks, dotted && v.ticks !== 48 && v.ticks !== 3 && (v.ticks !== 6 || divisions.includes(4)))}>
                 <DurationGlyph ticks={v.ticks} />{p(v.ja, v.en)}
               </button>)}
             <button className={`seg${dotted && !triplet ? ' on' : ''}`} aria-pressed={dotted && !triplet}
-              disabled={triplet || endOfPhrase || value === 3 || (value === 6 && !divisions.includes(4)) || (value === 12 && !divisions.some(d => d === 2 || d === 4))}
+              disabled={triplet || endOfPhrase || value === 48 || value === 3 || (value === 6 && !divisions.includes(4)) || (value === 12 && !divisions.some(d => d === 2 || d === 4))}
               onClick={() => chooseValue(value, !dotted)}>{p('付点', 'Dotted')} ·</button>
           </div>
           {divisions.includes(3) && <button className="btn entry-triplet" disabled={endOfPhrase} onClick={convert}>{triplet ? p('この拍を通常に戻す', 'Use straight rhythm in this beat') : p('この拍を3連にする', 'Make this beat a triplet')}</button>}
           {triplet && <button className="btn" onClick={() => chooseValue(4, false)}>{p('3連8分音符（1/3拍）', 'Triplet eighth (1/3 beat)')}</button>}
         </>}
+        {!fixedPitch && materialOptions && materialOptions.length > 1 && onMaterialChange && <div className="entry-material" role="group" aria-label={t('materialLabel')}>
+          <span>{t('materialLabel')}</span>
+          <div className="seg-group">
+            {materialOptions.map(m => <button key={m} className={`seg${material === m ? ' on' : ''}`} aria-pressed={material === m} onClick={() => onMaterialChange(m)}>{t(MATERIAL_LABEL[m])}</button>)}
+          </div>
+        </div>}
         {!fixedPitch && <div className="entry-octave">
           <span>{p('音の高さ', 'Pitch')}</span>
           <button className="btn" disabled={!pal.some(n => n.midi < octave * 12)} onClick={() => setOctave(octave - 1)}>{p('−1オクターブ', '−1 octave')}</button>

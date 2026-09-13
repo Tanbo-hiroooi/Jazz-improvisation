@@ -35,7 +35,8 @@
 .entry-position-label { display: flex; align-items: center; gap: 7px; font-size: 14px; color: var(--accent); text-align: center; }
 .entry-position-label i { display: inline-block; width: 3px; height: 22px; background: var(--accent); flex-shrink: 0; }
 .vf-entry-cursor { stroke: #d97706; stroke-width: 3; pointer-events: none; vector-effect: non-scaling-stroke; }
-.vf-rest-hit { fill: transparent; cursor: pointer; }
+/* 当たり判定は透明。SVGルートの stroke を継承すると四角い枠が見えるので切る */
+.vf-rest-hit { fill: transparent; stroke: none; cursor: pointer; }
 .vf-rest-hit:hover { fill: #f59e0b15; }
 .vf-rest-hit:focus-visible { stroke: #b45309; stroke-width: 2; outline: none; }
 .entry-workbench { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
@@ -51,13 +52,15 @@
 .entry-pitch strong { font-size: 17px; }
 .entry-pitch small { font-size: 11px; color: var(--text-dim); }
 .entry-octave { margin-top: 10px; justify-content: flex-start; }
+.entry-material { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.entry-material > span { font-size: 13px; color: var(--text-dim); }
 .entry-octave .btn { font-size: 12px; padding: 6px 9px; }
 .entry-edit-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .entry-edit-actions .seg { padding: 6px 8px; font-size: 12px; }
 .entry-error { color: var(--red); font-size: 13px; margin: 8px 0; }
 .entry-preview { padding: 12px; border: 1px solid var(--accent); border-radius: 8px; margin-bottom: 12px; }
 .entry-preview .btn { margin: 4px; min-height: 44px; }
-.vf-note-hit { fill: transparent; cursor: grab; touch-action: none; }
+.vf-note-hit { fill: transparent; stroke: none; cursor: grab; touch-action: none; }
 .vf-note-hit:focus-visible { stroke: #b45309; stroke-width: 2; outline: none; }
 @media (max-width: 620px) {
   .entry-workbench { position: sticky; top: 8px; z-index: 6; box-shadow: 0 -4px 18px #0003; }

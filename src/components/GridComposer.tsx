@@ -45,16 +45,6 @@ interface Props {
 
 const DEFAULT_MATERIALS: GridMaterial[] = ['chord-tone', 'guide-tone', 'scale', 'blues'];
 
-const MATERIAL_LABEL: Record<GridMaterial, Parameters<typeof tr>[1]> = {
-  'root-only': 'materialRoot',
-  'third-only': 'materialThird',
-  'chord-tone': 'materialChordTone',
-  'guide-tone': 'materialGuideTone',
-  scale: 'materialScale',
-  blues: 'materialBlues',
-  chromatic: 'materialChromatic',
-};
-
 export function GridComposer({
   lang, session, keyPc, progression, initialBpm = 80,
   material, onMaterialChange, bars, onBarsChange, history, hIdx, onHistoryChange,
@@ -215,19 +205,8 @@ export function GridComposer({
       <section className="panel">
         <h2>{t('phraseEditTitle')}</h2>
         <p className="hint-text">{t('gridComposeIntro')}</p>
-        {(materialOptions ?? DEFAULT_MATERIALS).length > 1 && (
-          <div className="field grid-material">
-            <label>{t('materialLabel')}</label>
-            <div className="seg-group">
-              {(materialOptions ?? DEFAULT_MATERIALS).map((m) => (
-                <button key={m} className={`seg${material === m ? ' on' : ''}`} aria-pressed={material === m} onClick={() => onMaterialChange(m)}>
-                  {t(MATERIAL_LABEL[m])}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
         <GridEditor
+          materialOptions={materialOptions ?? DEFAULT_MATERIALS} onMaterialChange={onMaterialChange}
           lang={lang}
           grid={grid}
           onChange={changeGrid}

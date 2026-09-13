@@ -192,7 +192,8 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
   そのうえで最終行が1〜2小節にならないよう、割り切れる/最終行が長い並べ方を選ぶ(8小節=6+2ではなく4+4)。
   検証は「StaffViewを裏で直接renderして`.vf-notehead`のbboxの隙間を測る」のが速い(UIを辿る必要なし)。
   行の判定は**いちばん近いstave**で行うこと(±30pxなどで判定すると、譜表の上に出た音符を隣の行と誤判定する)。
-  素材の選択(コードトーン/ガイドトーン/スケール/ブルース)はグリッドの直上に置く(使える音とセットで見せるため)。
+  素材の選択(コードトーン/ガイドトーン/スケール/ブルース)は入力パネルの「音の高さ」の隣(`entry-material`、GridEditorの`materialOptions`)に置く。
+  レッスンは素材固定なので渡さない。当たり判定の`rect`には`stroke: none`を必ず付ける(SVGルートのstrokeを継承して枠が見える)。
 - engineはシングルトン。`StartOptions`: bpm/countIn/loop/regionBars/metronome/`clickPattern('all'|'backbeat')`/notes/rhythmOnly/comp/swing/コールバック群。
 - スウィング: ウラ拍(x.5)を遅らせる方式。再生とハイライト判定が**同じ**タイミング計算を共有(ズレ防止)。
 - アーティキュレーション再生: accent=velocity×1.25 / staccato=gate0.45 / tenuto=gate1.0。
