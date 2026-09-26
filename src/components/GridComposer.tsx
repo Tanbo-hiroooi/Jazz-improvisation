@@ -2,7 +2,7 @@
 // 素材(コードトーン/ガイドトーン/ブルース)と小節数を選び、自由に作って音で確認する。
 // 「音を確認」はユーザー自身が編集した楽譜の再生であり、見本演奏ではない。
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { GridEditor } from './GridEditor';
 import { StaffView, type ChordDisplay, type LabelMode } from './StaffView';
 import { VolumeControls } from './VolumeControls';
@@ -34,13 +34,6 @@ interface Props {
   onHistoryChange: (history: GridPhrase[], hIdx: number) => void;
   /** 素材の選択肢(省略時は自由練習の既定4種) */
   materialOptions?: GridMaterial[];
-  /** 小節数の選択肢(渡すとプルダウンではなくボタンで選ぶ) */
-  barOptions?: number[];
-  /** 達成チェックリスト(章まとめ練習で使う) */
-  tasks?: { key: string; label: string; met: boolean }[];
-  tasksTitle?: string;
-  /** チェックリストの下に出す補足 */
-  tasksFooter?: ReactNode;
 }
 
 const DEFAULT_MATERIALS: GridMaterial[] = ['chord-tone', 'guide-tone', 'scale', 'blues'];
@@ -48,7 +41,7 @@ const DEFAULT_MATERIALS: GridMaterial[] = ['chord-tone', 'guide-tone', 'scale', 
 export function GridComposer({
   lang, session, keyPc, progression, initialBpm = 80,
   material, onMaterialChange, bars, onBarsChange, history, hIdx, onHistoryChange,
-  materialOptions, barOptions, tasks, tasksTitle, tasksFooter,
+  materialOptions,
 }: Props) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
 
@@ -149,7 +142,7 @@ export function GridComposer({
 
   if (focus) {
     return (
-      <FocusStage lang={lang} title={tasksTitle ?? pick(lang, progression.label, progression.labelEn)} onClose={() => setFocus(false)}>
+      <FocusStage lang={lang} title={pick(lang, progression.label, progression.labelEn)} onClose={() => setFocus(false)}>
         <div className="staff-card">
           <StaffView
             notes={displayedNotes} measures={prog.measures} clef={clef} shift={shift} flats={flats}
@@ -165,23 +158,7 @@ export function GridComposer({
 
   return (
     <div className="composer">
-      {barOptions && barOptions.length > 1 && (
-        <section className="panel">
-          <h2>{t('composerSetupTitle')}</h2>
-          <div className="field">
-            <label>{t('practiceBarsLabel')}</label>
-            <div className="seg-group">
-              {barOptions.map((b) => (
-                <button key={b} className={`seg${bars === b ? ' on' : ''}`} aria-pressed={bars === b} onClick={() => onBarsChange(b)}>
-                  {b}{t('measuresUnit')}
-                </button>
-              ))}
-            </div>
-            <p className="hint-text">{t('practiceBarsHint')}</p>
-          </div>
-        </section>
-      )}
-      {!barOptions && progression.measures > 1 && (
+      {progression.measures > 1 && (
         <section className="panel">
           <h2>{t('composerSetupTitle')}</h2>
           <div className="field">
@@ -224,17 +201,6 @@ export function GridComposer({
           guitarPosition={session.guitarPosition} guitarOpenStrings={session.guitarOpenStrings}
           onUndo={undo} onRedo={redo} canUndo={hIdx > 0} canRedo={hIdx < history.length - 1}
         />
-        {tasks && tasks.length > 0 && (
-          <div className="workout-tasks">
-            {tasksTitle && <h3>{tasksTitle} <span className="key-badge">{tasks.filter((x) => x.met).length} / {tasks.length}</span></h3>}
-            <ul className="req-checklist">
-              {tasks.map((x) => (
-                <li key={x.key} className={x.met ? 'met' : 'unmet'}>{x.met ? '✓' : '○'} {x.label}</li>
-              ))}
-            </ul>
-            {tasksFooter}
-          </div>
-        )}
 
         <div className="transport-opts composer-undo-row">
           <div className="seg-group">

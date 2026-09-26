@@ -29,6 +29,11 @@ export interface StartOptions {
   rhythmOnly?: boolean;
   /** 簡易コード音 */
   comp?: CompEvent[];
+  /**
+   * この拍(リージョン先頭から)以降の譜例の音は鳴らさない。ハイライトは続ける。
+   * 第1章の「聴く→一緒に→ひとりで」で、3周目だけ自分で演奏させるために使う。
+   */
+  silentFromBeat?: number;
   /** スウィング: ウラ拍(8分)を何拍ぶん遅らせるか(0=ストレート, 1/6≒三連スウィング) */
   swing?: number;
   /** 再生位置コールバック: bar はリージョン内小節(カウントイン中は -1) */
@@ -38,11 +43,12 @@ export interface StartOptions {
   onEnded?: () => void;
 }
 
+// 拍 → Transport の tick 表記("123i")。
+// "小節:拍:16分" の文字列だと、3連の加算誤差(34.00000000000001 など)で
+// 16分の値が指数表記("1.4e-14")になり、Tone が別の位置として解釈してしまう。
+// tick の整数に丸めれば 3連(1/3拍)・スウィング(1/6拍)・16分のどれも正確に表せる。
 function beatsToTime(beats: number): string {
-  const bar = Math.floor(beats / 4);
-  const quarter = Math.floor(beats % 4);
-  const sixteenth = (beats % 1) * 4;
-  return `${bar}:${quarter}:${sixteenth}`;
+  return `${Math.round(beats * Tone.getTransport().PPQ)}i`;
 }
 
 /** チャンネル別の音量(0〜1)。チャンネルごとのGainノードで適用する */
@@ -217,9 +223,12 @@ export class AudioEngine {
       // アーティキュレーション: アクセント=強く / スタッカート=半分に切る / テヌート=いっぱいに保つ
       let velocity = nt.velocity;
       let gate = 0.9;
-      if (nt.articulation === 'accent') velocity = Math.min(1, velocity * 1.25);
-      else if (nt.articulation === 'staccato') gate = 0.45;
+      if (nt.articulation === 'staccato') gate = 0.45;
       else if (nt.articulation === 'tenuto') { gate = 1.0; velocity = Math.min(1, velocity * 1.05); }
+      // アクセントは最大音量にする(普通の音との差を耳で分かるように。「短く強く」も含む)
+      if (nt.articulation === 'accent' || nt.accent) velocity = 1;
+      // ゴースト: ほとんど聞こえないくらい弱く、少し短く
+      if (nt.ghost) { velocity = Math.min(velocity, 0.25); gate = Math.min(gate, 0.6); }
       return { midi: nt.midi, velocity, start, duration, gate };
     });
 
@@ -250,7 +259,8 @@ export class AudioEngine {
     // お手本の音。Rhythm Only では音を鳴らさず、譜面上の赤いガイド(onNoteIndex)だけを
     // リズムに合わせて動かす(打音は鳴らさない)。
     if (timedNotes.length > 0 && !opts.rhythmOnly) {
-      const events = timedNotes.map((nt) => ({
+      const silentFrom = opts.silentFromBeat ?? Infinity;
+      const events = timedNotes.filter((nt) => nt.start < silentFrom - 1e-6).map((nt) => ({
         time: beatsToTime(nt.start + offsetBars * 4),
         midi: nt.midi,
         duration: nt.duration,

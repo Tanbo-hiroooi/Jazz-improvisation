@@ -21,7 +21,7 @@ export interface GridEditorProps {
   onUndo?: () => void; onRedo?: () => void; canUndo?: boolean; canRedo?: boolean;
   labelMode?: LabelMode; onLabelModeChange?: (mode: LabelMode) => void;
   onFocus?: () => void;
-  /** 使う音の素材を切り替えられるとき(自由練習・章まとめ)の選択肢。「音の高さ」の隣に出す */
+  /** 使う音の素材を切り替えられるとき(自由練習)の選択肢。「音の高さ」の隣に出す */
   materialOptions?: GridMaterial[]; onMaterialChange?: (m: GridMaterial) => void;
 }
 export const MATERIAL_LABEL: Record<GridMaterial, Parameters<typeof tr>[1]> = {

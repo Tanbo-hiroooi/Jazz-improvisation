@@ -4,12 +4,12 @@
 プロジェクトの方針・アーキテクチャ・過去のバグから確立した設計原則・開発ワークフローの正本です。
 このファイルは「最低限の要点」と「直近の引き継ぎ」だけを載せています。
 
-最終更新: 2026-09-13(Claude → Codex への引き継ぎ)
+最終更新: 2026-09-26(第1章をリズム譜方式に刷新)
 
 ## 現在地
 
 - 公開アプリ: https://tanbo-hiroooi.github.io/Jazz-improvisation/ (`main` への push で GitHub Actions が自動デプロイ)
-- 最新コミット: `5eed7c6 Simplify the pitch row: one octave pair and always-visible articulation`(公開済み)
+- 最新の公開コミット: 第1章の刷新(下記 2026-09-26、`Rebuild chapter 1 as one-page rhythm scores`)。
 - 作業開始時は `git status --short` と `git log -10 --oneline` で、この記述より新しい変更が無いか確認すること。
 
 ## 絶対に守る契約(詳細は HANDOFF.md §2・§10)
@@ -28,17 +28,30 @@
 
 ```bash
 npx tsc --noEmit
-npm run test:entry   # 入力・グリッド・スウィングに触れたら(gridEntry 1303件 + swing 12件)
+npm run test:entry   # 入力・グリッド・スウィング・リズム譜に触れたら(gridEntry 1303件 + swing 12件 + rhythm 5300件)
 npm run build
 ```
 
 そのうえで実ブラウザ(`npm run dev` → localhost:5173)で対象操作を実際に行い、console error 0・幅390pxで横スクロール無しを確認する。
 譜面の検証は「StaffView を裏で直接 render して `.vf-notehead` / `g.vf-tuplet` の bbox を測る」のが速い(HANDOFF §8 参照)。
-コース全体に影響する変更は、全27レッスン・全51STEPを走査してから報告する。
+コース全体に影響する変更は、全32レッスン・全50STEP(編集25・リズム譜10)を走査してから報告する。
+
+## 2026-09-26 の変更: 第1章をリズム譜方式に刷新
+
+オーナーの課題: 真っ白な譜面に1音ずつ置くのが手間/4小節ごとにSTEPを押すのが手間/説明文が多く散らばっている/
+楽器経験者に全音符・4分音符の入門は不要。詳細は HANDOFF.md §5「第1章はリズム譜方式」。
+
+- 第1章は10レッスン: 基本3(スウィング/食い/3連)+実戦のリズム6(単語・ピックアップ・形をずらす・アクセントとゴースト・3連と4分3連・間と長さ)+ブルース12小節の1音ソロ。
+  各レッスンは1STEP・1枚の譜面(A〜Dのブロック)。「▶ 聴く→一緒に→ひとりで」(3周ループ、3周目は譜例の音なし)と「♪ 聴く」。
+- 新規: `src/theory/rhythmScore.ts`(リズム譜の文字列表記)、`tests/rhythm.test.ts`、StepPractice の `RhythmStepBody`。
+- 再生: `startPlayback(kind, { passes, silentFromPass })`、engine の `silentFromBeat`、ghost/重ねアクセント。Part の時刻は tick 整数(`"123i"`)に変更(3連の誤差で同時刻に2音が入るバグの修正)。
+- 譜面: 4分3連、ゴーストの括弧、ブロック見出し枠(`sections`)、口ずさみ表示(`labelMode 'scat'`)。
+- 撤去: 章まとめ練習(`ChapterWorkoutScreen`)を全章から。GridComposer の `barOptions/tasks` も削除。
+- 一覧にレッスンの区分見出し(Lesson.`part`)。selfCheck が空のレッスンは自己チェック欄を出さない。
 
 ## 2026-09-13 に完了した変更(Claude セッション、7コミット)
 
-フレーズ編集(自由練習「フレーズを作る」・レッスンの編集STEP・章まとめ練習で共通の `GridEditor`)を
+フレーズ編集(自由練習「フレーズを作る」・レッスンの編集STEPで共通の `GridEditor`)を
 「全体譜の上で直接編集する」形に作り替えた。詳細は HANDOFF.md §8「音符の順番入力」。
 
 | コミット | 内容 |

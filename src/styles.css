@@ -944,23 +944,19 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
 }
 .grid-bar-chord { font-weight: 700; font-size: 14px; color: var(--accent); }
 .grid-copy-btn { margin-left: auto; }
-/* ---- 章まとめ練習 ---- */
-.workout-open-btn { width: 100%; margin-top: 10px; }
-.workout-tasks {
-  margin-top: 10px;
-  padding: 10px 12px;
-  background: var(--bg-panel-2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+/* ---- 第1章のリズム譜 ---- */
+.lesson-part { margin: 10px 0 4px; font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 0.06em; }
+.rhythm-blocks { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 8px; padding: 0; }
+.rhythm-blocks li {
+  padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px;
+  font-size: 12px; color: var(--text-dim); background: var(--bg);
 }
-.workout-tasks h3 {
-  margin: 0 0 6px;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.workout-tasks .req-checklist { margin: 0; }
+.rhythm-blocks li.on { border-color: var(--accent); color: var(--text); background: var(--accent-soft); }
+.rhythm-block-letter { font-weight: 700; color: var(--accent); }
+.rhythm-now { margin: 8px 0; min-height: 1.5em; font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rhythm-pass { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
+.rhythm-pass.pass-2 { background: #16a34a22; color: #4ade80; }
+.focus-stage .rhythm-now { justify-content: center; flex: 0 0 auto; margin: 0; }
 
 /* ---- 集中モード(譜面だけを全画面に出す) ---- */
 body.focus-open { overflow: hidden; }

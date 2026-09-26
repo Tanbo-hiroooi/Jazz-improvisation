@@ -46,6 +46,7 @@ import {
 } from '../theory/phrases';
 import { changeMeasures, fitProgression, type Progression } from '../theory/progressions';
 import { loadCourseProgress, saveCourseProgress } from '../state/storage';
+import { rhythmNotes } from '../theory/rhythmScore';
 import { pick, t as tr, type Lang } from '../i18n';
 
 /** STEPのcontent設定から、説明と完全に一致する音だけを生成する */
@@ -248,6 +249,128 @@ function FixedStepBody({
     <>
       <StaffHead lang={lang} labelMode={labelMode} setLabelMode={setLabelMode} onFocus={() => setFocus(true)} />
       {stage}
+    </>
+  );
+}
+
+const BLOCK_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
+/** 3周の役割: 1周目=譜例を聴く / 2周目=一緒に演奏 / 3周目=譜例の音なしで自分だけ */
+const PASS_KEYS = ['rhythmPassListen', 'rhythmPassTogether', 'rhythmPassSolo'] as const;
+
+/**
+ * 第1章のリズム譜: 4小節×数ブロックの1枚の譜面を、止めずに通して演奏する。
+ * 説明は譜面上の見出しと、いま演奏しているブロックの1行だけにする。
+ */
+function RhythmStepBody({
+  lang, content, progression, keyPc, shift, flats, clef, notation, guitarPosition, guitarOpenStrings,
+  bpm, countIn, metronomeOn, clickPattern, compOn, registerStop,
+  focus, setFocus, optionsNode, focusTitle,
+}: SharedProps & { content: StepContent }) {
+  const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
+  const blocks = content.rhythmBlocks ?? [];
+  const allBars = useMemo(() => blocks.flatMap((b) => b.bars), [blocks]);
+  const prog = useMemo(() => fitProgression(progression, allBars.length), [progression, allBars.length]);
+  // ブロックの先頭小節(見出しと「いまどこか」の判定に使う)
+  const blockStarts = useMemo(() => {
+    const out: number[] = [];
+    let m = 0;
+    for (const b of blocks) { out.push(m); m += b.bars.length; }
+    return out;
+  }, [blocks]);
+  const [scat, setScat] = useState(true);
+  const displayedNotes = useMemo(() => rhythmNotes(allBars, prog, keyPc, lang), [allBars, prog, keyPc, lang]);
+  const chordDisplays = useMemo(() => chordDisplaysFor(prog, keyPc, shift, flats), [prog, keyPc, shift, flats]);
+  const sections = useMemo(
+    () => blocks.map((b, i) => ({ measure: blockStarts[i], label: `${BLOCK_LETTERS[i]} ${pick(lang, b.label.ja, b.label.en)}` })),
+    [blocks, blockStarts, lang],
+  );
+
+  const { playing, position, currentNoteIndex, startPlayback, stopAll } = usePracticePlayback({
+    progression: prog, effKeyPc: keyPc, displayedNotes, bpm, countIn,
+    loopEnabled: true, metronomeOn, clickPattern, compOn, swing: 1 / 6, loopRange: 'full', selectedMeasure: 0,
+  });
+  useEffect(() => {
+    registerStop(stopAll);
+    return () => registerStop(null);
+  }, [stopAll, registerStop]);
+
+  const [cycling, setCycling] = useState(false);
+  const startCycle = () => {
+    setCycling(true);
+    setFocus(true);
+    void startPlayback('example', { passes: 3, silentFromPass: 2 });
+  };
+  const listen = () => {
+    setCycling(false);
+    void startPlayback('example');
+  };
+  const inBar = position && position.measure >= 0 ? position.measure : -1;
+  const currentBlock = inBar < 0 ? (playing ? -1 : 0) : blockStarts.reduce((cur, st, i) => (inBar >= st ? i : cur), 0);
+  const pass = playing && cycling && position && position.measure >= 0 ? position.pass : -1;
+
+  const blockRow = (
+    <ol className="rhythm-blocks" aria-label={t('rhythmBlocksLabel')}>
+      {blocks.map((b, i) => (
+        <li key={i} className={i === currentBlock ? 'on' : ''}>
+          <span className="rhythm-block-letter">{BLOCK_LETTERS[i]}</span> {pick(lang, b.label.ja, b.label.en)}
+        </li>
+      ))}
+    </ol>
+  );
+  const nowLine = (
+    <p className="rhythm-now" aria-live="polite">
+      {pass >= 0 && <span className={`rhythm-pass pass-${pass}`}>{t(PASS_KEYS[pass])}</span>}
+      {currentBlock >= 0 && blocks[currentBlock] ? pick(lang, blocks[currentBlock].hint.ja, blocks[currentBlock].hint.en) : t('countInBanner')}
+    </p>
+  );
+  const staff = (
+    <div className="staff-card">
+      <StaffView
+        notes={displayedNotes} measures={prog.measures} clef={clef} shift={shift} flats={flats}
+        labelMode={scat ? 'scat' : 'none'} chords={chordDisplays} currentIndex={currentNoteIndex}
+        notation={notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings}
+        sections={sections}
+      />
+    </div>
+  );
+  const transport = (
+    <div className="transport-main">
+      {playing ? (
+        <button className="btn big stop" onClick={() => { stopAll(); setCycling(false); }}>■ Stop</button>
+      ) : (
+        <>
+          <button className="btn big start" onClick={startCycle}>▶ {t('rhythmCycle')}</button>
+          <button className="btn big example" onClick={listen}>♪ {t('rhythmListen')}</button>
+        </>
+      )}
+    </div>
+  );
+
+  if (focus) {
+    return (
+      <FocusStage lang={lang} title={focusTitle} onClose={() => setFocus(false)}>
+        {nowLine}
+        {staff}
+        {transport}
+        <details className="focus-settings"><summary>{t('focusSettings')}</summary>{optionsNode}</details>
+      </FocusStage>
+    );
+  }
+  return (
+    <>
+      <div className="staff-head">
+        <h4>{t('staffTitle')}</h4>
+        <div className="staff-head-tools">
+          <label className="toggle"><input type="checkbox" checked={scat} onChange={(e) => setScat(e.target.checked)} /> {t('labelScat')}</label>
+          <button className="btn tiny focus-open-btn" onClick={() => setFocus(true)}>⛶ {t('focusOpen')}</button>
+        </div>
+      </div>
+      {blockRow}
+      {staff}
+      {nowLine}
+      {transport}
+      <p className="hint-text">{t('rhythmCycleHint')}</p>
+      {optionsNode}
     </>
   );
 }
@@ -586,12 +709,14 @@ export function StepPractice({
     </div>
   );
   // 集中モードの見出しは「いまやること」1行
-  const focusLine = `${p(step.title)} — ${p(step.editable ? step.editable.task : step.instruction)}`;
+  const isRhythm = step.content?.source === 'rhythm';
+  const focusLine = isRhythm ? p(step.title) : `${p(step.title)} — ${p(step.editable ? step.editable.task : step.instruction)}`;
 
   return (
     <section className="panel step-practice">
       <h2>{t('practiceTitle')}</h2>
 
+      {!isRhythm && <>
       <div className="step-tablist" role="tablist" aria-label={t('stepsTitle')}>
         {lesson.steps.map((s, i) => (
           <button
@@ -624,6 +749,7 @@ export function StepPractice({
         )}
         {step.editable && <p className="hint-text editable-task">📝 {p(step.editable.task)}</p>}
       </div>
+      </>}
 
       <div className="field-row">
         <div className="field">
@@ -722,7 +848,17 @@ export function StepPractice({
         </div>
       )}
 
-      {step.editable ? (
+      {isRhythm ? (
+        <RhythmStepBody
+          key={currentStep}
+          lang={lang} content={step.content!} progression={progression} keyPc={keyPc} shift={shift} flats={flats}
+          clef={clef} notation={notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings}
+          bpm={bpm} countIn={countIn} metronomeOn={metronomeOn} clickPattern={clickPattern} compOn={compOn}
+          labelMode={labelMode} setLabelMode={setLabelMode}
+          registerStop={registerStop}
+          focus={focus} setFocus={setFocus} optionsNode={optionsNode} focusTitle={focusLine}
+        />
+      ) : step.editable ? (
         <EditableStepBody
           key={`${currentStep}-${stepEditable!.bars}`}
           lang={lang} editable={stepEditable!} progression={progression} keyPc={keyPc} shift={shift} flats={flats}
@@ -748,7 +884,7 @@ export function StepPractice({
 
       <VolumeControls lang={lang} />
 
-      <div className="step-footer-nav">
+      {!isRhythm && <div className="step-footer-nav">
         <button className="btn" onClick={() => goToStep(Math.max(0, currentStep - 1))} disabled={currentStep === 0}>
           ← {t('prevStep')}
         </button>
@@ -760,7 +896,7 @@ export function StepPractice({
         >
           {t('nextStep')} →
         </button>
-      </div>
+      </div>}
     </section>
   );
 }

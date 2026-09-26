@@ -202,8 +202,9 @@ export function LessonScreen({
 
       {/* ③ できたかチェック */}
       <section className="panel">
-        <h2>☑ {t('todayCheck')}</h2>
-        <ul className="check-list">
+        {/* 第1章のリズム譜は自己評価の項目を持たない(文章を増やさないため) */}
+        {lesson.selfCheck.length > 0 && <h2>☑ {t('todayCheck')}</h2>}
+        {lesson.selfCheck.length > 0 && <ul className="check-list">
           {lesson.selfCheck.map((c, i) => (
             <li key={i}>
               <label className="toggle check-item">
@@ -216,7 +217,7 @@ export function LessonScreen({
               </label>
             </li>
           ))}
-        </ul>
+        </ul>}
         <textarea
           value={memo}
           onChange={(e) => setMemo(e.target.value)}

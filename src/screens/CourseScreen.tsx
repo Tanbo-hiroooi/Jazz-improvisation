@@ -1,8 +1,7 @@
 // 練習コース: 章ごとにレッスンを一覧表示し、進捗を管理
 
 import { useState } from 'react';
-import { CHAPTERS, COURSES, chapterWorkout, courseLessonIds, getLesson, lessonsOfChapter } from '../data/courses';
-import { ChapterWorkoutScreen } from './ChapterWorkoutScreen';
+import { CHAPTERS, COURSES, courseLessonIds, getLesson, lessonsOfChapter } from '../data/courses';
 import { loadCourseProgress, saveCourseProgress, type MyInstrumentSettings } from '../state/storage';
 import { pick, t as tr, type Lang } from '../i18n';
 import { LessonScreen } from './LessonScreen';
@@ -21,8 +20,7 @@ interface Props {
 export function CourseScreen({ lang, session, onPatchSession, onChangeInstrument, onSaveBase, selectedLessonId, onSelectLesson }: Props) {
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
   const [progress, setProgress] = useState(loadCourseProgress);
-  // 章まとめ練習(章を1つの譜面で通す)
-  const [workoutChapterId, setWorkoutChapterId] = useState<string | null>(null);
+
 
   const markDone = (lessonId: string) => {
     if (!progress.completedLessonIds.includes(lessonId)) {
@@ -31,23 +29,6 @@ export function CourseScreen({ lang, session, onPatchSession, onChangeInstrument
       saveCourseProgress(next);
     }
   };
-
-  if (workoutChapterId) {
-    const chapter = CHAPTERS.find((c) => c.id === workoutChapterId);
-    const workout = chapterWorkout(workoutChapterId);
-    if (chapter && workout) {
-      return (
-        <ChapterWorkoutScreen
-          key={workoutChapterId}
-          lang={lang}
-          session={session}
-          chapter={chapter}
-          workout={workout}
-          onBack={() => setWorkoutChapterId(null)}
-        />
-      );
-    }
-  }
 
   if (selectedLessonId) {
     const lesson = getLesson(selectedLessonId);
@@ -115,8 +96,11 @@ export function CourseScreen({ lang, session, onPatchSession, onChangeInstrument
                     {lessons.map((lesson, i) => {
                       const isDone = progress.completedLessonIds.includes(lesson.id);
                       const isNext = lesson.id === nextLessonId;
+                      // 章の中の区切り(第1章の「基本」「実戦のリズム」)
+                      const partStart = lesson.part && lesson.part.ja !== lessons[i - 1]?.part?.ja;
                       return (
                         <li key={lesson.id}>
+                          {partStart && <p className="lesson-part">{pick(lang, lesson.part!.ja, lesson.part!.en)}</p>}
                           <button
                             className={`lesson-item${isDone ? ' done' : ''}${isNext ? ' next' : ''}`}
                             onClick={() => onSelectLesson(lesson.id)}
@@ -138,11 +122,6 @@ export function CourseScreen({ lang, session, onPatchSession, onChangeInstrument
                       );
                     })}
                   </ul>
-                  {chapterWorkout(cid) && (
-                    <button className="btn workout-open-btn" onClick={() => setWorkoutChapterId(cid)}>
-                      {t('workoutOpen')}
-                    </button>
-                  )}
                 </section>
               );
             })}

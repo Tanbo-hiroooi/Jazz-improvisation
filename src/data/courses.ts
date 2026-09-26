@@ -22,11 +22,27 @@ export interface Bi {
 }
 
 /** 固定譜例の内容(STEPの説明と完全に一致する音だけを生成する) */
+/**
+ * リズム譜の1ブロック(4小節)。1枚の譜面に並べ、再生しながら続けて演奏する。
+ * bars の書式は theory/rhythmScore.ts を参照。
+ */
+export interface RhythmBlock {
+  /** 譜面の上に出す短い見出し */
+  label: Bi;
+  /** 再生中に1行だけ出す、やること */
+  hint: Bi;
+  bars: string[];
+}
+
 export interface StepContent {
   source:
     | 'root' | 'third' | 'seventh' | 'chord-tones' | 'guide-tones' | 'target' | 'approach'
     | 'approach-pair' | 'enclosure' | 'landing-approach' | 'scale' | 'tension' | 'custom-path'
-    | 'sample-motif' | 'blues-riff' | 'blue-note-demo';
+    | 'sample-motif' | 'blues-riff' | 'blue-note-demo'
+    /** 第1章: 1枚の長いリズム譜(rhythmBlocks) */
+    | 'rhythm';
+  /** source='rhythm' のブロック */
+  rhythmBlocks?: RhythmBlock[];
   rhythm?: DegreePathRhythm;
   arpPattern?: ArpPatternId;
   path?: StepDegree[];
@@ -84,6 +100,8 @@ export interface Lesson {
   progressionId: ProgressionId;
   /** 章の最後の「通し」レッスン(12小節を1コーラス作る) */
   isThrough?: boolean;
+  /** レッスン一覧で章の中を区切る見出し(第1章の「基本」「実戦のリズム」など) */
+  part?: Bi;
   /** ② STEP */
   steps: PracticeStep[];
   /** ③ できたかチェック */
@@ -126,8 +144,8 @@ export const COURSES: Course[] = [
 export const CHAPTERS: Chapter[] = [
   {
     id: 'ch1',
-    title: b('第1章: 1音とリズムだけでスウィングする', 'Ch. 1: Swing with one note and rhythm'),
-    purpose: b('音は1音だけ。リズム・休符・裏拍でジャズのノリを体に入れる。', 'One note only — internalize the feel through rhythm, rests and offbeats.'),
+    title: b('第1章: リズムでスウィングする', 'Ch. 1: Swing through rhythm'),
+    purpose: b('1枚の譜面を聴いて、続けて演奏する。基本のノリから、ソロで実際に使うリズムまで。', 'Hear one long score, then play it straight through — from the basic feel to rhythms used in real solos.'),
   },
   {
     id: 'ch2',
@@ -157,206 +175,287 @@ export const CHAPTERS: Chapter[] = [
 ];
 
 export const LESSONS: Lesson[] = [
-  // ================= 第1章 1音とリズムだけでスウィングする =================
+  // ================= 第1章 リズムでスウィングする =================
+  // 前半「基本」3レッスン + 後半「実戦のリズム」6レッスン + 締めくくり。
+  // どれも1枚の長いリズム譜(4小節×4ブロック)。聴く→一緒に→ひとりで、を周回して演奏する。
   {
-    id: 'r1-quarters',
+    id: 'r1-swing',
     chapterId: 'ch1',
-    title: b('4分音符と休みだけで作る', 'Build a line from quarters and rests'),
-    technicalName: b('スウィング', 'Swing'),
-    outcome: b('2・4拍のクリックに乗って、4分音符と休みだけで演奏できる。', 'You can groove over a 2-and-4 click with nothing but quarter notes and rests.'),
+    part: b('基本', 'Basics'),
+    title: b('スウィングに乗る', 'Ride the swing'),
+    outcome: b('2・4拍のクリックに乗って、跳ねる8分と裏拍のリズムを演奏しよう。', 'Ride the 2-and-4 click with bouncing 8ths and offbeats.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    tempoLadder: LADDER_BPM,
+    steps: [
+      {
+        title: b('スウィングに乗る', 'Ride the swing'),
+        instruction: b('2・4拍のクリックに乗って、跳ねる8分と裏拍のリズムを演奏しよう。', 'Ride the 2-and-4 click with bouncing 8ths and offbeats.'),
+        content: { source: 'rhythm', rhythmBlocks: [
+          { label: b('スウィング8分', 'Swing 8ths'), hint: b('8分を「ドゥダ」と跳ねて', 'Bounce the 8ths: doo-dah'), bars: ['8 8 8 8 8 8 8 8', '8 8 8 8 8 8 8 8', '8 8 8 8 8 8 8 8', '4 4 2'] },
+          { label: b('裏拍だけ', 'Offbeats only'), hint: b('オモテを休んで、裏だけ', 'Rest on the beat, play the and'), bars: ['r8 8 r8 8 r8 8 r8 8', 'r8 8 r8 8 r8 8 r8 8', 'r8 8 r8 8 r8 8 r8 8', 'r8 8 r8 8 r2'] },
+          { label: b('チャールストン', 'Charleston'), hint: b('1拍目と2拍目の裏', 'Beat 1 and the and of 2'), bars: ['4. 8 r2', '4. 8 r2', '4. 8 r2', '4. 8 r2'] },
+          { label: b('2・4拍に置く', 'Sit on 2 and 4'), hint: b('クリックと同じ2・4拍で、間をとって', 'Play with the click on 2 and 4, leaving space'), bars: ['r4 4 r4 4', 'r4 4 r4 4', '4. 8 r2', 'r4 4 r2'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('ジャズのリズム隊は2・4拍を刻み、8分音符は長短に跳ねます。この2つが揃うと、同じ音でもジャズに聞こえます。', 'The rhythm section marks 2 and 4, and jazz 8ths are long-short. Together they make even one note sound like jazz.'),
+      mistakes: [b('クリックを1・3拍と勘違いする → クリックは2・4拍', 'Hearing the click as 1 and 3 — it is on 2 and 4')],
+    },
+  },
+  {
+    id: 'r1-forward',
+    chapterId: 'ch1',
+    part: b('基本', 'Basics'),
+    title: b('食いで前へ進む', 'Lean forward with anticipations'),
+    outcome: b('拍や小節線の少し手前で音を出して、前へ進むノリを作ろう。', 'Play just ahead of the beat or barline to push the groove forward.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    tempoLadder: LADDER_BPM,
+    steps: [
+      {
+        title: b('食いで前へ進む', 'Lean forward with anticipations'),
+        instruction: b('拍や小節線の少し手前で音を出して、前へ進むノリを作ろう。', 'Play just ahead of the beat or barline to push the groove forward.'),
+        content: { source: 'rhythm', rhythmBlocks: [
+          { label: b('4拍目の裏で食う', 'Anticipate the bar'), hint: b('次の小節の頭を半拍早く', 'Play the next downbeat half a beat early'), bars: ['4 4 4 r8 8_', '4 r4 r2', '4 4 4 r8 8_', '4 r4 r2'] },
+          { label: b('2拍目の裏で食う', 'Anticipate beat 3'), hint: b('3拍目を半拍早く', 'Play beat 3 half a beat early'), bars: ['4 r8 8_ 4 r4', '4 r8 8_ 4 r4', 'r4 r8 8_ 4 4', '2 r2'] },
+          { label: b('裏から入るチャールストン', 'Reverse Charleston'), hint: b('1拍目の裏と3拍目', 'The and of 1, then beat 3'), bars: ['r8 4. 4 r4', 'r8 4. 4 r4', 'r8 4. 4 r4', 'r8 4. 4 r4'] },
+          { label: b('食いと休み', 'Anticipations and space'), hint: b('食いと休みを混ぜて', 'Mix anticipations with rests'), bars: ['r8 4. 4 r8 8_', '4 r4 r2', '4. 8 r4 r8 8_', '2 r2'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('拍の頭ちょうどに置き続けると行進曲になります。半拍早く出すと、そこに推進力が生まれます。', 'Landing squarely on every beat sounds like a march. Arriving half a beat early creates drive.'),
+      mistakes: [b('食いのあと拍を見失う → 食った音の長さを数えずに、次の2・4拍を聴く', 'Losing the beat after an anticipation — listen for the next 2 and 4')],
+    },
+  },
+  {
+    id: 'r1-triplet',
+    chapterId: 'ch1',
+    part: b('基本', 'Basics'),
+    title: b('3連を混ぜる', 'Mix in triplets'),
+    outcome: b('1拍だけ3連にして、リズムに細かい彩りを混ぜよう。', 'Turn a single beat into triplets to add fine color.'),
     progressionId: 'ii-V-I',
     defaultBpm: 70,
     clickPattern: 'backbeat',
     tempoLadder: LADDER_BPM,
     steps: [
       {
-        title: b('2・4拍を感じる', 'Feel 2 and 4'),
-        instruction: b('クリックは2拍目と4拍目だけ鳴ります。譜例を聴いて、同じように演奏してみよう。', 'The click sounds only on beats 2 and 4. Listen, then play along.'),
-        rules: [b('音はルート1音だけ', 'One note only — the root'), b('2・4拍を体で感じる', 'Feel beats 2 and 4 in your body')],
-        content: { source: 'root', rhythm: 'basic' },
-      },
-      {
-        title: b('自分のリズムを作る', 'Build your own rhythm'),
-        instruction: b('4分音符を選び、音符と休符を順に入力して{bars}小節を作ろう。', 'Choose quarter notes, then enter notes and rests to build {bars} bars.'),
-        rules: [b('4分音符と休みだけ', 'Quarters and rests only'), b('音の高さは考えない', 'Ignore pitch for now')],
-        editable: {
-          material: 'root-only', bars: 4, divisions: [1], initial: 'empty', initialDivision: 1, fixedPitch: true,
-          conditions: { minNotes: 6, minRestBeats: 2 },
-          requiredAction: 'any-change',
-          task: b('音を{minNotes}個以上、休みを{minRest}拍以上入れて作ろう。', 'Use at least {minNotes} notes and {minRest} beats of rest.'),
-        },
+        title: b('3連を混ぜる', 'Mix in triplets'),
+        instruction: b('1拍だけ3連にして、リズムに細かい彩りを混ぜよう。', 'Turn a single beat into triplets to add fine color.'),
+        content: { source: 'rhythm', rhythmBlocks: [
+          { label: b('1拍だけ3連', 'One triplet beat'), hint: b('1拍を3つに', 'Split one beat into three'), bars: ['t8 t8 t8 4 r4 4', 't8 t8 t8 4 r4 4', '4 t8 t8 t8 r4 4', '2 r2'] },
+          { label: b('3連を続ける', 'Keep the triplets going'), hint: b('2拍続けて3つずつ', 'Two beats of triplets in a row'), bars: ['t8 t8 t8 t8 t8 t8 4 r4', 't8 t8 t8 t8 t8 t8 4 r4', 't8 t8 t8 t8 t8 t8 4 r4', '2 r2'] },
+          { label: b('スウィングを3連で', 'Swing as triplets'), hint: b('「ター・タ」は3連の1つ目と3つ目', 'Swing is the first and last of a triplet'), bars: ['t4 t8 t4 t8 t4 t8 t4 t8', 't4 t8 t4 t8 t4 t8 t4 t8', 't4 t8 t4 t8 t4 t8 t4 t8', 't4 t8 t4 t8 r2'] },
+          { label: b('3連で食う', 'Anticipate with triplets'), hint: b('3連の最後から次の小節へ', 'From the last triplet into the next bar'), bars: ['t8 t8 t8 4 4 r4', '8 8 t8 t8 t8 2', '4 4 4 t8 t8 t8_', '4 r4 r2'] },
+        ] },
       },
     ],
-    selfCheck: [
-      b('2・4拍のクリックを聴きながら演奏できた', 'I played while hearing the 2-and-4 click'),
-      b('休みの間もノリが途切れなかった', 'The groove kept going through my rests'),
-    ],
+    selfCheck: [],
     trivia: {
-      why: b('ジャズのリズム隊はハイハットを2・4拍で刻みます。数える場所を移すだけで、同じ4分音符がジャズに聞こえます。', 'Jazz drummers mark beats 2 and 4. Just moving your inner count there makes the same quarters swing.'),
-      mistakes: [b('クリックを1・3拍と勘違いして裏返る → クリックは2・4拍', 'Hearing the click as 1 and 3 — flip it: the click is 2 and 4')],
+      why: b('スウィングの跳ねは3連が土台です。3連を1拍だけ混ぜると、そこだけ密度が上がって印象が残ります。', 'Swing is built on triplets. One triplet beat raises the density in one spot and makes it stand out.'),
+      mistakes: [b('3連のあと次の拍に戻れない → 3連の次の拍の頭を少し強く', 'Losing the next beat after a triplet — lean on the next downbeat')],
     },
-    estimatedMinutes: 6,
   },
   {
-    id: 'r1-eighths',
+    id: 'r2-words',
     chapterId: 'ch1',
-    title: b('裏拍から音を出す', 'Start notes on the offbeat'),
-    technicalName: b('裏拍', 'Offbeats'),
-    outcome: b('スウィングする8分音符を演奏し、裏拍から音を置ける。', 'You can play swinging 8ths and start notes on the offbeats.'),
+    part: b('実戦のリズム', 'Rhythms from real solos'),
+    title: b('リズムの単語を覚える', 'Learn rhythmic words'),
+    outcome: b('ジャズのソロでよく使う、裏拍で終わる短いリズムを覚えよう。', 'Learn short rhythms from jazz solos that end on an offbeat.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    tempoLadder: LADDER_BPM,
+    steps: [
+      {
+        title: b('リズムの単語を覚える', 'Learn rhythmic words'),
+        instruction: b('ジャズのソロでよく使う、裏拍で終わる短いリズムを覚えよう。', 'Learn short rhythms from jazz solos that end on an offbeat.'),
+        content: { source: 'rhythm', rhythmBlocks: [
+          { label: b('2拍目から4拍目の裏まで', 'Beat 2 to the and of 4'), hint: b('最後の音は短く強く', 'Make the last note short and strong'), bars: ['r4 8 8 8 8 8 8/as', 'r1', 'r4 8 8 8 8 8 8/as', 'r1'] },
+          { label: b('1拍目の裏から4拍目の裏まで', 'The and of 1 to the and of 4'), hint: b('裏で入って裏で終わる', 'Start on an and, end on an and'), bars: ['r8 8 8 8 8 8 8 8/as', 'r1', 'r8 8 8 8 8 8 8 8/as', 'r1'] },
+          { label: b('4拍目の裏から入る', 'Enter on the and of 4'), hint: b('前の小節の終わりから', 'Start at the end of the previous bar'), bars: ['r2 r4 r8 8', '8 8 8 8 8/as r8 r4', 'r2 r4 r8 8', '8 8 8 8 8/as r8 r4'] },
+          { label: b('「ドゥ・バッ」で締める', 'End with doo-BAP'), hint: b('2音で短く締める', 'Close with two short notes'), bars: ['r4 8 8 8 8 8 8', '4 8 8/as r2', 'r8 8 8 8 8 8 8 8', '8 8/as r2 r4'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('ビバップの奏者は、裏拍で始めて裏拍で終わる短いリズムを単語のように使い回します。形を覚えると、ソロの入り方と終わり方に迷わなくなります。', 'Bebop players reuse short rhythms that start and end on offbeats, like words. Knowing them tells you how to begin and end a phrase.'),
+      mistakes: [b('最後の音が長くなる → 「バッ」と短く切る', 'The last note rings on — cut it short: bap')],
+    },
+  },
+  {
+    id: 'r2-pickup',
+    chapterId: 'ch1',
+    part: b('実戦のリズム', 'Rhythms from real solos'),
+    title: b('1拍目へ向かって弾く', 'Aim for beat 1'),
+    outcome: b('小節の手前から始めて、次の1拍目に着地しよう。', 'Start before the bar and land on the next beat 1.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    tempoLadder: LADDER_BPM,
+    steps: [
+      {
+        title: b('1拍目へ向かって弾く', 'Aim for beat 1'),
+        instruction: b('小節の手前から始めて、次の1拍目に着地しよう。', 'Start before the bar and land on the next beat 1.'),
+        content: { source: 'rhythm', rhythmBlocks: [
+          { label: b('3拍目の裏から', 'From the and of 3'), hint: b('1拍目の長い音へ', 'Into a long note on beat 1'), bars: ['r2 r8 8 8 8', '2/t r2', 'r2 r8 8 8 8', '2/t r2'] },
+          { label: b('4拍目から', 'From beat 4'), hint: b('2つの音で1拍目へ', 'Two notes into beat 1'), bars: ['r2 r4 8 8', '2/t r2', 'r2 r4 8 8', '2/t r2'] },
+          { label: b('2拍目から長い助走', 'A long run-up from beat 2'), hint: b('たっぷり進んで着地', 'Travel, then land'), bars: ['r4 8 8 8 8 8 8', '2/t r2', 'r4 8 8 8 8 8 8', '2/t r2'] },
+          { label: b('3拍目にも着地', 'Land on beat 3 too'), hint: b('1拍目と3拍目の両方へ', 'Aim for beat 1 and beat 3'), bars: ['r2 r8 8 8 8', '4/t r8 8 4/t r4', 'r2 r8 8 8 8', '4/t r8 8 4/t r4'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('1拍目はフレーズの始まりではなく、向かっていく着地点です。手前から助走をつけると、フレーズが前へ進みます。', 'Beat 1 is where a phrase arrives, not where it starts. A run-up from before the bar makes the line move forward.'),
+      mistakes: [b('1拍目から弾き始めてしまう → 助走の音から数える', 'Starting on beat 1 — count from the pickup notes')],
+    },
+  },
+  {
+    id: 'r2-motif',
+    chapterId: 'ch1',
+    part: b('実戦のリズム', 'Rhythms from real solos'),
+    title: b('1つの形をずらして回す', 'Move one shape around'),
+    outcome: b('2つの音の短い形を、置き場所を変えながら何度も使おう。', 'Reuse one short two-note shape while moving where it falls.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    tempoLadder: LADDER_BPM,
+    steps: [
+      {
+        title: b('1つの形をずらして回す', 'Move one shape around'),
+        instruction: b('2つの音の短い形を、置き場所を変えながら何度も使おう。', 'Reuse one short two-note shape while moving where it falls.'),
+        content: { source: 'rhythm', rhythmBlocks: [
+          { label: b('置き場所を変える', 'Move the start'), hint: b('同じ形を半拍ずつ後ろへ', 'Shift the same shape half a beat each time'), bars: ['8 4 r8 r2', 'r8 8 4 r2', 'r4 8 4 r8 r4', 'r4 r8 8 4 r4'] },
+          { label: b('1音足す', 'Add a note'), hint: b('形を3つの音に', 'Grow the shape to three notes'), bars: ['8 8 4 r2', 'r8 8 8 4 r8 r4', 'r4 8 8 4 r4', 'r2 8 8 4'] },
+          { label: b('間を詰める', 'Squeeze it'), hint: b('形を続けて並べる', 'Play the shape back to back'), bars: ['8 4 8 4 r4', '8 4 8 4 8 8/s', 'r8 8 4 8 4 r8', '4/t r4 r2'] },
+          { label: b('間を広げる', 'Stretch it'), hint: b('形を倍の長さに', 'Play the shape twice as long'), bars: ['4 2 r4', 'r4 4 2', '8 4 r8 r2', 'r8 8 4 r2'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('ソニー・ロリンズは「St. Thomas」で2つの音の形を、置き場所を変えて何度も使っています。音を増やさなくても、リズムだけで話が進みます。', 'Sonny Rollins keeps moving one two-note shape around in “St. Thomas.” The story moves forward through rhythm alone.'),
+      mistakes: [b('形がずれると拍を見失う → 2・4拍のクリックを聴き続ける', 'Losing the beat when the shape moves — keep hearing the 2-and-4 click')],
+    },
+  },
+  {
+    id: 'r2-accent',
+    chapterId: 'ch1',
+    part: b('実戦のリズム', 'Rhythms from real solos'),
+    title: b('裏拍にアクセントを置く', 'Accent the offbeats'),
+    outcome: b('裏拍を強く、低い音を弱くして、ジャズらしい抑揚をつけよう。', 'Lean on the offbeats and ghost the low notes for a jazz lilt.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    tempoLadder: LADDER_BPM,
+    steps: [
+      {
+        title: b('裏拍にアクセントを置く', 'Accent the offbeats'),
+        instruction: b('裏拍を強く、低い音を弱くして、ジャズらしい抑揚をつけよう。', 'Lean on the offbeats and ghost the low notes for a jazz lilt.'),
+        content: { source: 'rhythm', rhythmBlocks: [
+          { label: b('裏拍を強く', 'Strong offbeats'), hint: b('「ドゥバ」の「バ」を強く', 'Lean on the bah of doo-bah'), bars: ['8 8:3/a 8:5 8:7/a 8:8 8:7/a 8:5 8:3/a', '8 8:3/a 8:5 8:7/a 8:8 8:7/a 8:5 8:3/a', '8 8:3/a 8:5 8:7/a 8:8 8:7/a 8:5 8:3/a', '8 8:3/a 8:5 8:7/as r2'] },
+          { label: b('一番高い音を強く', 'Accent the top note'), hint: b('頂上の音にだけアクセント', 'Accent only the highest note'), bars: ['8 8:3 8:5 8:7 8:5 8:8/a 8:7 8:5', '8 8:3 8:5 8:7 8:5 8:8/a 8:7 8:5', '8 8:3 8:5 8:7 8:5 8:8/a 8:7 8:5', '8:3 8/as r2 r4'] },
+          { label: b('低い裏拍の音を弱く', 'Ghost the low offbeats'), hint: b('括弧の音はほとんど聞こえないくらい', 'Notes in brackets are barely heard'), bars: ['8:8 8:5/g 8:7 8:3/g 8:5 8/g 8:3 8/g', '8:8 8:5/g 8:7 8:3/g 8:5 8/g 8:3 8/g', '8:8 8:5/g 8:7 8:3/g 8:5 8/g 8:3 8/g', '8:5 8:3/g 4 r2'] },
+          { label: b('全部を組み合わせる', 'Put it all together'), hint: b('強く・弱く・最後は短く', 'Strong, ghosted, and a short ending'), bars: ['8 8:3/a 8:5 8:8/a 8:7 8:5/g 8:3 8/as', '8 8:3/a 8:5 8:8/a 8:7 8:5/g 8:3 8/as', '8 8:3/a 8:5 8:8/a 8:7 8:5/g 8:3 8/as', '8:5 8:3/g 8/as r8 r2'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('管楽器奏者は裏拍をタンギングして表拍へつなぎ、低い裏拍の音はほとんど鳴らしません。この強弱がスウィングの揺れを生みます。', 'Horn players tongue the offbeats, slur into the beat, and barely sound the low offbeat notes. That contrast is what makes it swing.'),
+      mistakes: [b('全部の音を同じ強さで弾く → 裏拍だけを口ずさんでから弾く', 'Every note the same volume — sing just the offbeats first')],
+    },
+  },
+  {
+    id: 'r2-triplet',
+    chapterId: 'ch1',
+    part: b('実戦のリズム', 'Rhythms from real solos'),
+    title: b('3連で揺らす', 'Rock with triplets'),
+    outcome: b('3連で飾ったり、3つずつまとめたりして、リズムを揺らそう。', 'Decorate with triplets and group notes in threes to rock the rhythm.'),
     progressionId: 'ii-V-I',
     defaultBpm: 70,
     clickPattern: 'backbeat',
     tempoLadder: LADDER_BPM,
     steps: [
       {
-        title: b('スウィング8分を聴く', 'Hear the swing 8ths'),
-        instruction: b('8分音符が「タータ」と跳ねる譜例です。まねして演奏し、跳ね方を体に入れよう。', 'The 8ths bounce “daa-da.” Copy it and absorb the bounce.'),
-        rules: [b('音はルート1音だけ', 'Root only')],
-        content: { source: 'root', rhythm: 'swing8' },
-      },
-      {
-        title: b('裏拍だけで演奏する', 'Offbeats only'),
-        instruction: b('オモテを休んで、裏拍だけ音を出す譜例です。クリックと交互に鳴る感覚をつかもう。', 'Rest on the beat and play only the “ands.” You and the click take turns.'),
-        content: { source: 'root', rhythm: 'offbeat8' },
-      },
-      {
-        title: b('裏拍入りのリズムを作る', 'Build with offbeats'),
-        instruction: b('8分休符を入れてから8分音符を入力し、裏拍から始まる音を入れよう。', 'Enter an eighth rest followed by an eighth note to start on an offbeat.'),
-        rules: [b('裏拍から始まる音を1つ以上', 'At least one note starting on an offbeat')],
-        editable: {
-          material: 'root-only', bars: 4, divisions: [1, 2], initial: 'empty', fixedPitch: true,
-          conditions: { minNotes: 4, requireOffbeatAttack: true },
-          requiredAction: 'any-change',
-          task: b('裏拍から始まる音を入れてみよう。', 'Include notes that start on offbeats.'),
-        },
+        title: b('3連で揺らす', 'Rock with triplets'),
+        instruction: b('3連で飾ったり、3つずつまとめたりして、リズムを揺らそう。', 'Decorate with triplets and group notes in threes to rock the rhythm.'),
+        content: { source: 'rhythm', rhythmBlocks: [
+          { label: b('8分の流れに3連を1つ', 'One triplet in the flow'), hint: b('8分の途中で1拍だけ飾る', 'Decorate one beat inside a line of 8ths'), bars: ['8 8 t8 t8 t8 8 8 4', '8 8 8 8 t8 t8 t8 4', '8 8 t8 t8 t8 8 8 4', '2 r2'] },
+          { label: b('8分と3連を交互に', 'Alternate 8ths and triplets'), hint: b('2つと3つを入れ替えて', 'Switch between twos and threes'), bars: ['8 8 t8 t8 t8 8 8 t8 t8 t8', '8 8 t8 t8 t8 8 8 t8 t8 t8', '8 8 t8 t8 t8 8 8 t8 t8 t8', 't8 t8 t8 4 r2'] },
+          { label: b('3つずつまとめる', 'Group in threes'), hint: b('3つごとのアクセントが小節をまたいで回る', 'An accent every three notes rolls across the bars'), bars: ['8/a 8 8 8/a 8 8 8/a 8', '8 8/a 8 8 8/a 8 8 8/a', '8 8 8/a 8 8 8/a 8 8', '4/a r4 r2'] },
+          { label: b('4分3連', 'Quarter-note triplets'), hint: b('2拍に3つ、ゆったり', 'Three notes across two beats, laid back'), bars: ['t4 t4 t4 2', '4 4 t4 t4 t4', 't4 t4 t4 t4 t4 t4', '2/t r2'] },
+        ] },
       },
     ],
-    selfCheck: [
-      b('8分音符が均等でなく「タータ」と跳ねた', 'My 8ths bounced instead of being even'),
-      b('裏拍から入っても迷子にならなかった', 'Offbeat entries didn’t throw me off'),
-    ],
+    selfCheck: [],
     trivia: {
-      why: b('ジャズの8分音符はオモテ長め・ウラ短めに揺れます。裏拍を自分で置けると、この揺れを能動的に作れます。この裏拍は第3章で、コードの役割と結びつけてもう一度使います。', 'Jazz 8ths are long-short, not even. Placing offbeats yourself makes the swing active. Chapter 3 brings them back, tied to what each chord is doing.'),
-      mistakes: [b('裏拍のつもりがオモテに戻る → 「ん・タ」と口ずさんでから演奏する', 'Your “ands” drift onto the beat — sing “n-TAH” first')],
+      why: b('ドラムのシンバルは3連系で刻み、ベースは4分で歩きます。3つのまとまりや4分3連は、その2つのノリを重ねて揺らす道具です。', 'The ride cymbal feels triplets while the bass walks in quarters. Groups of three and quarter-note triplets play one feel against the other.'),
+      mistakes: [b('3つずつのまとまりで拍を見失う → アクセントではなく2・4拍を聴く', 'Losing the beat in groups of three — listen to 2 and 4, not the accents')],
     },
-    estimatedMinutes: 8,
   },
   {
-    id: 'r1-rests',
+    id: 'r2-phrase',
     chapterId: 'ch1',
-    title: b('各小節に休みを1拍以上入れる', 'Leave a beat of rest in every bar'),
-    technicalName: b('休符', 'Space'),
-    outcome: b('毎小節に「間」を置いて、呼吸のあるリズムを作れる。', 'You can leave space in every bar and make rhythms that breathe.'),
+    part: b('実戦のリズム', 'Rhythms from real solos'),
+    title: b('間と長さでソロを組む', 'Shape a solo with space'),
+    outcome: b('フレーズの長さと音の多さを変えて、話すように演奏しよう。', 'Vary phrase length and density so it sounds like speech.'),
     progressionId: 'ii-V-I',
-    defaultBpm: 70,
+    defaultBpm: 80,
     clickPattern: 'backbeat',
     tempoLadder: LADDER_BPM,
     steps: [
       {
-        title: b('休みが主役のリズムを聴く', 'Hear a rhythm built on space'),
-        instruction: b('「ターン・(休み)・タッ」の譜例です。まねして演奏しよう。', 'A “daah — (rest) — dat” figure. Copy it.'),
-        rules: [b('音はルート1音だけ', 'Root only')],
-        content: { source: 'root', rhythm: 'charleston' },
-      },
-      {
-        title: b('休みを入れて作る', 'Build with space'),
-        instruction: b('どの小節にも休みを残して、{bars}小節を作ろう。', 'Build {bars} bars, leaving space in every one of them.'),
-        rules: [b('各小節に1拍以上の休み', 'At least one beat of rest per bar')],
-        editable: {
-          material: 'root-only', bars: 4, divisions: [1, 2], initial: 'empty', fixedPitch: true,
-          conditions: { minNotes: 4, minRestBeatsPerBar: 1 },
-          requiredAction: 'any-change',
-          task: b('各小節に1拍以上の休みを入れよう。', 'Leave at least one beat of rest in each bar.'),
-        },
+        title: b('間と長さでソロを組む', 'Shape a solo with space'),
+        instruction: b('フレーズの長さと音の多さを変えて、話すように演奏しよう。', 'Vary phrase length and density so it sounds like speech.'),
+        content: { source: 'rhythm', rhythmBlocks: [
+          { label: b('1小節弾いて1小節休む', 'Play a bar, rest a bar'), hint: b('弾いたら同じだけ休む', 'Rest as long as you played'), bars: ['r8 8 8 8 8 8 4', 'r1', '8 8 4 r8 8 4', 'r1'] },
+          { label: b('1小節半のフレーズ', 'A bar-and-a-half phrase'), hint: b('小節の途中で終わる', 'End in the middle of a bar'), bars: ['r8 8 8 8 8 8 8 8', '8 8 8/as r8 r4 8 8', '8 8 8 8 8 8 8/as r8', 'r1'] },
+          { label: b('3拍目から始める', 'Start on beat 3'), hint: b('小節線をまたいで続ける', 'Carry on across the barline'), bars: ['r2 8 8 8 8', '8 8 4/as r2', 'r2 8 8 8 8', '4 8 8/as r2'] },
+          { label: b('少ない→多い→少ない', 'Few, many, few'), hint: b('音の数で山を作る', 'Build a peak with the number of notes'), bars: ['r4 4 r2', 'r8 8 8 8 r2', '8 8 8 8 t8 t8 t8 8 8', '2/t r2'] },
+        ] },
       },
     ],
-    selfCheck: [
-      b('休みの間も心の中で拍を数え続けられた', 'I kept counting through the rests'),
-      b('演奏しっぱなしにならなかった', 'I didn’t play non-stop'),
-    ],
+    selfCheck: [],
     trivia: {
-      why: b('初心者のソロが苦しく聞こえる一番の原因は、休みが無いことです。間があるほどフレーズは輪郭を持ちます。', 'The main reason a beginner solo sounds breathless is no rests. Space gives a phrase its shape.'),
-      mistakes: [b('休みで拍を見失う → 休みの間もクリックの2・4拍を数える', 'Losing the beat during rests — keep counting the 2-and-4 click')],
+      why: b('フレーズを2小節・4小節ぴったりで区切ると単調になります。長さと音数を変えると、会話のような流れが生まれます。', 'Phrases that always last exactly two or four bars sound square. Changing length and density makes it sound like conversation.'),
+      mistakes: [b('休みで拍を見失う → 休みの間も2・4拍を数える', 'Losing the beat in the rests — keep counting 2 and 4')],
     },
-    estimatedMinutes: 7,
   },
   {
-    id: 'r1-syncopation',
+    id: 'r2-solo',
     chapterId: 'ch1',
-    title: b('小節線をまたぐ音を作る', 'Carry a note across the barline'),
-    technicalName: b('食い', 'Anticipation'),
-    outcome: b('拍や小節線をまたぐ音で、前のめりの推進力を出せる。', 'You can carry notes across beats and barlines for forward drive.'),
-    progressionId: 'ii-V-I',
-    defaultBpm: 70,
+    part: b('実戦のリズム', 'Rhythms from real solos'),
+    title: b('1音でリズムのソロを弾く', 'Play a one-note rhythm solo'),
+    outcome: b('12小節ブルースで、ここまでのリズムを1コーラス通そう。', 'Put everything together over one chorus of 12-bar blues.'),
+    progressionId: 'blues',
+    defaultBpm: 80,
     clickPattern: 'backbeat',
     tempoLadder: LADDER_BPM,
     steps: [
       {
-        title: b('食いを聴く', 'Hear the anticipation'),
-        instruction: b('次の小節の音を少し早く出す譜例です。前へ倒れる感じを聴き取ろう。', 'The next bar’s note arrives early. Listen for the forward lean.'),
-        rules: [b('音はルート1音だけ', 'Root only')],
-        content: { source: 'root', rhythm: 'anticipation' },
-      },
-      {
-        title: b('食いを作る', 'Build an anticipation'),
-        instruction: b('小節の最後の裏拍から4分音符を入力して、小節線をまたぐ音を作ろう。', 'Enter a quarter note on the final offbeat to carry it across the barline.'),
-        rules: [b('小節線をまたぐ音を1つ以上', 'At least one note across a barline')],
-        editable: {
-          material: 'root-only', bars: 4, divisions: [1, 2], initial: 'empty', fixedPitch: true,
-          conditions: { minNotes: 4, requireCrossBarHold: true },
-          requiredAction: 'any-change',
-          task: b('小節の最後の裏拍から長い音を入力し、小節線をまたいでみよう。', 'Enter a long note on the final offbeat to cross the barline.'),
-        },
+        title: b('1音でリズムのソロを弾く', 'Play a one-note rhythm solo'),
+        instruction: b('12小節ブルースで、ここまでのリズムを1コーラス通そう。', 'Put everything together over one chorus of 12-bar blues.'),
+        content: { source: 'rhythm', rhythmBlocks: [
+          { label: b('単語と間', 'Words and space'), hint: b('裏で入って裏で終わる', 'Start and end on offbeats'), bars: ['r4 8 8 8 8 8 8/as', 'r1', 'r8 8 8 8 8/a 8 4', 'r2 r8 8 8 8_'] },
+          { label: b('助走とずらし', 'Run-ups and shifts'), hint: b('1拍目へ向かい、形をずらす', 'Aim for beat 1, then move the shape'), bars: ['4/t r4 8 4 r8', 'r8 8 4 r2', 'r2 r8 8 8 8', '2/t r2'] },
+          { label: b('3連と締め', 'Triplets and the ending'), hint: b('揺らして、短く締める', 'Rock it, then close short'), bars: ['8 8 t8 t8 t8 8 8 8 8', 't4 t4 t4 8 8 8 8', '8/a 8 8/a 8 8/a 8 4', '4 8 8/as r2'] },
+        ] },
       },
     ],
-    selfCheck: [
-      b('小節線をまたいでも拍が分からなくならなかった', 'I kept my place across the barline'),
-      b('前へ進む感じが出た', 'It leaned forward'),
-    ],
+    selfCheck: [],
     trivia: {
-      why: b('拍の頭ちょうどに音を置き続けると行進曲になります。半拍だけ早く出すと、そこに推進力が生まれます。この食いは第3章で、解決を強める道具として使います。', 'Landing squarely on every beat sounds like a march. Arriving half a beat early creates drive. Chapter 3 uses this to strengthen resolutions.'),
-      mistakes: [b('食いのあと拍を見失う → 先に口ずさんで体で覚える', 'Losing the beat after an anticipation — sing it first')],
+      why: b('音を選ぶ前に、リズムだけでソロが成り立つことを体験します。次の章からは、このリズムに音を載せていきます。', 'Before choosing notes, feel how a solo can stand on rhythm alone. From the next chapter on, you put notes onto these rhythms.'),
+      mistakes: [b('最初から最後まで弾き続ける → ブロックごとの休みを必ず守る', 'Playing non-stop — keep the rests in every block')],
     },
-    estimatedMinutes: 8,
-  },
-  {
-    id: 'r1-subdivision',
-    chapterId: 'ch1',
-    title: b('拍を3連・16分に切り替える', 'Switch a beat to triplets or 16ths'),
-    technicalName: b('細分化', 'Subdivision'),
-    outcome: b('拍ごとに3連や16分へ切り替えて、細かい彩りを混ぜられる。', 'You can switch individual beats to triplets or 16ths for fine-grained color.'),
-    progressionId: 'ii-V-I',
-    defaultBpm: 60,
-    clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
-    steps: [
-      {
-        title: b('3連を聴く', 'Hear the triplets'),
-        instruction: b('1拍を3つに割った譜例です。1拍だけ細かくする感じを聴き取ろう。', 'One beat split into three. Notice that only one beat gets busy.'),
-        rules: [b('音はルート1音だけ', 'Root only')],
-        content: { source: 'root', rhythm: 'triplet' },
-      },
-      {
-        title: b('細かい拍を混ぜる', 'Mix in a busy beat'),
-        instruction: b('各拍の上のボタンで、その拍だけ3連や16分に切り替えよう。', 'Use the button above each beat to switch just that beat.'),
-        rules: [b('3連と16分を1つずつ', 'One triplet beat and one 16th beat')],
-        editable: {
-          material: 'root-only', bars: 4, divisions: [1, 2, 3, 4], initial: 'empty', fixedPitch: true,
-          conditions: { minNotes: 6, requireTriplet: true, requireSixteenth: true },
-          requiredAction: 'any-change',
-          task: b('3連と16分を1つずつ入れてみよう。', 'Include one triplet beat and one 16th beat.'),
-        },
-      },
-    ],
-    selfCheck: [
-      b('細かい拍のあとでも次の拍の頭に戻れた', 'I landed back on the next beat cleanly'),
-      b('全部を細かくせず1〜2か所に絞れた', 'I kept the busy beats to one or two spots'),
-    ],
-    trivia: {
-      why: b('細かい音は「速く演奏できる」ためではなく、1か所だけ密度を上げて印象を作るための道具です。', 'Fast notes aren’t about speed — they raise the density in one spot to create an impression.'),
-      mistakes: [b('全部16分にして平坦になる → 1小節に1か所だけにする', 'Making everything 16ths flattens it — limit it to one spot per bar')],
-    },
-    estimatedMinutes: 8,
   },
 
   // ================= 第2章 コードの中から使う音を選ぶ =================
@@ -1226,58 +1325,4 @@ export function lessonsOfChapter(chapterId: string): Lesson[] {
 /** コース内の全レッスンを章順に並べたID配列 */
 export function courseLessonIds(course: Course): string[] {
   return course.chapterIds.flatMap((cid) => lessonsOfChapter(cid).map((l) => l.id));
-}
-
-// ---- 章まとめ練習 ----
-// 章の編集課題はどれも同じ進行・同じ小節数の上で、条件だけを変えている。
-// そこで「1つの譜面」を作り、章の各レッスンの条件を同時にチェックできるようにする。
-
-export interface WorkoutTask {
-  lessonId: string;
-  /** そのレッスンの課題文({minNotes}などの差し込みを含む) */
-  label: Bi;
-  conditions?: GridConditions;
-}
-
-export interface ChapterWorkout {
-  chapterId: string;
-  progressionId: ProgressionId;
-  /** 既定の長さ */
-  bars: number;
-  /** 選べる長さ(4小節の章は8小節でも通せる) */
-  barOptions: number[];
-  /** 章で使う素材(狭い順) */
-  materials: GridMaterial[];
-  divisions: Division[];
-  tasks: WorkoutTask[];
-}
-
-/**
- * 章のレッスンから「まとめ練習」の設定を作る。
- * 章の中で最も多く使われている(進行×小節数)を主役にし、それに載っている課題だけを集める。
- */
-export function chapterWorkout(chapterId: string): ChapterWorkout | null {
-  const steps = lessonsOfChapter(chapterId).flatMap((l) =>
-    l.steps.filter((s) => s.editable).map((s) => ({ lesson: l, e: s.editable! })));
-  if (steps.length === 0) return null;
-
-  const count = new Map<string, number>();
-  for (const { lesson, e } of steps) {
-    const key = `${lesson.progressionId}|${e.bars}`;
-    count.set(key, (count.get(key) ?? 0) + 1);
-  }
-  const top = [...count.entries()].sort((a, b) => b[1] - a[1])[0][0];
-  const [progressionId, barsText] = top.split('|');
-  const bars = Number(barsText);
-
-  const main = steps.filter(({ lesson, e }) => lesson.progressionId === progressionId && e.bars === bars);
-  return {
-    chapterId,
-    progressionId: progressionId as ProgressionId,
-    bars,
-    barOptions: bars === 4 ? [4, 8] : [bars],
-    materials: [...new Set(main.map(({ e }) => e.material))],
-    divisions: [...new Set(main.flatMap(({ e }) => e.divisions))].sort((a, b) => a - b),
-    tasks: main.map(({ lesson, e }) => ({ lessonId: lesson.id, label: e.task, conditions: e.conditions })),
-  };
 }

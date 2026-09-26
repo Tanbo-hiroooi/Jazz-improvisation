@@ -19,6 +19,7 @@ import {
   Formatter,
   GhostNote,
   Modifier,
+  Parenthesis,
   Renderer,
   Stave,
   StaveConnector,
@@ -36,7 +37,8 @@ import { midiToParts, midiToName, midiToSolfege, mod12 } from '../theory/notes';
 import type { NoteEvent } from '../theory/phrases';
 import type { Clef, NotationMode } from '../theory/instruments';
 
-export type LabelMode = 'none' | 'name' | 'solfege' | 'degree';
+/** scat = 口ずさみ(「ドゥ」「バ」)。NoteEvent.label を出す(第1章のリズム譜) */
+export type LabelMode = 'none' | 'name' | 'solfege' | 'degree' | 'scat';
 
 export interface ChordDisplay {
   measure: number;
@@ -55,6 +57,8 @@ interface Props {
   flats: boolean;
   labelMode: LabelMode;
   chords: ChordDisplay[];
+  /** 小節の頭に出す見出し(第1章のリズム譜のブロック「A 裏拍だけ」など)。囲み文字で描く */
+  sections?: { measure: number; label: string }[];
   /** 再生中のノートインデックス(-1: なし) */
   currentIndex: number;
   /** 編集で選択中のノートインデックス(-1: なし)。編集中どの音を触っているか示す */
@@ -184,10 +188,10 @@ function restSegments(gapStart: number, gapEnd: number): { start: number; dur: s
  * 表情記号(アクセント・スタッカート・テヌート)を符頭の側へ置く(記譜の慣習)。
  * 既定の「常に上」だと、上向きの音では符幹の先に乗り、3連の数字をコードネームの高さまで押し上げる。
  */
-function articlesToNoteheadSide(notes: StaveNote[], artics: (VFArticulation | undefined)[]): void {
-  artics.forEach((a, i) => {
-    if (!a || !notes[i]) return;
-    a.setPosition(notes[i].getStemDirection() === Stem.UP ? Modifier.Position.BELOW : Modifier.Position.ABOVE);
+function articlesToNoteheadSide(notes: StaveNote[], artics: VFArticulation[][]): void {
+  artics.forEach((list, i) => {
+    if (!list || !notes[i]) return;
+    for (const a of list) a.setPosition(notes[i].getStemDirection() === Stem.UP ? Modifier.Position.BELOW : Modifier.Position.ABOVE);
   });
 }
 
@@ -195,7 +199,7 @@ const ARTIC_CODE: Record<string, string> = { accent: 'a>', staccato: 'a.', tenut
 
 export function StaffView({
   notes, measures, clef, shift, flats, labelMode, chords, currentIndex, selectedIndex = -1,
-  zoom = 1, fitHeight, fitMaxZoom,
+  zoom = 1, fitHeight, fitMaxZoom, sections,
   selectedMeasure = -1, onSelectMeasure, onSelectNote, noteSelectLabel, onDragNote, onNudgeNote,
   entryDivisions, entryCursor, entryFocusMeasure, onSelectRest, restSelectLabel,
   notation = 'staff', guitarPosition = 'auto', guitarOpenStrings = true,
@@ -295,7 +299,7 @@ export function StaffView({
       const lineHeight = isGrand ? 210 : showStaff && showTab ? 235 : showTab ? 120 : 130;
       const tabOffsetY = showStaff ? 95 : 0;
       // 1行目のコードネームを3連の数字の上へ持ち上げても切れないよう、少し余白を取る
-      const topPad = 28;
+      const topPad = sections && sections.length > 0 ? 46 : 28;
 
       // TAB: 実音MIDIを時系列で弦・フレットへ変換(globalIndexで引けるようにする)
       const tabByGi: (TabPosition | undefined)[] = [];
@@ -308,9 +312,23 @@ export function StaffView({
       }
 
       // 各ノートをタイ用セグメントへ分割
-      interface Seg { gi: number; segIdx: number; start: number; dur: number; triplet: boolean }
+      interface Seg { gi: number; segIdx: number; start: number; dur: number; triplet: boolean; qtrip?: boolean }
+      // 4分3連: 偶数拍(0・2拍目)から2/3拍の音が3つ続き、2拍をぴったり埋めるものは4分音符の3連で書く。
+      // それ以外の2/3拍は従来どおり3連8分のタイで書く(1拍の中の「ター・タ」など)
+      const qTrip = new Set<number>();
+      const byStart = displayNotes.map((n, gi) => ({ n, gi })).sort((a, b) => a.n.start - b.n.start);
+      for (let i = 0; i + 2 < byStart.length; i++) {
+        const [a, b2, c] = [byStart[i], byStart[i + 1], byStart[i + 2]];
+        const st = a.n.start;
+        if ([a, b2, c].every((x) => near(x.n.duration, 2 / 3)) && near(st / 2, Math.round(st / 2))
+          && near(b2.n.start, st + 2 / 3) && near(c.n.start, st + 4 / 3)) {
+          qTrip.add(a.gi); qTrip.add(b2.gi); qTrip.add(c.gi);
+          i += 2;
+        }
+      }
       const allSegs: Seg[] = [];
       displayNotes.forEach((n, gi) => {
+        if (qTrip.has(gi)) { allSegs.push({ gi, segIdx: 0, start: n.start, dur: n.duration, triplet: false, qtrip: true }); return; }
         noteSegments(n.start, n.duration).forEach((s, segIdx) => {
           allSegs.push({ gi, segIdx, start: s.start, dur: s.dur, triplet: s.triplet });
         });
@@ -328,7 +346,12 @@ export function StaffView({
         segIdx: number;
         label: string;
         triplet: boolean;
+        /** 4分3連の1つ */
+        qtrip?: boolean;
         articulation?: string; // VexFlowコード(先頭セグメントのみ)
+        /** articulation に重ねるアクセント(「短く強く」) */
+        accent2?: boolean;
+        ghost?: boolean;
       }
       const restKeys = [noteClef === 'bass' ? 'd/3' : 'b/4'];
       const measureItems: Item[][] = [];
@@ -369,8 +392,9 @@ export function StaffView({
             if (labelMode === 'name') label = midiToName(n.displayMidi, flats).replace(/-?\d+$/, '');
             else if (labelMode === 'solfege') label = midiToSolfege(n.displayMidi, flats);
             else if (labelMode === 'degree' && chord) label = degreeLabel(mod12(n.displayMidi), chord.rootPc, chord.quality);
+            else if (labelMode === 'scat') label = n.label ?? '';
           }
-          const { dur, dots } = s.triplet ? { dur: '8', dots: 0 } : nearestDur(s.dur);
+          const { dur, dots } = s.triplet ? { dur: '8', dots: 0 } : s.qtrip ? { dur: 'q', dots: 0 } : nearestDur(s.dur);
           items.push({
             start: s.start,
             keys: [`${p.letter.toLowerCase()}${p.accidental}/${p.octave}`],
@@ -382,7 +406,10 @@ export function StaffView({
             segIdx: s.segIdx,
             label,
             triplet: s.triplet,
+            qtrip: s.qtrip,
             articulation: s.segIdx === 0 && n.articulation ? ARTIC_CODE[n.articulation] : undefined,
+            accent2: s.segIdx === 0 && !!n.accent && n.articulation !== 'accent',
+            ghost: s.segIdx === 0 && !!n.ghost,
           });
           t = s.start + s.dur;
         }
@@ -446,6 +473,7 @@ export function StaffView({
       const tieNotes: Map<number, { segIdx: number; line: number; sn: StaveNote }[]> = new Map();
       // 小節クリック用の当たり判定(描画後にSVGへ重ねる)
       const measureBoxes: { m: number; x: number; y: number; w: number; h: number }[] = [];
+      const measureStarts: { x: number; y: number; line: number }[] = [];
       const entryAnchors: { start: number; x: number; y: number; endX: number; height: number; rest: boolean }[] = [];
       // コードネームは最後に描く(その行の3連の数字の高さが分かってから位置を決めるため)
       const chordDraws: { symbol: string; x: number; line: number; staveY: number }[] = [];
@@ -472,6 +500,7 @@ export function StaffView({
         const x = col * baseW;
         const y = topPad + line * lineHeight;
         measureBoxes.push({ m, x, y: y - 16, w: baseW - 1, h: lineHeight - 8 });
+        measureStarts[m] = { x, y, line };
 
         let stave: Stave | null = null;
         if (showStaff) {
@@ -517,17 +546,25 @@ export function StaffView({
         // 五線譜ノート
         let staveNotes: StaveNote[] = [];
         // 表情記号は、連桁で符幹の向きが決まってから符頭側へ置き直す
-        const articOf: (VFArticulation | undefined)[] = [];
+        const articOf: VFArticulation[][] = [];
         if (showStaff) {
           staveNotes = items.map((item, idx) => {
             const sn = new StaveNote({ keys: item.keys, duration: item.dur + (item.isRest ? '' : ''), clef: noteClef, auto_stem: true });
             if (item.acc && !item.isRest) sn.addModifier(new Accidental(item.acc), 0);
             if (item.dots > 0) Dot.buildAndAttach([sn], { all: true });
+            articOf[idx] = [];
             if (item.articulation) {
               const art = new VFArticulation(item.articulation);
               sn.addModifier(art, 0);
-              articOf[idx] = art;
+              articOf[idx].push(art);
             }
+            if (item.accent2) {
+              const art = new VFArticulation(ARTIC_CODE.accent);
+              sn.addModifier(art, 0);
+              articOf[idx].push(art);
+            }
+            // ゴースト: 括弧付きの音符(ほとんど聞こえないくらい弱く)
+            if (item.ghost) Parenthesis.buildAndAttach([sn]);
             if (item.label) {
               const ann = new Annotation(item.label);
               ann.setFont('Helvetica', 9);
@@ -567,8 +604,17 @@ export function StaffView({
         const tuplets: Tuplet[] = [];
         if (showStaff) {
           let run: StaveNote[] = [];
+          let qrun: StaveNote[] = [];
           items.forEach((item, i) => {
-            if (item.triplet) {
+            if (item.qtrip) {
+              run = [];
+              qrun.push(staveNotes[i]);
+              if (qrun.length === 3) {
+                tuplets.push(new Tuplet(qrun, { num_notes: 3, notes_occupied: 2 }));
+                qrun = [];
+              }
+            } else if (item.triplet) {
+              qrun = [];
               run.push(staveNotes[i]);
               if (run.length === 3) {
                 tuplets.push(new Tuplet(run, { num_notes: 3, notes_occupied: 2 }));
@@ -576,6 +622,7 @@ export function StaffView({
               }
             } else {
               run = [];
+              qrun = [];
             }
           });
         }
@@ -656,12 +703,31 @@ export function StaffView({
       ctx.save();
       ctx.setFont('Helvetica', 13, 'bold');
       ctx.setFillStyle('#1a1a2e');
-      for (const cd of chordDraws) {
-        const top = rowTop.get(cd.line);
-        const baseline = top === undefined ? cd.staveY - 2 : Math.min(cd.staveY - 2, top - 5);
-        ctx.fillText(cd.symbol, cd.x, Math.max(13, baseline));
-      }
+      const chordBaseline = (line: number, staveY: number) => {
+        const top = rowTop.get(line);
+        return Math.max(13, top === undefined ? staveY - 2 : Math.min(staveY - 2, top - 5));
+      };
+      for (const cd of chordDraws) ctx.fillText(cd.symbol, cd.x, chordBaseline(cd.line, cd.staveY));
       ctx.restore();
+
+      // ブロックの見出し(囲み文字)。コードネームの上に置く
+      if (sections && sections.length > 0) {
+        ctx.save();
+        ctx.setFont('Helvetica', 11, 'bold');
+        for (const sec of sections) {
+          const at = measureStarts[sec.measure];
+          if (!at) continue;
+          const bottom = chordBaseline(at.line, at.y) - 16;
+          const w = ctx.measureText(sec.label).width + 10;
+          // 枠は1つの rect に属性で描く(VexFlow の stroke() は直前のパスを描き直すので使わない)
+          // SVG描画の rect は第5引数で属性を取れる(型定義は4引数なので明示的に広げる)
+          (ctx as unknown as { rect: (x: number, y: number, w: number, h: number, a: Record<string, string | number>) => void })
+            .rect(at.x + 2, bottom - 15, w, 16, { fill: '#fef3c7', stroke: '#b45309', 'stroke-width': 1 });
+          ctx.setFillStyle('#7c2d12');
+          ctx.fillText(sec.label, at.x + 7, bottom - 3);
+        }
+        ctx.restore();
+      }
 
       // 小節の選択枠とクリック領域。選択枠は音符の後ろ、クリック領域は一番手前に置く
       measureRectsRef.current = [];
@@ -842,7 +908,7 @@ export function StaffView({
       window.removeEventListener('resize', render);
       window.visualViewport?.removeEventListener('resize', render);
     };
-  }, [displayNotes, measures, clef, flats, labelMode, chords, notation, guitarPosition, guitarOpenStrings, zoom, fitHeight, fitMaxZoom, entryDivisions, entryCursor, entryFocusMeasure]);
+  }, [displayNotes, measures, clef, flats, labelMode, chords, notation, guitarPosition, guitarOpenStrings, zoom, fitHeight, fitMaxZoom, entryDivisions, entryCursor, entryFocusMeasure, sections]);
 
   // 選択中の小節(再描画せずクラス切替)
   useEffect(() => {

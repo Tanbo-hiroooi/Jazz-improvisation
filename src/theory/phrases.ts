@@ -16,6 +16,12 @@ export interface NoteEvent {
   chordIndex: number;
   /** アーティキュレーション(省略=普通) */
   articulation?: 'accent' | 'staccato' | 'tenuto';
+  /** articulation に加えてアクセントも付ける(「短く強く」など。リズム譜で使う) */
+  accent?: boolean;
+  /** ゴースト: ほとんど聞こえないくらい弱く(括弧付きの音符で表示) */
+  ghost?: boolean;
+  /** 口ずさみ表示(「ドゥ」「バ」など)。labelMode='scat' のとき譜面に出す */
+  label?: string;
 }
 
 /** リックの1音: o=ルートからの半音, s=開始拍(小節内), d=拍数, v=ベロシティ */

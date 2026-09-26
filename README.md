@@ -23,11 +23,16 @@ First Chorusは、楽器を演奏でき、楽譜も読める人が、コード�
 苦手な技術を自分で選び、反復練習するモード。画面上部の「やること」タブで**♪ 基礎練習**(コードトーン/ガイドトーン/アプローチ/ターゲット/スケールの表示を切り替え、11種のリズムパターンと組み合わせる)と**🎼 フレーズを作る**(拍グリッドで自作する。小節数は進行に合わせて1〜12小節から選択)を切り替えます。
 
 ### 練習コース
-理論の暗記からではなく、**リズム→音選び→置く拍→つなぐ→語る→1コーラス**の順で学ぶ「リズムから始めるアドリブ入門」(全6章・27レッスン)を収録。基本ルールは「一度に変えるものは1つだけ」です。
+理論の暗記からではなく、**リズム→音選び→置く拍→つなぐ→語る→1コーラス**の順で学ぶ「リズムから始めるアドリブ入門」(全6章・32レッスン)を収録。基本ルールは「一度に変えるものは1つだけ」です。
 
 ## 練習コースの特徴
 
-章構成: ①1音とリズムだけでスウィングする → ②コードの中から使う音を選ぶ → ③拍の頭と裏を使い分けて音を置く → ④コードが変わる小節間を半音で繋げる → ⑤同じ形を繰り返して1コーラスにする → ⑥ブルースで1コーラスのソロを作る
+章構成: ①リズムでスウィングする → ②コードの中から使う音を選ぶ → ③拍の頭と裏を使い分けて音を置く → ④コードが変わる小節間を半音で繋げる → ⑤同じ形を繰り返して1コーラスにする → ⑥ブルースで1コーラスのソロを作る
+
+**第1章はリズム譜で練習します。** 各レッスンは4小節ずつのブロック(A〜D)をつないだ1枚の譜面で、説明は譜面上の見出しと、いま演奏しているブロックの一言だけです。「▶ 聴く→一緒に→ひとりで」を押すと、1周目は譜面どおりの音を聴き、2周目は一緒に演奏し、3周目は譜面の音が消えて自分だけで演奏します(止めるまで繰り返し)。基本はコードのルート1音で、リズムに集中できます。音符の下には口ずさみ(ドゥ・ダ・バ…)が付きます。
+前半の「基本」でスウィング8分・裏拍・食い・3連を、後半の「実戦のリズム」でソロでよく使うリズムの単語、1拍目へ向かう助走、形をずらす、裏拍のアクセントとゴースト、4分3連、間と長さを練習し、最後に12小節ブルースで1音のリズムソロを通します。
+
+**Chapter 1 is played from rhythm scores.** Each lesson is one score made of 4-bar blocks (A–D) with a heading per block and one short hint for the block you are playing. “Listen → Together → On your own” loops three passes: hear the written notes, play along, then play alone while the written notes go silent. Most notes are the chord root, so you can focus on rhythm; scat syllables appear under the notes.
 
 第2〜5章の最後は**【通し】レッスン**で、その章の技だけを使って12小節ブルースを1コーラス作ります。同じ形が毎章戻ってくるので「何のために練習しているか」が体験で分かり、4小節から12小節への段差もなくなります。
 
@@ -47,13 +52,11 @@ First Chorusは、楽器を演奏でき、楽譜も読める人が、コード�
 
 **練習の長さ(4小節/8小節)**: ii-V-I の課題は「**練習の長さ**」で8小節に伸ばせます。8小節は進行を2回くり返すので、前半で問いかけて後半で答える形が作れます。音符数・休符の条件は長さに合わせて増え、説明文の数字もそれに追従します。長さを変えても作りかけは消えません(前半を残して後ろに空の小節が足されます)。
 
-**章まとめ練習**: 各章の一覧の下にある「📝 この章をまとめて練習」から、**その章の課題を1つの譜面の上でまとめて**練習できます。章の各レッスンの条件が、いま作っているフレーズに対してリアルタイムで判定され、チェックリストとして並びます(例: 第1章は5レッスンぶんの条件が1つの4小節に同時に成立します)。レッスンを1つずつ進むのが「学ぶ」段階、この画面が「通して使う」段階です。
-
 **譜面は1画面に収める**: 譜面は、割り当てられた高さに**全体が収まるように自動で組み直します**。小節数が多いときは1行あたりの小節数を増やして(必要なら少し縮小して)、演奏しながらスクロールしなくて済むようにします。例えば音を詰めた12小節は、以前は譜面の高さが1284pxになり730pxぶんスクロールが必要でしたが、いまは392pxに収まります(1行4小節×3行)。
 
-**譜面全体で練習**: 「▶ 伴奏を流す」を押すと、譜面と再生ボタンを中心にした全画面表示へ切り替わります。音を出さずに準備する場合は、譜面の「⛶ 譜面全体で練習」から開けます。練習コース・章まとめ・自由練習の基礎練習とフレーズ作成すべてで使えます。譜面は実際の空きスペースに合わせて全小節が収まる大きさに調整され、スマートフォンの縦横切替にも追従します。「テンポ・再生設定」は必要なときだけ開けます。Escか「✕ 閉じる」で編集に戻り、作りかけとUndo履歴は保持されます。画面の小さい端末で音符が細かく感じる場合は、横向き表示も試してください。
+**譜面全体で練習**: 「▶ 伴奏を流す」を押すと、譜面と再生ボタンを中心にした全画面表示へ切り替わります。音を出さずに準備する場合は、譜面の「⛶ 譜面全体で練習」から開けます。練習コース・自由練習の基礎練習とフレーズ作成すべてで使えます。譜面は実際の空きスペースに合わせて全小節が収まる大きさに調整され、スマートフォンの縦横切替にも追従します。「テンポ・再生設定」は必要なときだけ開けます。Escか「✕ 閉じる」で編集に戻り、作りかけとUndo履歴は保持されます。画面の小さい端末で音符が細かく感じる場合は、横向き表示も試してください。
 
-**Practice with the full score**: Starting the backing opens a full-screen score in lessons, chapter workouts, fundamentals and the phrase editor. Use “Practice with full score” to open it before playing. All bars fit the available space, including after rotation or opening “Tempo & playback settings.” Close the view or press Esc to return to editing with your phrase and undo history intact. Try landscape orientation when notes look small on a phone.
+**Practice with the full score**: Starting the backing opens a full-screen score in lessons, fundamentals and the phrase editor. Use “Practice with full score” to open it before playing. All bars fit the available space, including after rotation or opening “Tempo & playback settings.” Close the view or press Esc to return to editing with your phrase and undo history intact. Try landscape orientation when notes look small on a phone.
 
 ## フレーズ作成（音符の順番入力）
 

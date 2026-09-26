@@ -33,12 +33,19 @@ export interface PlaybackParams {
 /** startPlayback 呼び出しごとの上書き(例: 単音で確認=伴奏なし) */
 export interface PlaybackOverrides {
   compOn?: boolean;
+  /**
+   * 同じ内容を何周続けて1回分とするか(既定1)。ループ時はこの周回全体を繰り返す。
+   * 第1章の「聴く→一緒に→ひとりで」は passes=3, silentFromPass=2。
+   */
+  passes?: number;
+  /** この周(0始まり)以降は譜例の音を鳴らさず、光るだけにする */
+  silentFromPass?: number;
 }
 
 export interface PlaybackState {
   playing: PlayKind | null;
-  /** 再生位置(measure=-1はカウントイン中、nullは停止中) */
-  position: { measure: number; beat: number } | null;
+  /** 再生位置(measure=-1はカウントイン中、nullは停止中)。pass は周回の何周目か(0始まり) */
+  position: { measure: number; beat: number; pass: number } | null;
   currentNoteIndex: number;
   startPlayback: (kind: PlayKind, overrides?: PlaybackOverrides) => Promise<void>;
   stopAll: () => void;
@@ -46,7 +53,7 @@ export interface PlaybackState {
 
 export function usePracticePlayback(p: PlaybackParams): PlaybackState {
   const [playing, setPlaying] = useState<PlayKind | null>(null);
-  const [position, setPosition] = useState<{ measure: number; beat: number } | null>(null);
+  const [position, setPosition] = useState<{ measure: number; beat: number; pass: number } | null>(null);
   const [currentNoteIndex, setCurrentNoteIndex] = useState(-1);
   const regionMapRef = useRef<number[]>([]);
   const regionStartRef = useRef(0);
@@ -73,6 +80,8 @@ export function usePracticePlayback(p: PlaybackParams): PlaybackState {
       regionStartRef.current = regionStart;
       const startBeat = regionStart * 4;
       const endBeat = (regionStart + regionBars) * 4;
+      const passes = Math.max(1, overrides?.passes ?? 1);
+      const passBeats = regionBars * 4;
 
       // リージョン内の表示ノート(開始拍を0に正規化)。
       // Rhythm Only も表示中の内容を使い、譜面のハイライトと音を常に一致させる
@@ -80,12 +89,14 @@ export function usePracticePlayback(p: PlaybackParams): PlaybackState {
       regionMapRef.current = [];
       if (kind !== 'backing') {
         regionNotes = [];
-        p.displayedNotes.forEach((n, gi) => {
-          if (n.start >= startBeat - 0.01 && n.start < endBeat - 0.01) {
-            regionNotes!.push({ ...n, start: n.start - startBeat });
-            regionMapRef.current.push(gi);
-          }
-        });
+        for (let pass = 0; pass < passes; pass++) {
+          p.displayedNotes.forEach((n, gi) => {
+            if (n.start >= startBeat - 0.01 && n.start < endBeat - 0.01) {
+              regionNotes!.push({ ...n, start: n.start - startBeat + pass * passBeats });
+              regionMapRef.current.push(gi);
+            }
+          });
+        }
       }
 
       // 簡易コード音(ルート+ガイドトーン)
@@ -103,7 +114,9 @@ export function usePracticePlayback(p: PlaybackParams): PlaybackState {
             if (m > 67) m -= 12;
             return m;
           });
-          comp.push({ start: cStart - startBeat, midis: [rootMidi, ...guideMidis], duration: Math.min(c.beats, 2.5) });
+          for (let pass = 0; pass < passes; pass++) {
+            comp.push({ start: cStart - startBeat + pass * passBeats, midis: [rootMidi, ...guideMidis], duration: Math.min(c.beats, 2.5) });
+          }
         }
       }
 
@@ -111,16 +124,17 @@ export function usePracticePlayback(p: PlaybackParams): PlaybackState {
         bpm: p.bpm,
         countIn: p.countIn,
         loop: p.loopEnabled,
-        regionBars,
+        regionBars: regionBars * passes,
         metronome: p.metronomeOn,
         clickPattern: p.clickPattern,
         notes: regionNotes,
         rhythmOnly: kind === 'rhythm',
         comp,
         swing: p.swing,
+        silentFromBeat: overrides?.silentFromPass !== undefined ? overrides.silentFromPass * passBeats : undefined,
         onPosition: (bar, beat) => {
-          if (bar < 0) setPosition({ measure: -1, beat });
-          else setPosition({ measure: regionStartRef.current + (bar % regionBars), beat });
+          if (bar < 0) setPosition({ measure: -1, beat, pass: 0 });
+          else setPosition({ measure: regionStartRef.current + (bar % regionBars), beat, pass: Math.floor(bar / regionBars) % passes });
         },
         onNoteIndex: (idx) => {
           setCurrentNoteIndex(idx >= 0 ? regionMapRef.current[idx] ?? -1 : -1);
