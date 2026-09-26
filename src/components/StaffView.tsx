@@ -299,7 +299,23 @@ export function StaffView({
       const lineHeight = isGrand ? 210 : showStaff && showTab ? 235 : showTab ? 120 : 130;
       const tabOffsetY = showStaff ? 95 : 0;
       // 1行目のコードネームを3連の数字の上へ持ち上げても切れないよう、少し余白を取る
-      const topPad = sections && sections.length > 0 ? 46 : 28;
+      const topPad = sections && sections.length > 0 ? 60 : 28;
+      // ブロック見出しがある行は、その上に見出しの分だけ余白を足す。
+      // 足さないと、見出しが前の行の口ずさみ・音名の文字に重なり、コードネームにも近すぎる
+      const SECTION_PAD = 34;
+      const sectionLinesFor = (per: number) => {
+        const set = new Set<number>();
+        for (const sec of sections ?? []) { const ln = Math.floor(sec.measure / per); if (ln > 0) set.add(ln); }
+        return set;
+      };
+      const lineYFor = (per: number) => {
+        const secLines = sectionLinesFor(per);
+        return (line: number) => {
+          let extra = 0;
+          for (const l of secLines) if (l <= line) extra += SECTION_PAD;
+          return topPad + line * lineHeight + extra;
+        };
+      };
 
       // TAB: 実音MIDIを時系列で弦・フレットへ変換(globalIndexで引けるようにする)
       const tabByGi: (TabPosition | undefined)[] = [];
@@ -448,7 +464,7 @@ export function StaffView({
           }
         }
         const ln = Math.ceil(measures / per);
-        return { perLine: per, lines: ln, height: ln * lineHeight + topPad };
+        return { perLine: per, lines: ln, height: ln * lineHeight + topPad + sectionLinesFor(per).size * SECTION_PAD };
       };
 
       // 拡大率の決定。利用できる高さに収まる中でいちばん大きい率を選ぶ。
@@ -463,6 +479,7 @@ export function StaffView({
       }
       const width = Math.floor(avail / scale);
       const { perLine, height } = layoutFor(width);
+      const lineY = lineYFor(perLine);
       scaleRef.current = scale;
 
       const renderer = new Renderer(container, Renderer.Backends.SVG);
@@ -498,7 +515,7 @@ export function StaffView({
         const isLineStart = col === 0;
         const baseW = width / perLine;
         const x = col * baseW;
-        const y = topPad + line * lineHeight;
+        const y = lineY(line);
         measureBoxes.push({ m, x, y: y - 16, w: baseW - 1, h: lineHeight - 8 });
         measureStarts[m] = { x, y, line };
 
@@ -717,7 +734,8 @@ export function StaffView({
         for (const sec of sections) {
           const at = measureStarts[sec.measure];
           if (!at) continue;
-          const bottom = chordBaseline(at.line, at.y) - 16;
+          // コードネームの文字の上に少しすき間を空ける
+          const bottom = chordBaseline(at.line, at.y) - 25;
           const w = ctx.measureText(sec.label).width + 10;
           // 枠は1つの rect に属性で描く(VexFlow の stroke() は直前のパスを描き直すので使わない)
           // SVG描画の rect は第5引数で属性を取れる(型定義は4引数なので明示的に広げる)

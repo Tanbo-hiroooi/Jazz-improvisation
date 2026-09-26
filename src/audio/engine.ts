@@ -5,6 +5,7 @@
 import * as Tone from 'tone';
 import type { NoteEvent } from '../theory/phrases';
 import { swingNotes } from '../theory/rhythms';
+import { unmuteForSilentSwitch } from './iosUnmute';
 
 export interface CompEvent {
   /** リージョン先頭からの拍 */
@@ -122,6 +123,8 @@ export class AudioEngine {
   }
 
   async ensureStarted(): Promise<void> {
+    // iPhone の消音スイッチがオンでもスピーカーから鳴らす。ユーザー操作の中で呼ぶ必要があるので最初の await より前
+    unmuteForSilentSwitch();
     if (!this.started) {
       await Tone.start();
       // Several first taps can await the same audio-context resume.

@@ -210,6 +210,9 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
   素材の選択(コードトーン/ガイドトーン/スケール/ブルース)は入力パネルの「音の高さ」の隣(`entry-material`、GridEditorの`materialOptions`)に置く。
   レッスンは素材固定なので渡さない。当たり判定の`rect`には`stroke: none`を必ず付ける(SVGルートのstrokeを継承して枠が見える)。
 - engineはシングルトン。`StartOptions`: bpm/countIn/loop/regionBars/metronome/`clickPattern('all'|'backbeat')`/notes/rhythmOnly/comp/swing/`silentFromBeat`/コールバック群。
+- **iPhoneの消音スイッチ対策**(`audio/iosUnmute.ts`、2026-09-26): iOSのWeb Audioは着信音扱いで、マナーモードだとスピーカーから鳴らない(イヤホンでは鳴る)。
+  Safari 17+は `navigator.audioSession.type = 'playback'`、古いiOSは無音WAV(その場で生成)の`<audio>`をループ再生してメディア扱いにする。
+  `play()`はユーザー操作の中でしか許されないので、`ensureStarted()`の**最初のawaitより前**で毎回呼ぶ。画面を離れたら無音再生は止める。
 - **Partに渡す時刻はtickの整数**(`beatsToTime` → `"123i"`)。以前の `"小節:拍:16分"` 文字列は、3連を足し続けた誤差
   (34.00000000000001 など)で16分の値が指数表記になり、Toneが別の位置として解釈した。結果、同じ時刻に2音が入り
   モノシンセが `Start time must be strictly greater than previous start time` を投げた(2026-09-26、ブルースのソロで発見)。
@@ -235,7 +238,7 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
 - **4分3連**: 偶数拍から始まる2/3拍×3つを検出し、4分音符3つのTuplet(3:2)として描く(8分3連とは別グループ)。
 - 表現可能音価: DUR_MAP {4,3,2,1.5,1,0.75,0.5,0.25} + 1/3 + 2/3(4分3連のときだけ)。
 - ゴースト音は符頭を括弧で囲む(`Parenthesis.buildAndAttach`)。スタッカート/テヌートに `accent: true` が重なると記号を2つ付ける。
-- `sections`(小節番号と見出し)を渡すと、その小節の上にブロック見出しの枠を描く(topPadは46に広がる)。
+- `sections`(小節番号と見出し)を渡すと、その小節の上にブロック見出しの枠を描く。見出しのある行だけ上に `SECTION_PAD` の余白を足し(`lineYFor`/`sectionLinesFor`、高さ計算にも含める)、1行目は topPad を60にする。足さないと前の行の口ずさみ文字に重なり、コードネームにも近すぎた(2026-09-26 オーナー指摘)。
 - **VexFlowの `ctx.stroke()` を単独で呼ばない**: SVGContextの`stroke()`は直前のパス(直前に描いた記号)を今の線色で描き直す。
   見出し枠で使ったら直前の休符がオレンジになった。枠は `rect(x, y, w, h, 属性)` の1回で描く(型は4引数なのでキャストが必要)。
 - TAB: タイの継続セグメントと休符はGhostNote(透明スペーサー)。TAB生成はguitar.ts。
