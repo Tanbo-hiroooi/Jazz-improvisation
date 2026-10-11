@@ -48,15 +48,15 @@ First Chorusは、楽器を演奏でき、楽譜も読める人が、コード�
 
 補足(なぜ効くのか・よくある失敗)は折りたたみの「豆知識」に収納。編集STEPは条件と操作課題を満たすまで「次のSTEP」が有効にならず、全STEP完了で「レッスン完了」が解放されます。
 
-**テンポ/キーのはしご**: 多くのレッスンに 60→70→80→100 BPM、C→F→B♭ のはしごが付いています。「クリアした!」で達成を記録し、自分のペースで上がります(進行の条件にはなりません)。メトロノームは**毎拍**と**2・4拍**(ジャズの定番)を切り替えられます。
+**キーのはしご**: 一部のレッスンに C→F→B♭ のはしごが付いています。「クリアした!」で達成を記録し、自分のペースで上がります(進行の条件にはなりません)。テンポはスライダーで自由に変えられます。メトロノームは**毎拍**と**2・4拍**(ジャズの定番)を切り替えられます。
 
 **練習の長さ(4小節/8小節)**: ii-V-I の課題は「**練習の長さ**」で8小節に伸ばせます。8小節は進行を2回くり返すので、前半で問いかけて後半で答える形が作れます。音符数・休符の条件は長さに合わせて増え、説明文の数字もそれに追従します。長さを変えても作りかけは消えません(前半を残して後ろに空の小節が足されます)。
 
 **譜面は1画面に収める**: 譜面は、割り当てられた高さに**全体が収まるように自動で組み直します**。小節数が多いときは1行あたりの小節数を増やして(必要なら少し縮小して)、演奏しながらスクロールしなくて済むようにします。例えば音を詰めた12小節は、以前は譜面の高さが1284pxになり730pxぶんスクロールが必要でしたが、いまは392pxに収まります(1行4小節×3行)。
 
-**譜面全体で練習**: 「▶ 伴奏を流す」を押すと、譜面と再生ボタンを中心にした全画面表示へ切り替わります。音を出さずに準備する場合は、譜面の「⛶ 譜面全体で練習」から開けます。練習コース・自由練習の基礎練習とフレーズ作成すべてで使えます。譜面は実際の空きスペースに合わせて全小節が収まる大きさに調整され、スマートフォンの縦横切替にも追従します。「テンポ・再生設定」は必要なときだけ開けます。Escか「✕ 閉じる」で編集に戻り、作りかけとUndo履歴は保持されます。画面の小さい端末で音符が細かく感じる場合は、横向き表示も試してください。
+**譜面を拡大**: 「▶ 伴奏を流す」を押すと、譜面と再生ボタンを中心にした全画面表示へ切り替わります。音を出さずに準備する場合は、譜面の「⛶ 譜面を拡大」から開けます。練習コース・自由練習の基礎練習とフレーズ作成すべてで使えます。譜面は実際の空きスペースに合わせて全小節が収まる大きさに調整され、スマートフォンの縦横切替にも追従します。「テンポ・再生設定」は必要なときだけ開けます。Escか「✕ 閉じる」で編集に戻り、作りかけとUndo履歴は保持されます。画面の小さい端末で音符が細かく感じる場合は、横向き表示も試してください。
 
-**Practice with the full score**: Starting the backing opens a full-screen score in lessons, fundamentals and the phrase editor. Use “Practice with full score” to open it before playing. All bars fit the available space, including after rotation or opening “Tempo & playback settings.” Close the view or press Esc to return to editing with your phrase and undo history intact. Try landscape orientation when notes look small on a phone.
+**Enlarge score**: Starting the backing opens a full-screen score in lessons, fundamentals and the phrase editor. Use “Enlarge score” to open it before playing. All bars fit the available space, including after rotation or opening “Tempo & playback settings.” Close the view or press Esc to return to editing with your phrase and undo history intact. Try landscape orientation when notes look small on a phone.
 
 ## フレーズ作成（音符の順番入力）
 

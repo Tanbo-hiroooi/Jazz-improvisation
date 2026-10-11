@@ -786,32 +786,8 @@ export function StepPractice({
         <p className="hint-text">{t('practiceBarsHint')}</p>
       )}
 
-      {(lesson.tempoLadder || lesson.keyLadder) && (
+      {lesson.keyLadder && (
         <div className="ladder-panel">
-          {lesson.tempoLadder && (
-            <div className="ladder-row">
-              <span className="opt-label">🪜 {t('tempoLadderLabel')}:</span>
-              <div className="seg-group">
-                {lesson.tempoLadder.map((v) => {
-                  const token = `bpm:${v}`;
-                  const done = ladderDone.includes(token);
-                  return (
-                    <button
-                      key={v}
-                      className={`seg${bpm === v ? ' on' : ''}`}
-                      aria-pressed={bpm === v}
-                      onClick={() => setBpm(v)}
-                    >
-                      {done ? '✓' : ''}{v}
-                    </button>
-                  );
-                })}
-                <button className="seg" onClick={() => toggleLadder(`bpm:${bpm}`)}>
-                  {ladderDone.includes(`bpm:${bpm}`) ? t('ladderUnclear') : t('ladderClear')}
-                </button>
-              </div>
-            </div>
-          )}
           {lesson.keyLadder && (
             <div className="ladder-row">
               <span className="opt-label">🗝 {t('keyLadderLabel')}:</span>

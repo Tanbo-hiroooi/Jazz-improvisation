@@ -58,7 +58,7 @@ export function saveMyInstrument(settings: MyInstrumentSettings): void {
   saveJSON(STORAGE_KEYS.myInstrument, settings);
 }
 
-/** コース進捗: 完了したレッスンIDと、テンポ/キーはしごの達成トークン(例: 'bpm:80', 'key:5') */
+/** コース進捗: 完了したレッスンIDと、キーはしごの達成トークン(例: 'key:5'。旧テンポはしごの 'bpm:80' が残っていても無視される) */
 export interface CourseProgress {
   completedLessonIds: string[];
   ladders?: Record<string, string[]>;

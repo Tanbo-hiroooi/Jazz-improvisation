@@ -112,8 +112,6 @@ export interface Lesson {
   defaultBpm?: number;
   /** メトロノームの既定パターン(backbeat=2・4拍) */
   clickPattern?: 'all' | 'backbeat';
-  /** テンポのはしご(クリアしたらユーザーが自分で上げる) */
-  tempoLadder?: number[];
   /** キーのはしご(pitch class) */
   keyLadder?: number[];
 }
@@ -126,7 +124,6 @@ export interface Course {
 }
 
 const b = (ja: string, en: string): Bi => ({ ja, en });
-const LADDER_BPM = [60, 70, 80, 100];
 const LADDER_KEY = [0, 5, 10]; // C → F → B♭
 
 export const COURSES: Course[] = [
@@ -187,7 +184,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('スウィングに乗る', 'Ride the swing'),
@@ -215,7 +211,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('食いで前へ進む', 'Lean forward with anticipations'),
@@ -243,7 +238,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 70,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('3連を混ぜる', 'Mix in triplets'),
@@ -271,7 +265,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('リズムの単語を覚える', 'Learn rhythmic words'),
@@ -299,7 +292,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('1拍目へ向かって弾く', 'Aim for beat 1'),
@@ -327,7 +319,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('1つの形をずらして回す', 'Move one shape around'),
@@ -355,7 +346,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('裏拍にアクセントを置く', 'Accent the offbeats'),
@@ -383,7 +373,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 70,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('3連で揺らす', 'Rock with triplets'),
@@ -411,7 +400,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('間と長さでソロを組む', 'Shape a solo with space'),
@@ -439,7 +427,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'blues',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('1音でリズムのソロを弾く', 'Play a one-note rhythm solo'),
@@ -468,7 +455,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     keyLadder: LADDER_KEY,
     steps: [
       {
@@ -508,7 +494,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     keyLadder: LADDER_KEY,
     steps: [
       {
@@ -548,7 +533,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     keyLadder: LADDER_KEY,
     steps: [
       {
@@ -588,7 +572,6 @@ export const LESSONS: Lesson[] = [
     isThrough: true,
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('12小節の地図を見る', 'See the map'),
@@ -629,7 +612,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     keyLadder: LADDER_KEY,
     steps: [
       {
@@ -674,7 +656,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     keyLadder: LADDER_KEY,
     steps: [
       {
@@ -719,7 +700,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     keyLadder: LADDER_KEY,
     steps: [
       {
@@ -752,7 +732,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     keyLadder: LADDER_KEY,
     steps: [
       {
@@ -801,7 +780,6 @@ export const LESSONS: Lesson[] = [
     isThrough: true,
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('着地を1回決める', 'Land once'),
@@ -836,7 +814,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     keyLadder: LADDER_KEY,
     steps: [
       {
@@ -876,7 +853,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     keyLadder: LADDER_KEY,
     steps: [
       {
@@ -916,7 +892,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('半音下から入る', 'Approach from below'),
@@ -960,7 +935,6 @@ export const LESSONS: Lesson[] = [
     isThrough: true,
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('着地でつないで12小節', 'Twelve bars of landings'),
@@ -994,7 +968,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     keyLadder: LADDER_KEY,
     steps: [
       {
@@ -1034,7 +1007,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('リズムだけ変えた例を聴く', 'Hear a rhythm variation'),
@@ -1076,7 +1048,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('問いと答えを聴く', 'Hear the call and response'),
@@ -1113,7 +1084,6 @@ export const LESSONS: Lesson[] = [
     isThrough: true,
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('12小節で掛け合う', 'Trade through 12 bars'),
@@ -1147,7 +1117,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'blues',
     defaultBpm: 70,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('ブルーノートを聴く', 'Hear the blue note'),
@@ -1184,7 +1153,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'blues',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('リフを聴く', 'Hear the riff'),
@@ -1220,7 +1188,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'blues',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('使える音を確かめる', 'Check your palette'),
@@ -1256,7 +1223,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'blues',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     steps: [
       {
         title: b('1コーラスを完成させる', 'Finish the chorus'),
@@ -1288,7 +1254,6 @@ export const LESSONS: Lesson[] = [
     progressionId: 'blues',
     defaultBpm: 80,
     clickPattern: 'backbeat',
-    tempoLadder: LADDER_BPM,
     keyLadder: LADDER_KEY,
     steps: [
       {

@@ -24,7 +24,7 @@ AIアシスタント(GPT / Claude / その他)や新規開発者が、このプ�
    - 原則: 「譜面に見えているものを音にする」機能だけを持ち、「演奏のお手本」は提供しない。
 2. **一度に変えるものは1つだけ**: 各STEPで新しく要求する要素は1つ。ただしこれは**必須条件**を絞る原則であり、**使える道具**(3連・16分など)まで狭めない(第2章以降の自由編集では全分割を許可済み)。
 3. **リズム最優先のカリキュラム**: リズム → フレーズ → コード → アドリブ の順(§5参照)。
-4. **挫折しない設計**: ハードゲート(次のSTEP・レッスン完了のロック)は編集課題のみ。テンポ/キーの「はしご」は絶対にゲートにしない(ユーザーが自分のペースで上げる)。
+4. **挫折しない設計**: ハードゲート(次のSTEP・レッスン完了のロック)は編集課題のみ。キーの「はしご」は絶対にゲートにしない(ユーザーが自分のペースで上げる)。
 5. **録音機能は作らない**(オーナーが明示的に不要と決定。第6章は自己チェック方式)。
 6. **音程の扱い**: 内部は常に実音(Concert)MIDI。移調楽器(B♭/E♭)は**表示時のみ**シフト。ギターの+12は記譜オクターブでありトランスポーズではない。TAB・五線譜・再生音の音程は常に一致させる。F管(ホルン等)は追加しない(決定済み)。
 7. **内部識別子は変更しない**: package.json name(jazz-phrase-lab)、localStorageキー、リポジトリ名/Pages URL、deploy workflow。ユーザー向け表示にのみ「First Chorus」を使う。
@@ -101,7 +101,7 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
 - **STEPの2形態**:
   - `content`(固定譜例STEP): `source`で内容を厳密指定(root/third/guide-tones/approach-pair/enclosure/landing-approach/custom-path/sample-motif/blues-riff/blue-note-demo/scale...)。**「chord-tonesで近似」は禁止** — STEPの説明文と譜面・再生音を完全一致させること(過去に不一致で大きな手戻りが発生)。訪問だけで達成扱い。
   - `editable`(グリッド編集STEP): material/bars/divisions/initial/conditions/requiredAction等。条件+操作課題を満たすまで未達成。
-- レッスン単位の設定: `defaultBpm` / `clickPattern`(第1章はbackbeat) / `tempoLadder` / `keyLadder`。
+- レッスン単位の設定: `defaultBpm` / `clickPattern`(第1章はbackbeat) / `keyLadder`(テンポのはしごは撤去済み)。
 - **レッスンIDを変えると進捗(completedLessonIds)がリセットされる。** テスターの有無をオーナーに確認してから変更すること。
 
 ## 6. 拍グリッド(theory/grid.ts)— フレーズ編集の中核
@@ -185,7 +185,7 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
   ここを守らないと「説明は4小節・譜面は8小節」のような不一致が起きる(このプロジェクトで最も嫌う種類のバグ)。
   一覧に出るレッスン名・outcomeは長さが決まっていないので、数字を書かない言い回しにしてある。
 - **集中モード**(`FocusStage.tsx`): 譜面と再生だけをポータルで全画面表示する。
-  「伴奏を流す」で自動的に開き、「譜面全体で練習」から再生前にも開ける。基礎練習にも対応済み。
+  「伴奏を流す」で自動的に開き、「譜面を拡大」(旧「譜面全体で練習」。意味が分かりにくいとのオーナー指摘で2026-10-11改名)から再生前にも開ける。基礎練習にも対応済み。
   テンポ・再生設定は折りたたみ。設定の開閉でカードの高さが変わると譜面も再フィットする。
   **画面を新設せず、STEPのbodyがJSXの出し先を変えるだけ**にしてある(`usePracticePlayback`は1画面1つという決まりを守るため。
   別画面にすると再生フックが2つになり、過去に「音が出ない」バグが出た)。
@@ -267,7 +267,8 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
 - **マイ楽器 vs 今回の練習設定**: App.tsxで`baseInstrument`(永続)と`session`(一時)を別stateで管理。Homeはbaseのみ表示。「この設定をマイ楽器に保存」で明示保存した時だけbase更新。
 - レッスン: 開いた直後は設定確認パネル(setupConfirmed初期値false)。扱うのは楽器・譜面・表示ピッチだけ。
   キーとテンポは練習パネル側(StepPractice)にあるので、確認パネルには置かない(二重表示を避ける)。
-- テンポ/キーはしご: CourseProgress.ladders にトークン('bpm:80','key:5')で保存。自己申告の「クリアした!」ボタン。
+- キーはしご: CourseProgress.ladders にトークン('key:5')で保存。自己申告の「クリアした!」ボタン。
+  テンポのはしごは2026-10-11に撤去(テンポはスライダーで変えられるため。オーナー決定)。保存済みの 'bpm:…' トークンは読まれないだけで害はない。
 - グリッドのチュートリアル: GridEditor内蔵。初回自動オープン、閉じたらlocalStorage('fc-grid-help-seen-v1')に記憶。STEP種別で項目を出し分け。
 - アクセシビリティ: トグルはaria-pressed、STEPタブはrole=tablist/aria-selected。維持すること。
 - localStorageキー: jpl-course-progress-v1 / jpl-last-screen-v1 / fc-my-instrument-v1 / fc-volumes-v1 / fc-grid-help-seen-v1 / jazz-phrase-lab-lang / 練習ログ(PracticeLogPanel内)。
