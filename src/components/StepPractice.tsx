@@ -45,7 +45,6 @@ import {
   type ToneRhythmId,
 } from '../theory/phrases';
 import { changeMeasures, fitProgression, type Progression } from '../theory/progressions';
-import { loadCourseProgress, saveCourseProgress } from '../state/storage';
 import { rhythmNotes } from '../theory/rhythmScore';
 import { pick, t as tr, type Lang } from '../i18n';
 
@@ -583,9 +582,6 @@ interface Props {
   registerStop: (fn: (() => void) | null) => void;
 }
 
-/** はしごの使い方を初回だけ自動で開くためのフラグ(グリッドのチュートリアルと同じ方式) */
-const LADDER_HELP_SEEN_KEY = 'fc-ladder-help-seen-v1';
-
 export function StepPractice({
   lang, lesson, progression, keyPc, setKeyPc, shift, flats, clef, notation, guitarPosition, guitarOpenStrings,
   bpm, setBpm, countIn, setCountIn, metronomeOn, setMetronomeOn, clickPattern, setClickPattern,
@@ -600,18 +596,6 @@ export function StepPractice({
   const [drafts, setDrafts] = useState<Record<number, StepDraftState>>({});
   const initialVisited = (): Record<number, boolean> => (lesson.steps[0]?.editable ? {} : { 0: true });
   const [visitedFixed, setVisitedFixed] = useState<Record<number, boolean>>(initialVisited);
-  // はしご達成(localStorage保存)
-  const [ladderDone, setLadderDone] = useState<string[]>(() => loadCourseProgress().ladders?.[lesson.id] ?? []);
-  // はしごの使い方は初回だけ開き、閉じたら以降のレッスンでは畳んだ状態で始める
-  const [ladderHelpOpen, setLadderHelpOpen] = useState<boolean>(() => {
-    try { return !localStorage.getItem(LADDER_HELP_SEEN_KEY); } catch { return true; }
-  });
-  const toggleLadderHelp = (open: boolean) => {
-    setLadderHelpOpen(open);
-    if (!open) {
-      try { localStorage.setItem(LADDER_HELP_SEEN_KEY, '1'); } catch { /* 保存失敗は無視 */ }
-    }
-  };
   const step = lesson.steps[currentStep];
   const total = lesson.steps.length;
   const activeDraft = drafts[currentStep] ?? null;
@@ -651,7 +635,6 @@ export function StepPractice({
     setCurrentStep(0);
     setDrafts({});
     setVisitedFixed(initialVisited());
-    setLadderDone(loadCourseProgress().ladders?.[lesson.id] ?? []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lesson.id]);
 
@@ -689,15 +672,6 @@ export function StepPractice({
     if (i === currentStep) return;
     setCurrentStep(i);
     if (!lesson.steps[i].editable) setVisitedFixed((d) => ({ ...d, [i]: true }));
-  };
-
-  const toggleLadder = (token: string) => {
-    const progress = loadCourseProgress();
-    const cur = progress.ladders?.[lesson.id] ?? [];
-    const next = cur.includes(token) ? cur.filter((x) => x !== token) : [...cur, token];
-    const updated = { ...progress, ladders: { ...(progress.ladders ?? {}), [lesson.id]: next } };
-    saveCourseProgress(updated);
-    setLadderDone(next);
   };
 
   const fallbackContent: StepContent = { source: 'chord-tones', rhythm: 'basic' };
@@ -802,43 +776,6 @@ export function StepPractice({
         <p className="hint-text">{t('practiceBarsHint')}</p>
       )}
 
-      {lesson.keyLadder && (
-        <div className="ladder-panel">
-          {lesson.keyLadder && (
-            <div className="ladder-row">
-              <span className="opt-label">🗝 {t('keyLadderLabel')}:</span>
-              <div className="seg-group">
-                {lesson.keyLadder.map((pc) => {
-                  const token = `key:${pc}`;
-                  const done = ladderDone.includes(token);
-                  const name = KEYS.find((k) => k.pc === pc)?.name ?? String(pc);
-                  return (
-                    <button
-                      key={pc}
-                      className={`seg${keyPc === pc ? ' on' : ''}`}
-                      aria-pressed={keyPc === pc}
-                      onClick={() => setKeyPc(pc)}
-                    >
-                      {done ? '✓' : ''}{name}
-                    </button>
-                  );
-                })}
-                <button className="seg" onClick={() => toggleLadder(`key:${keyPc}`)}>
-                  {ladderDone.includes(`key:${keyPc}`) ? t('ladderUnclear') : t('ladderClear')}
-                </button>
-              </div>
-            </div>
-          )}
-          <details
-            className="ladder-help"
-            open={ladderHelpOpen}
-            onToggle={(e) => toggleLadderHelp((e.target as HTMLDetailsElement).open)}
-          >
-            <summary>{t('ladderHelpTitle')}</summary>
-            <p className="hint-text">{t('ladderHint')}</p>
-          </details>
-        </div>
-      )}
 
       {isRhythm ? (
         <RhythmStepBody

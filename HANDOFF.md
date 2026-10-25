@@ -24,7 +24,7 @@ AIアシスタント(GPT / Claude / その他)や新規開発者が、このプ�
    - 原則: 「譜面に見えているものを音にする」機能だけを持ち、「演奏のお手本」は提供しない。
 2. **一度に変えるものは1つだけ**: 各STEPで新しく要求する要素は1つ。ただしこれは**必須条件**を絞る原則であり、**使える道具**(3連・16分など)まで狭めない(第3章以降の自由編集では全分割を許可済み)。
 3. **リズム最優先のカリキュラム**: リズム → フレーズ → コード → アドリブ の順(§5参照)。
-4. **挫折しない設計**: ハードゲート(次のSTEP・レッスン完了のロック)は編集課題のみ。キーの「はしご」は絶対にゲートにしない(ユーザーが自分のペースで上げる)。
+4. **挫折しない設計**: ハードゲート(次のSTEP・レッスン完了のロック)は編集課題のみ。テンポ・キーは自分のペースで変える(ゲートにしない)。
 5. **録音機能は作らない**(オーナーが明示的に不要と決定。第5章(id: ch6)は自己チェック方式)。
 6. **音程の扱い**: 内部は常に実音(Concert)MIDI。移調楽器(B♭/E♭)は**表示時のみ**シフト。ギターの+12は記譜オクターブでありトランスポーズではない。TAB・五線譜・再生音の音程は常に一致させる。F管(ホルン等)は追加しない(決定済み)。
 7. **内部識別子は変更しない**: package.json name(jazz-phrase-lab)、localStorageキー、リポジトリ名/Pages URL、deploy workflow。ユーザー向け表示にのみ「First Chorus」を使う。
@@ -58,7 +58,7 @@ src/
 │   ├── VolumeControls.tsx # チャンネル別音量スライダー
 │   └── ...
 ├── screens/         # Home / FreePractice / Course→Lesson
-├── state/storage.ts # localStorage抽象化(キー一覧・マイ楽器・進捗+はしご)
+├── state/storage.ts # localStorage抽象化(キー一覧・マイ楽器・進捗)
 └── i18n.ts          # 日英辞書(t(lang,key), pick(lang,ja,en))
 ```
 
@@ -102,7 +102,7 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
   - 各ブロックの `free`(使ってよい音)があると、3周目が「自分の音で」になる(ボタン「聴く→一緒に→自分の音で」)。
     3周目は譜例の音を消し、リズムは譜面どおり・音は `free` から自分で選ぶ。`free` はヒントの横に「3周目の音 1・3」と出て、3周目の間は緑に光る。
     **譜面に書いた音は必ずそのブロックの `free` に含める**(説明と譜面の一致。テストで検証)。
-  - 達成条件なし・譜面を直す機能なし(オーナー決定)。`keyLadder` は ii-V-I のレッスンに残している。
+  - 達成条件なし・譜面を直す機能なし(オーナー決定)。
   - 書式の追加: 高さの後ろの `>` は**次の小節のコード**の音(食いの先取り `8:3>_`)。chordIndex も次のコードにするので度数表示も合う。
   - リズム譜はブロックの頭が必ず行の頭に来るよう、1行の小節数をブロック長の約数に限る(StaffView `layoutFor`)。音が少ないと1行6小節になってブロックが行の途中から始まっていた。
 - 章まとめ練習(`ChapterWorkoutScreen`)は2026-09-26に全章から撤去(オーナー決定)。
@@ -112,7 +112,7 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
 - **STEPの2形態**:
   - `content`(固定譜例STEP): `source`で内容を厳密指定(root/third/guide-tones/approach-pair/enclosure/landing-approach/custom-path/sample-motif/blues-riff/blue-note-demo/scale...)。**「chord-tonesで近似」は禁止** — STEPの説明文と譜面・再生音を完全一致させること(過去に不一致で大きな手戻りが発生)。訪問だけで達成扱い。
   - `editable`(グリッド編集STEP): material/bars/divisions/initial/conditions/requiredAction等。条件+操作課題を満たすまで未達成。
-- レッスン単位の設定: `defaultBpm` / `clickPattern`(第1章はbackbeat) / `keyLadder`(テンポのはしごは撤去済み)。
+- レッスン単位の設定: `defaultBpm` / `clickPattern`(第1章はbackbeat)。
 - **レッスンIDを変えると進捗(completedLessonIds)がリセットされる。** テスターの有無をオーナーに確認してから変更すること。
 
 ## 6. 拍グリッド(theory/grid.ts)— フレーズ編集の中核
@@ -278,8 +278,8 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
 - **マイ楽器 vs 今回の練習設定**: App.tsxで`baseInstrument`(永続)と`session`(一時)を別stateで管理。Homeはbaseのみ表示。「この設定をマイ楽器に保存」で明示保存した時だけbase更新。
 - レッスン: 開いた直後は設定確認パネル(setupConfirmed初期値false)。扱うのは楽器・譜面・表示ピッチだけ。
   キーとテンポは練習パネル側(StepPractice)にあるので、確認パネルには置かない(二重表示を避ける)。
-- キーはしご: CourseProgress.ladders にトークン('key:5')で保存。自己申告の「クリアした!」ボタン。
-  テンポのはしごは2026-10-11に撤去(テンポはスライダーで変えられるため。オーナー決定)。保存済みの 'bpm:…' トークンは読まれないだけで害はない。
+- テンポ/キーの「はしご」(60→100 BPM、C→F→B♭ と自己申告の「クリアした!」)は撤去済み(テンポ 2026-10-11、キー 2026-10-25。オーナー決定)。
+  テンポはスライダー、キーはプルダウンで変えられ、達成記録はどこにも使われていなかったため。保存に残った `ladders` は読まない。
 - グリッドのチュートリアル: GridEditor内蔵。初回自動オープン、閉じたらlocalStorage('fc-grid-help-seen-v1')に記憶。STEP種別で項目を出し分け。
 - アクセシビリティ: トグルはaria-pressed、STEPタブはrole=tablist/aria-selected。維持すること。
 - localStorageキー: jpl-course-progress-v1 / jpl-last-screen-v1 / fc-my-instrument-v1 / fc-volumes-v1 / fc-grid-help-seen-v1 / jazz-phrase-lab-lang / 練習ログ(PracticeLogPanel内)。

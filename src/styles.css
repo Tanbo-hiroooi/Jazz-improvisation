@@ -1193,17 +1193,6 @@ body.focus-open { overflow: hidden; }
 .volume-row label strong { color: var(--accent); }
 .volume-row input[type='range'] { width: 100%; max-width: 320px; accent-color: var(--accent); height: 28px; }
 
-/* ---- テンポ/キーのはしご ---- */
-.ladder-panel {
-  background: var(--bg-panel-2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 8px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.ladder-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 /* 章末の「通し」レッスンの目印 */
 .through-badge {
   margin-left: 8px;
@@ -1215,16 +1204,6 @@ body.focus-open { overflow: hidden; }
   border-radius: 99px;
   vertical-align: middle;
 }
-/* はしごの使い方: 初回だけ開き、以降は1行の見出しだけ残す */
-.ladder-help summary {
-  cursor: pointer;
-  padding: 2px 0;
-  font-size: 12px;
-  color: var(--text-dim);
-  list-style-position: inside;
-}
-.ladder-help summary::marker { color: var(--text-dim); }
-.ladder-help .hint-text { margin-top: 2px; }
 .step-footer-nav {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   flex-wrap: wrap; margin-top: 6px;

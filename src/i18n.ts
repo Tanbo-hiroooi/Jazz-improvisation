@@ -310,11 +310,6 @@ const JA = {
   volumeTitle: '音量(メトロノーム・コード音)',
   volMetronome: 'メトロノーム',
   volComp: 'コード音',
-  keyLadderLabel: 'キーのはしご',
-  ladderClear: 'クリアした!',
-  ladderUnclear: 'クリアを取り消す',
-  ladderHelpTitle: 'はしごの使い方',
-  ladderHint: 'できたと感じたら「クリアした!」を押して、次の段へ自分のペースで上がりましょう(進行の条件ではありません)。',
   triviaTitle: '豆知識(なぜ効くの?・よくある失敗)',
   // ---- STEP統合UI ----
   stepGoalLabel: 'やること',
@@ -621,11 +616,6 @@ const EN: typeof JA = {
   volumeTitle: 'Volume (metronome, chords)',
   volMetronome: 'Metronome',
   volComp: 'Chord sound',
-  keyLadderLabel: 'Key ladder',
-  ladderClear: 'Cleared it!',
-  ladderUnclear: 'Un-clear',
-  ladderHelpTitle: 'How the ladders work',
-  ladderHint: 'When it feels solid, press “Cleared it!” and climb at your own pace (never required to continue).',
   triviaTitle: 'Trivia (why it works, common stumbles)',
   // ---- Step-integrated UI ----
   stepGoalLabel: 'What to do',
