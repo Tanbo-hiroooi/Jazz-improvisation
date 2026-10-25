@@ -32,7 +32,7 @@ import {
   Voice,
 } from 'vexflow';
 import { degreeLabel, type Quality } from '../theory/chords';
-import { midiSeqToTab, type GuitarPosition, type TabPosition } from '../theory/guitar';
+import { midiSeqToTab, STANDARD_TUNING, type GuitarPosition, type TabPosition } from '../theory/guitar';
 import { midiToParts, midiToName, midiToSolfege, mod12 } from '../theory/notes';
 import type { NoteEvent } from '../theory/phrases';
 import type { Clef, NotationMode } from '../theory/instruments';
@@ -130,6 +130,29 @@ function nearestDur(beats: number): { dur: string; dots: number } {
 }
 
 const near = (a: number, b: number) => Math.abs(a - b) < 0.04;
+
+/**
+ * 和音をTABに書くとき、1本の弦に2音が重ならないよう弦を振り分け直す。
+ * 単音ごとに選んだ位置(midiSeqToTab)で弦が重なっていなければそのまま使う。
+ */
+function spreadOnStrings(midis: number[], picked: TabPosition[]): TabPosition[] {
+  if (new Set(picked.map((p) => p.str)).size === picked.length) return picked;
+  const strings = STANDARD_TUNING.strings;
+  const center = picked.reduce((sum, p) => sum + p.fret, 0) / picked.length;
+  const used = new Set<number>();
+  const out: TabPosition[] = [...picked];
+  // 高い音から、空いている弦のうち元の位置に近いフレットへ置く
+  midis.map((m, i) => ({ m, i })).sort((a, b) => b.m - a.m).forEach(({ m, i }) => {
+    let best: TabPosition | null = null;
+    strings.forEach((open, si) => {
+      const fret = m - open;
+      if (fret < 0 || fret > 14 || used.has(si + 1)) return;
+      if (!best || Math.abs(fret - center) < Math.abs(best.fret - center)) best = { str: si + 1, fret };
+    });
+    if (best) { used.add((best as TabPosition).str); out[i] = best; }
+  });
+  return out;
+}
 
 /**
  * 1音を表示可能な音価に分割する(小節線で必ず区切り、表現できない長さはタイでつなぐ)。
@@ -368,6 +391,12 @@ export function StaffView({
         /** articulation に重ねるアクセント(「短く強く」) */
         accent2?: boolean;
         ghost?: boolean;
+        /** 縦に積んだ和音(同じ時刻・同じ長さの音)。keys と同じ順(低い音から)で並ぶ */
+        stack?: { gis: number[]; accs: ('' | '#' | 'b')[]; labels: string[] };
+        /** スラッシュ(リズムだけ)。answerKey は正解の音で、再生中だけ光らせる */
+        slash?: boolean;
+        answerKey?: string;
+        answerAcc?: '' | '#' | 'b';
       }
       const restKeys = [noteClef === 'bass' ? 'd/3' : 'b/4'];
       const measureItems: Item[][] = [];
@@ -398,35 +427,53 @@ export function StaffView({
             items.push({ start: r.start, keys: restKeys, dur: r.dur + 'r', dots: r.dots, isRest: true, acc: '', globalIndex: -1, segIdx: 0, label: '', triplet });
           }
         };
-        for (const s of inMeasure) {
+        const labelOf = (gi: number, segIdx: number) => {
+          if (segIdx !== 0) return '';
+          const n = displayNotes[gi];
+          const chord = chords[Math.min(n.chordIndex, Math.max(0, chords.length - 1))];
+          if (labelMode === 'name') return midiToName(n.displayMidi, flats).replace(/-?\d+$/, '');
+          if (labelMode === 'solfege') return midiToSolfege(n.displayMidi, flats);
+          if (labelMode === 'degree' && chord) return degreeLabel(mod12(n.displayMidi), chord.rootPc, chord.quality);
+          if (labelMode === 'scat') return n.label ?? '';
+          return '';
+        };
+        const keyOf = (midi: number) => {
+          const p = midiToParts(midi, flats);
+          return { key: `${p.letter.toLowerCase()}${p.accidental}/${p.octave}`, acc: p.accidental };
+        };
+        for (let si = 0; si < inMeasure.length; si++) {
+          const s = inMeasure[si];
           if (s.start > t + 0.04) pushRests(t, s.start);
           const n = displayNotes[s.gi];
-          const p = midiToParts(n.displayMidi, flats);
-          const chord = chords[Math.min(n.chordIndex, Math.max(0, chords.length - 1))];
-          let label = '';
-          if (s.segIdx === 0) {
-            if (labelMode === 'name') label = midiToName(n.displayMidi, flats).replace(/-?\d+$/, '');
-            else if (labelMode === 'solfege') label = midiToSolfege(n.displayMidi, flats);
-            else if (labelMode === 'degree' && chord) label = degreeLabel(mod12(n.displayMidi), chord.rootPc, chord.quality);
-            else if (labelMode === 'scat') label = n.label ?? '';
-          }
+          // 同じ時刻・同じ長さの音は、縦に積んだ1つの和音として描く
+          const group = [s];
+          while (si + 1 < inMeasure.length && near(inMeasure[si + 1].start, s.start)
+            && near(inMeasure[si + 1].dur, s.dur) && inMeasure[si + 1].segIdx === s.segIdx) group.push(inMeasure[++si]);
+          group.sort((a, b) => displayNotes[a.gi].displayMidi - displayNotes[b.gi].displayMidi);
           const { dur, dots } = s.triplet ? { dur: '8', dots: 0 } : s.qtrip ? { dur: 'q', dots: 0 } : nearestDur(s.dur);
-          items.push({
-            start: s.start,
-            keys: [`${p.letter.toLowerCase()}${p.accidental}/${p.octave}`],
-            dur,
-            dots,
-            isRest: false,
-            acc: p.accidental,
-            globalIndex: s.gi,
-            segIdx: s.segIdx,
-            label,
-            triplet: s.triplet,
-            qtrip: s.qtrip,
+          const base = {
+            start: s.start, dur, dots, isRest: false, segIdx: s.segIdx, triplet: s.triplet, qtrip: s.qtrip,
             articulation: s.segIdx === 0 && n.articulation ? ARTIC_CODE[n.articulation] : undefined,
             accent2: s.segIdx === 0 && !!n.accent && n.articulation !== 'accent',
             ghost: s.segIdx === 0 && !!n.ghost,
-          });
+          };
+          if (group.length > 1) {
+            const ks = group.map((g) => keyOf(displayNotes[g.gi].displayMidi));
+            items.push({
+              ...base, keys: ks.map((k) => k.key), acc: '', globalIndex: group[0].gi, label: '',
+              stack: { gis: group.map((g) => g.gi), accs: ks.map((k) => k.acc), labels: group.map((g) => labelOf(g.gi, g.segIdx)) },
+            });
+          } else if (n.slash) {
+            // スラッシュは譜表の真ん中の線に書く。正解の音は別に描いて、再生中だけ見せる
+            const k = keyOf(n.displayMidi);
+            items.push({
+              ...base, keys: restKeys, acc: '', globalIndex: s.gi, label: labelOf(s.gi, s.segIdx),
+              slash: true, answerKey: k.key, answerAcc: k.acc,
+            });
+          } else {
+            const k = keyOf(n.displayMidi);
+            items.push({ ...base, keys: [k.key], acc: k.acc, globalIndex: s.gi, label: labelOf(s.gi, s.segIdx) });
+          }
           t = s.start + s.dur;
         }
         if (items.length === 0 && !entryDivisions) {
@@ -440,8 +487,11 @@ export function StaffView({
       // 内容の密度から1小節に必要な幅を見積もり、1行あたりの小節数を決める
       let maxRequired = 120;
       for (const items of measureItems) {
-        const accCount = items.filter((i) => i.acc && !i.isRest).length;
-        const required = 50 + items.length * 32 + accCount * 12;
+        const accCount = items.filter((i) => i.acc && !i.isRest).length
+          + items.reduce((sum, i) => sum + (i.stack?.accs.filter(Boolean).length ?? 0), 0);
+        // 和音は符頭の右に度数を書くので、その分の幅を取る
+        const stackCount = items.filter((i) => i.stack).length;
+        const required = 50 + items.length * 32 + accCount * 12 + stackCount * 16;
         if (required > maxRequired) maxRequired = required;
       }
       /** 論理幅から「1行の小節数・行数・高さ」を決める(拡大率を変えると論理幅が変わる) */
@@ -572,8 +622,12 @@ export function StaffView({
         const articOf: VFArticulation[][] = [];
         if (showStaff) {
           staveNotes = items.map((item, idx) => {
-            const sn = new StaveNote({ keys: item.keys, duration: item.dur + (item.isRest ? '' : ''), clef: noteClef, auto_stem: true });
+            const sn = new StaveNote({
+              keys: item.keys, duration: item.dur, clef: noteClef, auto_stem: true,
+              ...(item.slash ? { type: 's' } : {}),
+            });
             if (item.acc && !item.isRest) sn.addModifier(new Accidental(item.acc), 0);
+            item.stack?.accs.forEach((a, k) => { if (a) sn.addModifier(new Accidental(a), k); });
             if (item.dots > 0) Dot.buildAndAttach([sn], { all: true });
             articOf[idx] = [];
             if (item.articulation) {
@@ -597,7 +651,7 @@ export function StaffView({
             return sn;
           });
           items.forEach((item, i) => {
-            if (item.globalIndex >= 0) {
+            if (item.globalIndex >= 0 && !item.stack && !item.slash) {
               const arr = tieNotes.get(item.globalIndex) ?? [];
               arr.push({ segIdx: item.segIdx, line, sn: staveNotes[i] });
               tieNotes.set(item.globalIndex, arr);
@@ -610,9 +664,11 @@ export function StaffView({
         if (showTab) {
           tabTickables = items.map((item) => {
             const baseDur = item.dur.replace('r', '');
-            if (item.isRest || item.segIdx > 0) return new GhostNote(baseDur);
-            const pos = tabByGi[item.globalIndex] ?? { str: 1, fret: 0 };
-            const tn = new TabNote({ positions: [pos], duration: baseDur });
+            if (item.isRest || item.segIdx > 0 || item.slash) return new GhostNote(baseDur);
+            const positions = item.stack
+              ? spreadOnStrings(item.stack.gis.map((gi) => displayNotes[gi].midi), item.stack.gis.map((gi) => tabByGi[gi] ?? { str: 1, fret: 0 }))
+              : [tabByGi[item.globalIndex] ?? { str: 1, fret: 0 }];
+            const tn = new TabNote({ positions, duration: baseDur });
             if (!showStaff && item.label) {
               const ann = new Annotation(item.label);
               ann.setFont('Helvetica', 9);
@@ -685,16 +741,63 @@ export function StaffView({
               height: isGrand ? 150 : showStaff && showTab ? 165 : 76, rest: item.isRest });
           }
           if (item.globalIndex < 0) return;
-          const els: SVGElement[] = noteElsRef.current[item.globalIndex] ?? [];
+          const found: SVGElement[] = [];
           if (showStaff) {
             const el = collectEl(staveNotes[i]);
-            if (el) els.push(el);
+            if (el) found.push(el);
           }
           if (showTab) {
             const el = collectEl(tabTickables[i]);
-            if (el) els.push(el);
+            if (el) found.push(el);
           }
-          noteElsRef.current[item.globalIndex] = els;
+          // 和音の度数は符頭の右に書く(Annotation は音符に1つしか付けられないため)
+          if (item.stack && showStaff) {
+            const sn = staveNotes[i];
+            const ys = sn.getYs();
+            const lx = sn.getAbsoluteX() + sn.getGlyphWidth() + 4;
+            ctx.save();
+            ctx.setFont('Helvetica', 9);
+            ctx.setFillStyle('#334155');
+            item.stack.labels.forEach((lb, k) => { if (lb) ctx.fillText(lb, lx, ys[k] + 3); });
+            ctx.restore();
+          }
+          // スラッシュの正解: 符頭(と加線・臨時記号)、TABならフレット番号を描いておき、ふだんは隠す。
+          // 再生中にこのスラッシュが今の音になると .vf-current が付いて光る
+          if (item.slash && item.answerKey) {
+            const g = ctx.openGroup('answer-light') as SVGGElement | undefined;
+            const cx = showStaff ? staveNotes[i].getAbsoluteX() : tabTickables[i].getAbsoluteX();
+            if (showStaff && stave) {
+              const probe = new StaveNote({ keys: [item.answerKey], duration: 'q', clef: noteClef });
+              probe.setStave(stave);
+              const ay = probe.getYs()[0];
+              const lineNo = probe.getKeyProps()[0].line;
+              const sp = stave.getSpacingBetweenLines();
+              // スラッシュのすぐ右に置く(同じ位置だとスラッシュの符幹と重なって読めない)
+              const hx = cx + staveNotes[i].getGlyphWidth() + 8;
+              // 加線(譜表の外の音)
+              for (let ln = 0; ln >= lineNo - 0.01; ln -= 1) ctx.fillRect(hx - 8, stave.getYForNote(ln) - 0.5, 16, 1);
+              for (let ln = 6; ln <= lineNo + 0.01; ln += 1) ctx.fillRect(hx - 8, stave.getYForNote(ln) - 0.5, 16, 1);
+              (ctx as unknown as { rect: (x: number, y: number, w: number, h: number, a: Record<string, string | number>) => void })
+                .rect(hx - 5.5, ay - sp / 2, 11, sp, { rx: 5.5, ry: sp / 2, stroke: 'none' });
+              if (item.answerAcc) {
+                ctx.setFont('Helvetica', 13, 'bold');
+                ctx.fillText(item.answerAcc === '#' ? '♯' : '♭', hx - 16, ay + 5);
+              }
+            }
+            if (showTab && tabStave) {
+              const pos = tabByGi[item.globalIndex] ?? { str: 1, fret: 0 };
+              ctx.setFont('Helvetica', 11, 'bold');
+              ctx.fillText(String(pos.fret), cx + 12, tabStave.getYForLine(pos.str - 1) + 4);
+            }
+            ctx.closeGroup();
+            if (g) {
+              g.classList.add('answer-light');
+              found.push(g);
+            }
+          }
+          for (const gi of item.stack?.gis ?? [item.globalIndex]) {
+            noteElsRef.current[gi] = [...(noteElsRef.current[gi] ?? []), ...found];
+          }
         });
       }
 

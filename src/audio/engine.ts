@@ -85,7 +85,8 @@ function loadVolumes(): ChannelVolumes {
 }
 
 export class AudioEngine {
-  private melody: Tone.Synth | null = null;
+  // 和音(縦に積んだコードの音)も鳴らすのでポリフォニック。単音だけなら従来の Synth と同じ音色
+  private melody: Tone.PolySynth | null = null;
   /** 編集中の単音プレビュー用(melodyを使うと再生中の音を奪うため別ノードにする) */
   private preview: Tone.Synth | null = null;
   private lastPreviewTime = -Infinity;
@@ -136,7 +137,7 @@ export class AudioEngine {
       this.backbeatGain = new Tone.Gain(1).connect(master);
       this.compGain = new Tone.Gain(1).connect(master);
 
-      this.melody = new Tone.Synth({
+      this.melody = new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: 'triangle8' },
         envelope: { attack: 0.02, decay: 0.15, sustain: 0.5, release: 0.15 },
         volume: -4,
@@ -232,7 +233,7 @@ export class AudioEngine {
       if (nt.articulation === 'accent' || nt.accent) velocity = 1;
       // ゴースト: ほとんど聞こえないくらい弱く、少し短く
       if (nt.ghost) { velocity = Math.min(velocity, 0.25); gate = Math.min(gate, 0.6); }
-      return { midi: nt.midi, velocity, start, duration, gate };
+      return { midi: nt.midi, velocity, start, duration, gate, slash: !!nt.slash };
     });
 
     // 再生位置の通知(16分音符ごと)
@@ -263,7 +264,8 @@ export class AudioEngine {
     // リズムに合わせて動かす(打音は鳴らさない)。
     if (timedNotes.length > 0 && !opts.rhythmOnly) {
       const silentFrom = opts.silentFromBeat ?? Infinity;
-      const events = timedNotes.filter((nt) => nt.start < silentFrom - 1e-6).map((nt) => ({
+      // スラッシュは「自分で選ぶ音」なので鳴らさない(ハイライトだけ動いて、正解が光る)
+      const events = timedNotes.filter((nt) => !nt.slash && nt.start < silentFrom - 1e-6).map((nt) => ({
         time: beatsToTime(nt.start + offsetBars * 4),
         midi: nt.midi,
         duration: nt.duration,

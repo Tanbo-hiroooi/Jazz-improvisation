@@ -23,7 +23,7 @@ First Chorusは、楽器を演奏でき、楽譜も読める人が、コード�
 苦手な技術を自分で選び、反復練習するモード。画面上部の「やること」タブで**♪ 基礎練習**(コードトーン/ガイドトーン/アプローチ/ターゲット/スケールの表示を切り替え、11種のリズムパターンと組み合わせる)と**🎼 フレーズを作る**(拍グリッドで自作する。小節数は進行に合わせて1〜12小節から選択)を切り替えます。
 
 ### 練習コース
-理論の暗記からではなく、**リズム→音選び→つなぐ→語る→1コーラス**の順で学ぶ「リズムから始めるアドリブ入門」(全5章・30レッスン)を収録。基本ルールは「一度に変えるものは1つだけ」です。
+理論の暗記からではなく、**リズム→音選び→つなぐ→語る→1コーラス**の順で学ぶ「リズムから始めるアドリブ入門」(全5章・32レッスン)を収録。基本ルールは「一度に変えるものは1つだけ」です。
 
 ## 練習コースの特徴
 
@@ -35,7 +35,7 @@ First Chorusは、楽器を演奏でき、楽譜も読める人が、コード�
 **Chapter 1 is played from rhythm scores.** Each lesson is one score made of 4-bar blocks (A–D) with a heading per block and one short hint for the block you are playing. “Listen → Together → On your own” loops three passes: hear the written notes, play along, then play alone while the written notes go silent. Most notes are the chord root, so you can focus on rhythm; scat syllables appear under the notes.
 
 **第2章は、第1章のリズムのままコードの音を選ぶ章です。** 形式は第1章と同じ1枚の譜面で、音符の下には度数(1・3・5・7、マイナーなら♭3など)が付きます。「▶ 聴く→一緒に→自分の音で」の3周目は譜面の音が消え、リズムはそのままに、ブロックごとの「3周目の音」から自分で選んで演奏します。
-前半の「コードの音を知る」で3度・3度と7度(ガイドトーン)・1-3-5-7の分散和音を、後半の「選んで並べる」で同じリズムのまま音を変える、跳んで戻る、落ち着くコード(Cmaj7)の3度へ着地する、を練習し、最後に12小節ブルースをコードの音で1コーラス通します。
+前半の「コードの音を知る」では、まず「コードから3度/7度を探す」で、縦に積んだコードの音 → スラッシュ(／)のリズムだけ → コード記号だけ、と手がかりを減らしながら3度と7度を自分で見つけて弾きます(弾く瞬間に正解の音が光ります)。続いて3度をリズムに乗せる・3度と7度(ガイドトーン)・1-3-5-7の分散和音を、後半の「選んで並べる」で同じリズムのまま音を変える、跳んで戻る、落ち着くコード(Cmaj7)の3度へ着地する、を練習し、最後に12小節ブルースをコードの音で1コーラス通します。
 
 **Chapter 2 keeps the Chapter 1 rhythms and adds chord tones.** Degrees (1, 3, 5, 7 — ♭3 and ♭7 on minor and dominant chords) appear under the notes. In “Listen → together → your notes”, pass 3 goes silent: keep the written rhythm and choose your own notes from the block’s “Pass 3 notes”.
 

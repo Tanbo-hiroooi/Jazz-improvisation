@@ -22,6 +22,8 @@ export interface NoteEvent {
   ghost?: boolean;
   /** 口ずさみ表示(「ドゥ」「バ」など)。labelMode='scat' のとき譜面に出す */
   label?: string;
+  /** スラッシュ(リズムだけ。音の高さは自分で選ぶ)。鳴らさず、再生中にこの音(正解)だけを光らせる */
+  slash?: boolean;
 }
 
 /** リックの1音: o=ルートからの半音, s=開始拍(小節内), d=拍数, v=ベロシティ */

@@ -443,21 +443,48 @@ export const LESSONS: Lesson[] = [
   },
 
   // ================= 第2章 コードの音を選ぶ =================
-  // 第1章のリズムのまま、使う音をコードの中から選ぶ。前半「コードの音を知る」3レッスン +
+  // 第1章のリズムのまま、使う音をコードの中から選ぶ。前半「コードの音を知る」5レッスン +
   // 後半「選んで並べる」3レッスン + ブルースで締めくくり。どれも1枚の譜面(4小節×ブロック)。
   // ブロックの free は3周目「自分の音で」に使ってよい音。音符の下には度数を出す。
+  {
+    id: 'c2-find-third',
+    chapterId: 'ch2',
+    part: b('コードの音を知る', 'Know the chord tones'),
+    title: b('コードから3度を探す', 'Find the 3rd in the chord'),
+    outcome: b('コード記号を見て、そのコードの3度を演奏しよう。', 'Read a chord symbol and play its 3rd.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    steps: [
+      {
+        title: b('コードから3度を探す', 'Find the 3rd in the chord'),
+        instruction: b('コード記号を見て、そのコードの3度を演奏しよう。', 'Read a chord symbol and play its 3rd.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', rhythmBlocks: [
+          { label: b('度数を見て', 'Read the degrees'), hint: b('積んだ音の下から2番目が3度', 'The 3rd is the second note from the bottom'), free: ['3'], bars: ['2:C r8 8:3 4:3', '2:C r8 8:3 4:3', '2:C r8 8:3 4:3', '2:C r8 8:3 4:3'] },
+          { label: b('積んだ音から', 'From the stacked notes'), hint: b('度数のない和音から見つけて、／のリズムで弾く', 'Find it in the unlabeled chord, then play it on the ／ rhythm'), free: ['3'], bars: ['2:C/n r8 x8:3 x4:3', '2:C/n r8 x8:3 x4:3', '2:C/n r8 x8:3 x4:3', '2:C/n r8 x8:3 x4:3'] },
+          { label: b('記号だけで', 'From the symbol alone'), hint: b('コード記号を見て弾く。弾く瞬間に正解が光る', 'Read the chord symbol and play. The answer lights up as you play'), free: ['3'], bars: ['x4.:3 x8:3 r2', 'x4.:3 x8:3 r2', 'x4.:3 x8:3 r2', 'x4.:3 x8:3 r2'] },
+          { label: b('記号だけで裏拍', 'Symbol only, on the and'), hint: b('裏拍で、コードが変わるたびに', 'On the offbeats, every time the chord changes'), free: ['3'], bars: ['r8 x8:3 r8 x8:3 r8 x8:3 r8 x8:3', 'r8 x8:3 r8 x8:3 r8 x8:3 r8 x8:3', 'r8 x8:3 r8 x8:3 r8 x8:3 r8 x8:3', 'r8 x8:3 r8 x8:3 r2'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('3度は、ルートから数えて3つ目の音です。m(マイナー)が付くコードは半音低い♭3になります。Dm7ならF、G7ならB、Cmaj7ならE。', 'The 3rd is the third note up from the root. Chords with an m (minor) take the half-step-lower ♭3: F in Dm7, B in G7, E in Cmaj7.'),
+      mistakes: [b('記号だけになると迷う → まずルートを見つけ、そこから1つ飛ばしで上へ数える', 'Lost once only the symbol is left — find the root first, then count up skipping one note')],
+    },
+  },
   {
     id: 'c2-third',
     chapterId: 'ch2',
     part: b('コードの音を知る', 'Know the chord tones'),
-    title: b('3度で色を聴く', 'Hear the color of the 3rd'),
+    title: b('3度をリズムに乗せる', 'Put the 3rd into rhythm'),
     outcome: b('第1章のリズムのまま、各コードの3度を演奏しよう。', 'Keep the Chapter 1 rhythms and play the 3rd of each chord.'),
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
     steps: [
       {
-        title: b('3度で色を聴く', 'Hear the color of the 3rd'),
+        title: b('3度をリズムに乗せる', 'Put the 3rd into rhythm'),
         instruction: b('第1章のリズムのまま、各コードの3度を演奏しよう。', 'Keep the Chapter 1 rhythms and play the 3rd of each chord.'),
         content: { source: 'rhythm', rhythmLabel: 'degree', rhythmBlocks: [
           { label: b('3度を伸ばす', 'Hold the 3rd'), hint: b('コードが変わると3度の色も変わる', 'The 3rd changes color with the chord'), free: ['3'], bars: ['4.:3 8:3 r2', '4.:3 8:3 r2', '4.:3 8:3_ 2:3', '1:3'] },
@@ -471,6 +498,33 @@ export const LESSONS: Lesson[] = [
     trivia: {
       why: b('3度はコードが明るいか暗いかを決める音です。ルートより雄弁で、この1音だけで「進行が分かって演奏している」響きになります。', 'The 3rd decides whether a chord is major or minor. It says more than the root — one note is enough to sound like you know the changes.'),
       mistakes: [b('3度がどの音か迷う → 音符の下の度数を見ながら、まず1周目を聴く', 'Not sure which note is the 3rd — read the degree under each note and listen to pass 1 first')],
+    },
+  },
+  {
+    id: 'c2-find-seventh',
+    chapterId: 'ch2',
+    part: b('コードの音を知る', 'Know the chord tones'),
+    title: b('コードから7度を探す', 'Find the 7th in the chord'),
+    outcome: b('コード記号を見て、そのコードの7度を演奏しよう。', 'Read a chord symbol and play its 7th.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    steps: [
+      {
+        title: b('コードから7度を探す', 'Find the 7th in the chord'),
+        instruction: b('コード記号を見て、そのコードの7度を演奏しよう。', 'Read a chord symbol and play its 7th.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', rhythmBlocks: [
+          { label: b('度数を見て', 'Read the degrees'), hint: b('積んだ音のいちばん上が7度', 'The 7th is the top note of the stack'), free: ['7'], bars: ['2:C r8 8:7 4:7', '2:C r8 8:7 4:7', '2:C r8 8:7 4:7', '2:C r8 8:7 4:7'] },
+          { label: b('積んだ音から', 'From the stacked notes'), hint: b('度数のない和音から見つけて、／のリズムで弾く', 'Find it in the unlabeled chord, then play it on the ／ rhythm'), free: ['7'], bars: ['2:C/n r8 x8:7 x4:7', '2:C/n r8 x8:7 x4:7', '2:C/n r8 x8:7 x4:7', '2:C/n r8 x8:7 x4:7'] },
+          { label: b('記号だけで', 'From the symbol alone'), hint: b('コード記号を見て弾く。弾く瞬間に正解が光る', 'Read the chord symbol and play. The answer lights up as you play'), free: ['7'], bars: ['x4.:7 x8:7 r2', 'x4.:7 x8:7 r2', 'x4.:7 x8:7 r2', 'x4.:7 x8:7 r2'] },
+          { label: b('記号だけで裏拍', 'Symbol only, on the and'), hint: b('裏拍で、コードが変わるたびに', 'On the offbeats, every time the chord changes'), free: ['7'], bars: ['r8 x8:7 r8 x8:7 r8 x8:7 r8 x8:7', 'r8 x8:7 r8 x8:7 r8 x8:7 r8 x8:7', 'r8 x8:7 r8 x8:7 r8 x8:7 r8 x8:7', 'r8 x8:7 r8 x8:7 r2'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('7度はルートのすぐ下(1オクターブ上のルートから下がった音)です。maj7はルートの半音下、m7と7は全音下の♭7になります。Dm7ならC、G7ならF、Cmaj7ならB。', 'The 7th sits just below the octave root: a half step below it in maj7, a whole step below (♭7) in m7 and 7 chords. C in Dm7, F in G7, B in Cmaj7.'),
+      mistakes: [b('maj7と7で迷う → 「maj7は半音下、それ以外は全音下」とだけ覚える', 'Mixing up maj7 and 7 — remember just: maj7 is a half step below the root, the others a whole step')],
     },
   },
   {
