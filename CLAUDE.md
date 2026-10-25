@@ -44,7 +44,7 @@
 ## 最新変更の検証実績
 
 - `npx tsc --noEmit`: 成功
-- `npm run test:entry`: gridEntry 1303件(編集13 STEP)+ swing 12件 + rhythm 15163件(第1・2章19レッスン・296小節)
+- `npm run test:entry`: gridEntry 1303件(編集13 STEP)+ swing 12件 + rhythm 14239件(第1・2章19レッスン・288小節)
 - `npm run build`: 成功（既知のchunk size警告のみ）
 - (2026-09-13時点)実ブラウザで全STEPを日本語ギター、英語ピアノ大譜表、移調楽器の3条件で走査、編集STEPで入力・表示切替・Undoを確認
 - (2026-09-26)第1章の全レッスンの表示、3周再生、英語、390px、console error 0を確認

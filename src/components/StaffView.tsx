@@ -393,10 +393,8 @@ export function StaffView({
         ghost?: boolean;
         /** 縦に積んだ和音(同じ時刻・同じ長さの音)。keys と同じ順(低い音から)で並ぶ */
         stack?: { gis: number[]; accs: ('' | '#' | 'b')[]; labels: string[] };
-        /** スラッシュ(リズムだけ)。answerKey は正解の音で、再生中だけ光らせる */
-        slash?: boolean;
-        answerKey?: string;
-        answerAcc?: '' | '#' | 'b';
+        /** 答えの音: ふだんは隠し、再生中にこの音が来た瞬間だけ光って見える */
+        hidden?: boolean;
       }
       const restKeys = [noteClef === 'bass' ? 'd/3' : 'b/4'];
       const measureItems: Item[][] = [];
@@ -463,16 +461,9 @@ export function StaffView({
               ...base, keys: ks.map((k) => k.key), acc: '', globalIndex: group[0].gi, label: '',
               stack: { gis: group.map((g) => g.gi), accs: ks.map((k) => k.acc), labels: group.map((g) => labelOf(g.gi, g.segIdx)) },
             });
-          } else if (n.slash) {
-            // スラッシュは譜表の真ん中の線に書く。正解の音は別に描いて、再生中だけ見せる
-            const k = keyOf(n.displayMidi);
-            items.push({
-              ...base, keys: restKeys, acc: '', globalIndex: s.gi, label: labelOf(s.gi, s.segIdx),
-              slash: true, answerKey: k.key, answerAcc: k.acc,
-            });
           } else {
             const k = keyOf(n.displayMidi);
-            items.push({ ...base, keys: [k.key], acc: k.acc, globalIndex: s.gi, label: labelOf(s.gi, s.segIdx) });
+            items.push({ ...base, keys: [k.key], acc: k.acc, globalIndex: s.gi, label: labelOf(s.gi, s.segIdx), hidden: !!n.hidden });
           }
           t = s.start + s.dur;
         }
@@ -622,10 +613,7 @@ export function StaffView({
         const articOf: VFArticulation[][] = [];
         if (showStaff) {
           staveNotes = items.map((item, idx) => {
-            const sn = new StaveNote({
-              keys: item.keys, duration: item.dur, clef: noteClef, auto_stem: true,
-              ...(item.slash ? { type: 's' } : {}),
-            });
+            const sn = new StaveNote({ keys: item.keys, duration: item.dur, clef: noteClef, auto_stem: true });
             if (item.acc && !item.isRest) sn.addModifier(new Accidental(item.acc), 0);
             item.stack?.accs.forEach((a, k) => { if (a) sn.addModifier(new Accidental(a), k); });
             if (item.dots > 0) Dot.buildAndAttach([sn], { all: true });
@@ -651,7 +639,7 @@ export function StaffView({
             return sn;
           });
           items.forEach((item, i) => {
-            if (item.globalIndex >= 0 && !item.stack && !item.slash) {
+            if (item.globalIndex >= 0 && !item.stack && !item.hidden) {
               const arr = tieNotes.get(item.globalIndex) ?? [];
               arr.push({ segIdx: item.segIdx, line, sn: staveNotes[i] });
               tieNotes.set(item.globalIndex, arr);
@@ -664,7 +652,7 @@ export function StaffView({
         if (showTab) {
           tabTickables = items.map((item) => {
             const baseDur = item.dur.replace('r', '');
-            if (item.isRest || item.segIdx > 0 || item.slash) return new GhostNote(baseDur);
+            if (item.isRest || item.segIdx > 0) return new GhostNote(baseDur);
             const positions = item.stack
               ? spreadOnStrings(item.stack.gis.map((gi) => displayNotes[gi].midi), item.stack.gis.map((gi) => tabByGi[gi] ?? { str: 1, fret: 0 }))
               : [tabByGi[item.globalIndex] ?? { str: 1, fret: 0 }];
@@ -761,42 +749,36 @@ export function StaffView({
             item.stack.labels.forEach((lb, k) => { if (lb) ctx.fillText(lb, lx, ys[k] + 3); });
             ctx.restore();
           }
-          // スラッシュの正解: 符頭(と加線・臨時記号)、TABならフレット番号を描いておき、ふだんは隠す。
-          // 再生中にこのスラッシュが今の音になると .vf-current が付いて光る
-          if (item.slash && item.answerKey) {
-            const g = ctx.openGroup('answer-light') as SVGGElement | undefined;
-            const cx = showStaff ? staveNotes[i].getAbsoluteX() : tabTickables[i].getAbsoluteX();
-            if (showStaff && stave) {
-              const probe = new StaveNote({ keys: [item.answerKey], duration: 'q', clef: noteClef });
-              probe.setStave(stave);
-              const ay = probe.getYs()[0];
-              const lineNo = probe.getKeyProps()[0].line;
-              const sp = stave.getSpacingBetweenLines();
-              // スラッシュのすぐ右に置く(同じ位置だとスラッシュの符幹と重なって読めない)
-              const hx = cx + staveNotes[i].getGlyphWidth() + 8;
-              // 加線(譜表の外の音)
-              for (let ln = 0; ln >= lineNo - 0.01; ln -= 1) ctx.fillRect(hx - 8, stave.getYForNote(ln) - 0.5, 16, 1);
-              for (let ln = 6; ln <= lineNo + 0.01; ln += 1) ctx.fillRect(hx - 8, stave.getYForNote(ln) - 0.5, 16, 1);
-              (ctx as unknown as { rect: (x: number, y: number, w: number, h: number, a: Record<string, string | number>) => void })
-                .rect(hx - 5.5, ay - sp / 2, 11, sp, { rx: 5.5, ry: sp / 2, stroke: 'none' });
-              if (item.answerAcc) {
-                ctx.setFont('Helvetica', 13, 'bold');
-                ctx.fillText(item.answerAcc === '#' ? '♯' : '♭', hx - 16, ay + 5);
+          // 答えの音: ふだんは隠し、再生がこの音に来た瞬間(.vf-current)だけ見せる
+          if (item.hidden) found.forEach((el) => el.classList.add('answer-light'));
+          if (item.stack) {
+            // 和音: 答えの音(鳴らす音)の符頭とフレットだけを、その音のハイライト先にする。
+            // 見せるだけの音(silent)はどこにも登録しない(光らない)
+            const anySilent = item.stack.gis.some((gi) => displayNotes[gi].silent);
+            const heads = showStaff ? [...(found[0]?.querySelectorAll('.vf-notehead') ?? [])] as SVGElement[] : [];
+            const ys = showStaff ? staveNotes[i].getYs() : [];
+            const tabEl = showTab ? found[found.length - 1] : null;
+            const frets = tabEl ? [...tabEl.querySelectorAll('text')] as SVGElement[] : [];
+            item.stack.gis.forEach((gi, k) => {
+              if (displayNotes[gi].silent) return;
+              let els: SVGElement[] = found;
+              if (anySilent) {
+                els = [];
+                // 符頭は描画順が keys と同じとは限らないので、高さ(y)がいちばん近いものを選ぶ
+                const head = heads.reduce<SVGElement | null>((best, h) => {
+                  const by = (h as unknown as SVGGraphicsElement).getBBox();
+                  const d = Math.abs(by.y + by.height / 2 - ys[k]);
+                  if (!best) return h;
+                  const bb = (best as unknown as SVGGraphicsElement).getBBox();
+                  return d < Math.abs(bb.y + bb.height / 2 - ys[k]) ? h : best;
+                }, null);
+                if (head) els.push(head);
+                if (frets[k]) els.push(frets[k]);
               }
-            }
-            if (showTab && tabStave) {
-              const pos = tabByGi[item.globalIndex] ?? { str: 1, fret: 0 };
-              ctx.setFont('Helvetica', 11, 'bold');
-              ctx.fillText(String(pos.fret), cx + 12, tabStave.getYForLine(pos.str - 1) + 4);
-            }
-            ctx.closeGroup();
-            if (g) {
-              g.classList.add('answer-light');
-              found.push(g);
-            }
-          }
-          for (const gi of item.stack?.gis ?? [item.globalIndex]) {
-            noteElsRef.current[gi] = [...(noteElsRef.current[gi] ?? []), ...found];
+              noteElsRef.current[gi] = [...(noteElsRef.current[gi] ?? []), ...els];
+            });
+          } else {
+            noteElsRef.current[item.globalIndex] = [...(noteElsRef.current[item.globalIndex] ?? []), ...found];
           }
         });
       }

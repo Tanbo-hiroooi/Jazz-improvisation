@@ -336,12 +336,13 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
   fill: #2563eb !important;
   stroke: #2563eb !important;
 }
-/* 再生中の音のハイライト */
+/* 再生中の音のハイライト(和音の答えのフレット番号のように、text 要素そのものに付く場合もある) */
+.vf-current,
 .vf-current * {
   fill: #e11d48 !important;
   stroke: #e11d48 !important;
 }
-/* スラッシュの正解の音: ふだんは隠し、そのスラッシュを弾く瞬間だけ光らせる */
+/* 答えの音: ふだんは隠し、その音を弾く瞬間だけ光らせる(記号だけで3度/7度を探す練習) */
 .answer-light { visibility: hidden; }
 .answer-light.vf-current { visibility: visible; }
 

@@ -233,7 +233,7 @@ export class AudioEngine {
       if (nt.articulation === 'accent' || nt.accent) velocity = 1;
       // ゴースト: ほとんど聞こえないくらい弱く、少し短く
       if (nt.ghost) { velocity = Math.min(velocity, 0.25); gate = Math.min(gate, 0.6); }
-      return { midi: nt.midi, velocity, start, duration, gate, slash: !!nt.slash };
+      return { midi: nt.midi, velocity, start, duration, gate, silent: !!nt.silent, hidden: !!nt.hidden };
     });
 
     // 再生位置の通知(16分音符ごと)
@@ -252,6 +252,8 @@ export class AudioEngine {
           let idx = -1;
           for (let i = 0; i < timedNotes.length; i++) {
             const nt = timedNotes[i];
+            // 和音の見せるだけの音は光らせない(答えの音だけが光る)
+            if (nt.silent) continue;
             if (nt.start <= regionBeats + 0.01 && regionBeats < nt.start + nt.duration) idx = i;
           }
           opts.onNoteIndex?.(idx);
@@ -264,8 +266,8 @@ export class AudioEngine {
     // リズムに合わせて動かす(打音は鳴らさない)。
     if (timedNotes.length > 0 && !opts.rhythmOnly) {
       const silentFrom = opts.silentFromBeat ?? Infinity;
-      // スラッシュは「自分で選ぶ音」なので鳴らさない(ハイライトだけ動いて、正解が光る)
-      const events = timedNotes.filter((nt) => !nt.slash && nt.start < silentFrom - 1e-6).map((nt) => ({
+      // 和音の見せるだけの音(silent)と、答えの音(hidden: 自分で見つける音)は鳴らさない
+      const events = timedNotes.filter((nt) => !nt.silent && !nt.hidden && nt.start < silentFrom - 1e-6).map((nt) => ({
         time: beatsToTime(nt.start + offsetBars * 4),
         midi: nt.midi,
         duration: nt.duration,

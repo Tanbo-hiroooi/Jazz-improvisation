@@ -10,10 +10,12 @@ ok(parseToken('8:5/as_').tie && parseToken('8:5/as_').accent && parseToken('8:5/
 ok(Math.abs(parseToken('t4').beats - 2 / 3) < 1e-9, 't4 is 2/3');
 assert.throws(() => parseToken('7')); n++;
 ok(parseToken('8:3>_').next && parseToken('8:3>_').tie && !parseToken('8:3').next, 'next-chord flag');
-ok(parseToken('x4:3').slash && !parseToken('4:3').slash, 'slash flag');
-ok(parseToken('2:C/n').degree === 'C' && parseToken('2:C/n').noLabel, 'chord stack without labels');
+ok(parseToken('2:C/n').degree === 'C' && parseToken('2:C/n').noLabel && !parseToken('2:C').target, 'chord stack without labels');
+ok(parseToken('1:C3').target === '3' && parseToken('1:C7/n').target === '7', 'chord stack with an answer note');
+ok(parseToken('1:3/h').hidden && !parseToken('1:3').hidden, 'hidden answer flag');
 assert.throws(() => parseToken('2:C_')); n++;
-assert.throws(() => parseToken('x2:C')); n++;
+assert.throws(() => parseToken('1:C3/h')); n++;
+assert.throws(() => parseToken('1:53')); n++;
 let lessons = 0, bars = 0;
 const perChapter: Record<string, number> = {};
 for (const l of LESSONS) for (const st of l.steps) {
@@ -85,19 +87,24 @@ for (const l of LESSONS) for (const st of l.steps) {
 }
 ok(perChapter.ch1 === 10, `chapter 1 has 10 rhythm lessons: 3 basics, 6 real-solo, 1 closing (got ${perChapter.ch1})`);
 ok(perChapter.ch2 === 9, `chapter 2 has 9 rhythm lessons: 5 basics, 3 choose-and-arrange, 1 blues (got ${perChapter.ch2})`);
-// 「コードから3度/7度を探す」: 和音は4音、スラッシュは鳴らさない正解として3度/7度を持つ
+// 「コードから3度/7度を探す」: リズムは使わず、1小節に1つ。
+// 和音は4音のうち答えの音だけを鳴らして光らせ、記号だけの小節は答えを隠して鳴らさない
 for (const [id, deg] of [['c2-find-third', 1], ['c2-find-seventh', 3]] as const) {
   const l = LESSONS.find((x) => x.id === id)!;
   const bars2 = l.steps[0].content!.rhythmBlocks!.flatMap((b) => b.bars);
+  ok(bars2.every((bar) => parseBar(bar).length === 1 && parseBar(bar)[0].beats === 4), `${id}: one whole note per bar (no rhythm)`);
   const prog = fitProgression(getProgression(l.progressionId), bars2.length);
   const ns = rhythmNotes(bars2, prog, 0, 'ja', 'degree');
-  const firstBar = ns.filter((x) => x.start < 2);
-  ok(firstBar.length === 4 && new Set(firstBar.map((x) => x.start)).size === 1, `${id}: bar 1 opens with a four-note stack`);
-  const slashes = ns.filter((x) => x.slash);
-  ok(slashes.length > 0, `${id}: has slash notes`);
-  for (const x of slashes) {
+  const isAnswer = (x: (typeof ns)[number]) => {
     const c = prog.chords[x.chordIndex];
-    ok(((x.midi - c.rootOffset) % 12 + 12) % 12 === QUALITIES[c.quality].tones[deg], `${id}: slash answer is the chord's ${deg === 1 ? '3rd' : '7th'} at ${x.start}`);
+    return ((x.midi - c.rootOffset) % 12 + 12) % 12 === QUALITIES[c.quality].tones[deg];
+  };
+  for (let m = 0; m < bars2.length; m++) {
+    const inBar = ns.filter((x) => Math.floor(x.start / 4 + 1e-6) === m);
+    const lit = inBar.filter((x) => !x.silent);
+    ok(lit.length === 1 && isAnswer(lit[0]), `${id} bar ${m + 1}: only the ${deg === 1 ? '3rd' : '7th'} is played and lit`);
+    if (inBar.length === 4) ok(inBar.filter((x) => x.silent).length === 3, `${id} bar ${m + 1}: the other three stack notes are shown only`);
+    else ok(lit[0].hidden === true && lit[0].label === '', `${id} bar ${m + 1}: symbol-only bar hides the answer`);
   }
 }
 console.log(`${n} rhythm assertions passed; ${lessons} lessons, ${bars} bars checked.`);

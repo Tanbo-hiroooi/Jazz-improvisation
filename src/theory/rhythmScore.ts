@@ -3,12 +3,13 @@
 // 1小節を空白区切りのトークンで書く。1トークン = 1つの音符か休符。
 //   長さ : 1=全 / 2.=付点2分 / 2 / 4.=付点4分 / 4 / 8.=付点8分 / 8 / 16 / t8=3連8分(1/3拍) / t4=3連4分(2/3拍)
 //   休符 : 先頭に r(例: r4, r8, rt8)
-//   スラッシュ: 先頭に x(例: x4:3)。リズムだけを書き、音は自分で選ぶ。高さは「正解」で、鳴らさずに再生中だけ光らせる
 //   高さ : :R :3 :5 :7 :8 (その小節のコードのルート/3度/5度/7度/1オクターブ上のルート。省略時は R)
 //          後ろに > を付けると「次の小節のコード」の音(食いで次のコードの3度を先取りする時: 8:3>_)
-//          :C はコードの音(1・3・5・7)を縦に積んだ和音
+//          :C はコードの音(1・3・5・7)を縦に積んだ和音。:C3 / :C7 は「その音が答え」の和音
+//          (答えの音だけを鳴らして光らせ、ほかの3音は見せるだけ)
 //   表情 : /a アクセント /s 短く /t 長く /g ゴースト(組み合わせ可: /as = 短く強く)
 //          /n は音符の下の文字(度数)を出さない(和音から自分で3度を見つける練習など)
+//          /h は答えの音: ふだんは隠し、鳴らさず、再生がその音に来た瞬間だけ光って見える(記号だけで3度を探す練習)
 //   タイ : 末尾に _ を付けると次の音符とつながる(小節をまたいでもよい)
 // 例: "r8 8 8 8:3 8:5/a 8 8 8/as"
 //
@@ -22,10 +23,12 @@ import { chordAt, type Progression } from './progressions';
 export interface RhythmToken {
   beats: number;
   rest: boolean;
-  /** スラッシュ(リズムだけ) */
-  slash: boolean;
   /** C = コードの音を縦に積んだ和音 */
   degree: 'R' | '3' | '5' | '7' | '8' | 'C';
+  /** 和音(C)のうち答えの音。無ければ和音全体を鳴らす */
+  target?: 'R' | '3' | '5' | '7';
+  /** 答えの音(隠して、来た瞬間だけ光らせる) */
+  hidden: boolean;
   /** 次の小節のコードの音にする(食いの先取り) */
   next: boolean;
   accent: boolean;
@@ -43,23 +46,25 @@ const DURATIONS: Record<string, number> = {
 
 /** 1トークンを読む。書式が不正なら例外(データの誤りを早く見つけるため) */
 export function parseToken(src: string): RhythmToken {
-  const m = /^(r|x)?(t8|t4|2\.|4\.|8\.|1|2|4|8|16)(?::(R|3|5|7|8|C)(>?))?(?:\/([astgn]+))?(_?)$/.exec(src);
+  const m = /^(r?)(t8|t4|2\.|4\.|8\.|1|2|4|8|16)(?::(R|3|5|7|8|C)(R|3|5|7)?(>?))?(?:\/([astgnh]+))?(_?)$/.exec(src);
   if (!m) throw new Error(`rhythm token: ${src}`);
-  // 和音のタイ・和音のスラッシュは表せない(書き間違いを早く見つける)
-  if (m[3] === 'C' && (m[6] === '_' || m[1] === 'x')) throw new Error(`rhythm token: ${src}`);
-  const arts = m[5] ?? '';
+  const arts = m[6] ?? '';
+  // 和音のタイ・隠した和音は表せない。答えの指定は和音だけ(書き間違いを早く見つける)
+  if (m[3] === 'C' && (m[7] === '_' || arts.includes('h'))) throw new Error(`rhythm token: ${src}`);
+  if (m[4] && m[3] !== 'C') throw new Error(`rhythm token: ${src}`);
   return {
     beats: DURATIONS[m[2]],
     rest: m[1] === 'r',
-    slash: m[1] === 'x',
     degree: (m[3] as RhythmToken['degree']) ?? 'R',
-    next: m[4] === '>',
+    target: (m[4] as RhythmToken['target']) || undefined,
+    hidden: arts.includes('h'),
+    next: m[5] === '>',
     accent: arts.includes('a'),
     staccato: arts.includes('s'),
     tenuto: arts.includes('t'),
     ghost: arts.includes('g'),
     noLabel: arts.includes('n'),
-    tie: m[6] === '_',
+    tie: m[7] === '_',
   };
 }
 
@@ -126,11 +131,16 @@ export function rhythmNotes(
       const labelFor = (d: Exclude<RhythmToken['degree'], 'C'>) =>
         t.noLabel ? '' : labels === 'degree' ? degreeText(d, chord.quality) : scat(t, start, lang);
       if (t.degree === 'C') {
-        // 縦に積んだ和音: 1・3・5・7 を同じ時刻・同じ長さで並べる(譜面では1つの和音として描く)
-        (['R', '3', '5', '7'] as const).forEach((d, i) => notes.push({
-          midi: root + tones[i], start, duration: t.beats, velocity: 0.45,
-          chordIndex: Math.max(0, chordIndex), label: labelFor(d),
-        }));
+        // 縦に積んだ和音: 1・3・5・7 を同じ時刻・同じ長さで並べる(譜面では1つの和音として描く)。
+        // 答え(target)があれば、その音だけを鳴らして光らせ、ほかの3音は見せるだけにする
+        (['R', '3', '5', '7'] as const).forEach((d, i) => {
+          const tone: NoteEvent = {
+            midi: root + tones[i], start, duration: t.beats, velocity: t.target ? 0.6 : 0.45,
+            chordIndex: Math.max(0, chordIndex), label: labelFor(d),
+          };
+          if (t.target && t.target !== d) tone.silent = true;
+          notes.push(tone);
+        });
         continue;
       }
       const offset = t.degree === 'R' ? 0 : t.degree === '8' ? 12 : tones[{ 3: 1, 5: 2, 7: 3 }[t.degree]];
@@ -141,9 +151,10 @@ export function rhythmNotes(
         // 普通の音は控えめにして、アクセントとゴーストの差が耳で分かるようにする
         velocity: t.ghost ? 0.25 : 0.6,
         chordIndex: Math.max(0, chordIndex),
-        label: labelFor(t.degree),
+        // 答えの音は文字も出さない(小節にはコード記号だけが見える)
+        label: t.hidden ? '' : labelFor(t.degree),
       };
-      if (t.slash) note.slash = true;
+      if (t.hidden) note.hidden = true;
       if (t.staccato) note.articulation = 'staccato';
       else if (t.tenuto) note.articulation = 'tenuto';
       else if (t.accent) note.articulation = 'accent';
