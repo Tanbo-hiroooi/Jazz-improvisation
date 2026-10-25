@@ -31,6 +31,8 @@ export interface RhythmBlock {
   label: Bi;
   /** 再生中に1行だけ出す、やること */
   hint: Bi;
+  /** 3周目「自分の音で」に使ってよいコードの音(第2章)。無ければ3周目は「ひとりで」 */
+  free?: ('R' | '3' | '5' | '7')[];
   bars: string[];
 }
 
@@ -39,10 +41,12 @@ export interface StepContent {
     | 'root' | 'third' | 'seventh' | 'chord-tones' | 'guide-tones' | 'target' | 'approach'
     | 'approach-pair' | 'enclosure' | 'landing-approach' | 'scale' | 'tension' | 'custom-path'
     | 'sample-motif' | 'blues-riff' | 'blue-note-demo'
-    /** 第1章: 1枚の長いリズム譜(rhythmBlocks) */
+    /** 第1章・第2章: 1枚の長いリズム譜(rhythmBlocks) */
     | 'rhythm';
   /** source='rhythm' のブロック */
   rhythmBlocks?: RhythmBlock[];
+  /** source='rhythm' の音符の下の文字。既定は口ずさみ(第1章)、'degree' は度数(第2章) */
+  rhythmLabel?: 'degree';
   rhythm?: DegreePathRhythm;
   arpPattern?: ArpPatternId;
   path?: StepDegree[];
@@ -134,7 +138,8 @@ export const COURSES: Course[] = [
       '理論の暗記からではなく、ジャズらしいノリを体に入れることから始めるコースです。一度に変えるものは1つだけ。各章の最後は12小節ブルースを1コーラス通します。',
       'Start with the jazz feel, not theory. Change only one thing at a time, and close every chapter with a full 12-bar blues chorus.',
     ),
-    chapterIds: ['ch1', 'ch2', 'ch3', 'ch4', 'ch5', 'ch6'],
+    // 旧第3章(ch3)は2026-10に第2章へ吸収。章IDは変えず、表示の番号だけ詰めている
+    chapterIds: ['ch1', 'ch2', 'ch4', 'ch5', 'ch6'],
   },
 ];
 
@@ -146,27 +151,22 @@ export const CHAPTERS: Chapter[] = [
   },
   {
     id: 'ch2',
-    title: b('第2章: コードの中から使う音を選ぶ', 'Ch. 2: Pick your notes from the chord'),
-    purpose: b('各コードで使える音が分かり、自分のフレーズを作れるようになる。', 'Learn which notes fit each chord and build a line of your own.'),
-  },
-  {
-    id: 'ch3',
-    title: b('第3章: 拍の頭と裏を使い分けて音を置く', 'Ch. 3: Choose the beat you play on'),
-    purpose: b('同じ音でも、出す拍を変えるだけで聞こえ方が変わると分かる。', 'The same notes sound different depending on where in the bar you place them.'),
+    title: b('第2章: コードの音を選ぶ', 'Ch. 2: Choose notes from the chord'),
+    purpose: b('第1章のリズムのまま、コードの中から音を選ぶ。聴いて、一緒に演奏して、最後は自分の音で。', 'Keep the Chapter 1 rhythms and choose notes from the chord. Listen, play along, then play your own notes.'),
   },
   {
     id: 'ch4',
-    title: b('第4章: コードが変わる小節間を半音で繋げる', 'Ch. 4: Cross the barline by a half step'),
+    title: b('第3章: コードが変わる小節間を半音で繋げる', 'Ch. 3: Cross the barline by a half step'),
     purpose: b('小節が変わってもフレーズが切れず、半音でつながるようになる。', 'Keep the line going across the changes by moving just a half step.'),
   },
   {
     id: 'ch5',
-    title: b('第5章: 同じ形を繰り返して1コーラスにする', 'Ch. 5: Repeat one shape for a whole chorus'),
+    title: b('第4章: 同じ形を繰り返して1コーラスにする', 'Ch. 4: Repeat one shape for a whole chorus'),
     purpose: b('短い形を繰り返し、少しだけ変えて12小節をまとめる。', 'Repeat a short shape, vary it slightly, and hold a whole 12 bars together.'),
   },
   {
     id: 'ch6',
-    title: b('第6章: ブルースで1コーラスのソロを作る', 'Ch. 6: Write your own blues chorus'),
+    title: b('第5章: ブルースで1コーラスのソロを作る', 'Ch. 5: Write your own blues chorus'),
     purpose: b('12小節のソロを自分で作って、最後まで演奏する。', 'Build a 12-bar solo of your own and play it all the way through.'),
   },
 ];
@@ -445,366 +445,208 @@ export const LESSONS: Lesson[] = [
     },
   },
 
-  // ================= 第2章 コードの中から使う音を選ぶ =================
+  // ================= 第2章 コードの音を選ぶ =================
+  // 第1章のリズムのまま、使う音をコードの中から選ぶ。前半「コードの音を知る」3レッスン +
+  // 後半「選んで並べる」3レッスン + ブルースで締めくくり。どれも1枚の譜面(4小節×ブロック)。
+  // ブロックの free は3周目「自分の音で」に使ってよい音。音符の下には度数を出す。
   {
-    id: 'n2-third',
+    id: 'c2-third',
     chapterId: 'ch2',
-    title: b('各コードの3度を1音だけ置く', 'Place just the 3rd of each chord'),
-    technicalName: b('3度', 'The 3rd'),
-    outcome: b('3度1音だけで、コードの明るい・暗いを演奏し分けられる。', 'With just the 3rd you can sound the difference between bright and dark chords.'),
+    part: b('コードの音を知る', 'Know the chord tones'),
+    title: b('3度で色を聴く', 'Hear the color of the 3rd'),
+    outcome: b('第1章のリズムのまま、各コードの3度を演奏しよう。', 'Keep the Chapter 1 rhythms and play the 3rd of each chord.'),
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
     keyLadder: LADDER_KEY,
     steps: [
       {
-        title: b('3度を聴く', 'Hear the 3rd'),
-        instruction: b('各コードの3度だけを鳴らした譜例です。明るさが変わるのを聴き取ろう。', 'Only the 3rd of each chord. Listen to the brightness change.'),
-        rules: [b('音は3度1音だけ', 'The 3rd only')],
-        content: { source: 'third' },
-      },
-      {
-        title: b('3度でリズムを作る', 'Build a rhythm on the 3rd'),
-        instruction: b('第1章のリズムのまま、音は各コードの3度だけで{bars}小節を作ろう。', 'Keep your Chapter 1 rhythms, but use only each chord’s 3rd.'),
-        rules: [b('使える音は3度だけ', 'The 3rd is the only note available')],
-        editable: {
-          material: 'third-only', bars: 4, divisions: [1, 2], initial: 'empty',
-          conditions: { minNotes: 4, minRestBeatsPerBar: 1 },
-          requiredAction: 'any-change',
-          task: b('3度だけを使って、休みを入れた{bars}小節を作ろう。', 'Build {bars} bars from 3rds only, leaving rests.'),
-        },
+        title: b('3度で色を聴く', 'Hear the color of the 3rd'),
+        instruction: b('第1章のリズムのまま、各コードの3度を演奏しよう。', 'Keep the Chapter 1 rhythms and play the 3rd of each chord.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', rhythmBlocks: [
+          { label: b('3度を伸ばす', 'Hold the 3rd'), hint: b('コードが変わると3度の色も変わる', 'The 3rd changes color with the chord'), free: ['3'], bars: ['4.:3 8:3 r2', '4.:3 8:3 r2', '4.:3 8:3_ 2:3', '1:3'] },
+          { label: b('裏で3度', '3rds on the and'), hint: b('裏拍だけで3度を', 'Play the 3rd on the offbeats only'), free: ['3'], bars: ['r8 8:3 r8 8:3 r8 8:3 r8 8:3', 'r8 8:3 r8 8:3 r8 8:3 r8 8:3', 'r8 8:3 r8 8:3 r8 8:3 r8 8:3', 'r8 8:3 r8 8:3 r2'] },
+          { label: b('ルートと3度', 'Root and 3rd'), hint: b('オモテはルート、裏は3度', 'Root on the beat, 3rd on the and'), free: ['R', '3'], bars: ['8 8:3 8 8:3 8 8:3 8 8:3', '8 8:3 8 8:3 8 8:3 8 8:3', '8 8:3 8 8:3 8 8:3 8 8:3', '8 8:3 4:3 r2'] },
+          { label: b('次の3度を先取り', 'Anticipate the next 3rd'), hint: b('小節の最後の裏で、次のコードの3度を出す', 'On the last and, play the next chord’s 3rd'), free: ['R', '3'], bars: ['4:3 r4 r4 r8 8:3>_', '4 r4 r4 r8 8:3>_', '2 r2', '4:3 4 2:3'] },
+        ] },
       },
     ],
-    selfCheck: [
-      b('Dm7が暗く、Cmaj7が明るく聞こえた', 'Dm7 sounded dark and Cmaj7 bright'),
-      b('コードが変わると3度も変わるのが分かった', 'I noticed the 3rd move when the chord changed'),
-    ],
+    selfCheck: [],
     trivia: {
       why: b('3度はコードが明るいか暗いかを決める音です。ルートより雄弁で、この1音だけで「進行が分かって演奏している」響きになります。', 'The 3rd decides whether a chord is major or minor. It says more than the root — one note is enough to sound like you know the changes.'),
-      mistakes: [b('音が単調に感じる → 音は1つでも、リズムを変えれば表情は変わります', 'Feels monotonous — one note is fine; change the rhythm instead')],
+      mistakes: [b('3度がどの音か迷う → 音符の下の度数を見ながら、まず1周目を聴く', 'Not sure which note is the 3rd — read the degree under each note and listen to pass 1 first')],
     },
-    estimatedMinutes: 7,
   },
   {
-    id: 'n2-guide',
+    id: 'c2-guide',
     chapterId: 'ch2',
-    title: b('各コードの3度と7度だけを演奏する', 'Play only the 3rd and 7th'),
+    part: b('コードの音を知る', 'Know the chord tones'),
+    title: b('3度と7度で進行を描く', 'Draw the changes with 3rds and 7ths'),
     technicalName: b('ガイドトーン', 'Guide tones'),
-    outcome: b('3度と7度の2音だけで、コードが進む感じを出せる。', 'Two notes — the 3rd and 7th — are enough to make the changes audible.'),
+    outcome: b('3度と7度の2音だけで、コードが進む感じを出そう。', 'Make the changes audible with just the 3rd and 7th.'),
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
     keyLadder: LADDER_KEY,
     steps: [
       {
-        title: b('2音で進行を聴く', 'Hear the changes in two notes'),
-        instruction: b('各コードの3度と7度だけの譜例です。2音でも進行が分かるのを確かめよう。', 'Only 3rds and 7ths. Check that two notes still spell the changes.'),
-        rules: [b('使う音は3度と7度だけ', '3rds and 7ths only')],
-        content: { source: 'guide-tones', rhythm: 'basic' },
-      },
-      {
-        title: b('ガイドトーンで{bars}小節作る', 'Build {bars} bars from guide tones'),
-        instruction: b('3度と7度だけを使って、休みも入れながら{bars}小節を作ろう。', 'Build {bars} bars from 3rds and 7ths, leaving some rests.'),
-        rules: [b('使える音は3度と7度だけ', 'Only 3rds and 7ths available')],
-        editable: {
-          material: 'guide-tone', bars: 4, divisions: [1, 2], initial: 'empty',
-          conditions: { minNotes: 4, minRestBeats: 2 },
-          requiredAction: 'any-change',
-          task: b('3度と7度だけで{bars}小節を作ろう。', 'Build {bars} bars from 3rds and 7ths.'),
-        },
+        title: b('3度と7度で進行を描く', 'Draw the changes with 3rds and 7ths'),
+        instruction: b('3度と7度の2音だけで、コードが進む感じを出そう。', 'Make the changes audible with just the 3rd and 7th.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', rhythmBlocks: [
+          { label: b('3度から7度へ', '3rd to 7th'), hint: b('1拍目に3度、裏で7度', '3rd on beat 1, 7th on the and'), free: ['3', '7'], bars: ['4:3 r8 8:7 r2', '4:3 r8 8:7 r2', '4:3 r8 8:7 r2', '4:3 r8 8:7 r2'] },
+          { label: b('7度から3度へ', '7th to 3rd'), hint: b('今度は7度から', 'Now start from the 7th'), free: ['3', '7'], bars: ['4:7 r8 8:3 r2', '4:7 r8 8:3 r2', '4:7 r8 8:3 r2', '2:7 2:3'] },
+          { label: b('2・4拍に置く', 'Sit on 2 and 4'), hint: b('クリックと一緒に、短く', 'Short, together with the click'), free: ['3', '7'], bars: ['r4 4:3/s r4 4:7/s', 'r4 4:3/s r4 4:7/s', 'r4 4:3/s r4 4:7/s', 'r4 4:3/s r2'] },
+          { label: b('リズムの単語で', 'In rhythm words'), hint: b('第1章の単語に2音を載せる', 'Put the two notes on Chapter 1 words'), free: ['3', '7'], bars: ['r8 8:3 8:7 8:3/s r2', 'r4 r8 8:7 8:3 8:7/as r4', 'r8 8:3 8:7 8:3 4:7 r4', '2:3 r2'] },
+        ] },
       },
     ],
-    selfCheck: [
-      b('2音だけでもコードが変わったのが分かった', 'Two notes were enough to hear the chord change'),
-      b('G7だけ落ち着かない響きになった', 'Only G7 sounded unsettled'),
-    ],
+    selfCheck: [],
     trivia: {
       why: b('3度と7度はコードの性格を決める2音です。G7ではこの2音が増4度(トライトーン)になり、それが「早く解決したい」の正体です。', 'The 3rd and 7th define a chord’s character. On G7 they form a tritone — that is what makes it want to resolve.'),
-      mistakes: [b('音が足りなく感じる → まず2音で進行が見えることを確かめる。増やすのは次のレッスン', 'Feels too thin — first prove two notes work; you add more next lesson')],
+      mistakes: [b('音が足りなく感じる → 2音でも進行が聞こえることを先に確かめる。増やすのは次のレッスン', 'Feels too thin — first hear that two notes spell the changes; you add more next lesson')],
     },
-    estimatedMinutes: 8,
   },
   {
-    id: 'n2-chordtone',
+    id: 'c2-arpeggio',
     chapterId: 'ch2',
-    title: b('コードトーン4音から選んで作る', 'Choose from the four chord tones'),
-    technicalName: b('コードトーン', 'Chord tones'),
-    outcome: b('1-3-5-7の4音から選んで、自分のフレーズを作れる。', 'You can pick from 1-3-5-7 and build a line of your own.'),
+    part: b('コードの音を知る', 'Know the chord tones'),
+    title: b('4つの音を順に並べる', 'Line up the four chord tones'),
+    technicalName: b('コードトーン・アルペジオ', 'Chord-tone arpeggios'),
+    outcome: b('1-3-5-7の4音を、スウィング8分で上り下りしよう。', 'Run 1-3-5-7 up and down in swing 8ths.'),
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
     keyLadder: LADDER_KEY,
     steps: [
       {
-        title: b('4つの音を聴く', 'Hear the four notes'),
-        instruction: b('各コードの1-3-5-7を順に鳴らした譜例です。伸ばしても濁らない音を耳に入れよう。', 'The 1-3-5-7 of each chord in order. These are the notes you can hold without clashing.'),
-        rules: [b('使う音は1-3-5-7', 'Use 1-3-5-7')],
-        content: { source: 'chord-tones', arpPattern: 'up' },
-      },
-      {
-        title: b('リズムと音を組み合わせる', 'Combine rhythm and pitch'),
-        instruction: b('音符の長さを選び、音名ボタンで音を入れよう。表情も1つ以上付けてみよう。', 'Choose a duration and enter notes with the pitch buttons. Add at least one articulation.'),
-        rules: [b('休みを{minRest}拍以上', 'At least {minRest} beats of rest'), b('表情を1つ以上', 'At least one articulation')],
-        editable: {
-          material: 'chord-tone', bars: 4, divisions: [1, 2], initial: 'empty', allowArticulation: true,
-          conditions: { minNotes: 6, minRestBeats: 2, requireArticulation: true },
-          requiredAction: 'any-change',
-          task: b('音を{minNotes}個以上、休みを{minRest}拍以上入れて、表情も付けよう。', 'Use {minNotes}+ notes, {minRest}+ beats of rest, and one articulation.'),
-        },
+        title: b('4つの音を順に並べる', 'Line up the four chord tones'),
+        instruction: b('1-3-5-7の4音を、スウィング8分で上り下りしよう。', 'Run 1-3-5-7 up and down in swing 8ths.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', rhythmBlocks: [
+          { label: b('上る', 'Up'), hint: b('1-3-5-7と上る', 'Climb 1-3-5-7'), free: ['R', '3', '5', '7'], bars: ['8 8:3 8:5 8:7 8 8:3 8:5 8:7', '8 8:3 8:5 8:7 8 8:3 8:5 8:7', '8 8:3 8:5 8:7 8 8:3 8:5 8:7', '8 8:3 8:5 8:7 2:8'] },
+          { label: b('下る', 'Down'), hint: b('7-5-3-1と下る', 'Come down 7-5-3-1'), free: ['R', '3', '5', '7'], bars: ['8:7 8:5 8:3 8 8:7 8:5 8:3 8', '8:7 8:5 8:3 8 8:7 8:5 8:3 8', '8:7 8:5 8:3 8 8:7 8:5 8:3 8', '8:7 8:5 8:3 8 2'] },
+          { label: b('3度から', 'From the 3rd'), hint: b('3度から上って、7度で止める', 'Start on the 3rd, stop on the 7th'), free: ['R', '3', '5', '7'], bars: ['8:3 8:5 8:7 8:8 8:3 8:5 8:7 8:8', '8:3 8:5 8:7 8:8 8:3 8:5 8:7 8:8', '8:3 8:5 8:7 8:8 8:3 8:5 8:7 8:8', '8:3 8:5 8:7 8:8 4:7 r4'] },
+          { label: b('上って下る', 'Up and back'), hint: b('いちばん高い音を強く', 'Accent the top note'), free: ['R', '3', '5', '7'], bars: ['8 8:3 8:5 8:7 8:8/a 8:7 8:5 8:3', '8 8:3 8:5 8:7 8:8/a 8:7 8:5 8:3', '8 8:3 8:5 8:7 8:8/a 8:7 8:5 8:3', '2:3 r2'] },
+        ] },
       },
     ],
-    selfCheck: [
-      b('全部の音がコードに合って聞こえた', 'Every note fit its chord'),
-      b('表情を変えると印象が変わるのが分かった', 'Articulation changed the character'),
-    ],
+    selfCheck: [],
     trivia: {
-      why: b('1-3-5-7は伸ばしても濁らない「安全地帯」です。迷ったらここに戻れます。同じ音でもアクセント・短く・長くで別の音楽になります。', 'The 1-3-5-7 are safe ground — you can hold them without clashing. And the same notes become different music with accents, staccato and tenuto.'),
-      mistakes: [b('音を詰め込みすぎる → 休みを2拍残す', 'Cramming in notes — keep 2 beats of rest')],
+      why: b('1-3-5-7は伸ばしても濁らない「安全地帯」です。テンポの中で上り下りできると、どこからでも安全な音に戻れます。', 'The 1-3-5-7 are safe ground — you can hold them without clashing. Running them in time means you can always get back to a safe note.'),
+      mistakes: [b('8分が走る → テンポを下げて、2・4拍のクリックに合わせる', 'Rushing the 8ths — lower the tempo and lock onto the 2-and-4 click')],
     },
-    estimatedMinutes: 9,
   },
   {
-    id: 'n2-blues-through',
+    id: 'c2-words',
     chapterId: 'ch2',
-    title: b('12小節ブルースをコードトーンで通す', 'Take the 12-bar blues with chord tones'),
-    outcome: b('12小節を通して作り、その中のii-V-Iを見つけられる。', 'You can build a full 12 bars and spot the ii-V-I inside it.'),
-    progressionId: 'blues',
-    isThrough: true,
+    part: b('選んで並べる', 'Choose and arrange'),
+    title: b('同じリズムで音を変える', 'Same rhythm, new notes'),
+    outcome: b('リズムはそのまま、使うコードの音だけを変えよう。', 'Keep the rhythm and change only which chord tones you use.'),
+    progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
+    keyLadder: LADDER_KEY,
     steps: [
       {
-        title: b('12小節の地図を見る', 'See the map'),
-        instruction: b('ルートだけで12小節をなぞった譜例です。落ち着く場所と落ち着かない場所を聴き分けよう。', 'The 12 bars traced with roots only. Hear which bars settle and which don’t.'),
-        rules: [b('1・3・7・11小節目が落ち着く場所', 'Bars 1, 3, 7 and 11 are the settled ones'), b('9-10-11小節はDm7-G7-C7', 'Bars 9-10-11 are Dm7-G7-C7')],
-        content: { source: 'root', rhythm: 'basic' },
-      },
-      {
-        title: b('12小節を作る', 'Build all 12 bars'),
-        instruction: b('コードトーンだけで12小節を作ろう。9-10-11小節は4小節の練習と同じ形だよ。', 'Build 12 bars from chord tones. Bars 9-10-11 are the same shape you practised.'),
-        rules: [b('休みを{minRest}拍以上', 'At least {minRest} beats of rest')],
-        editable: {
-          material: 'chord-tone', bars: 12, divisions: [1, 2], initial: 'empty',
-          conditions: { minNotes: 12, minRestBeats: 4 },
-          requiredAction: 'any-change',
-          task: b('12小節をコードトーンで作って、通して聴いてみよう。', 'Build all 12 bars from chord tones and play it through.'),
-        },
+        title: b('同じリズムで音を変える', 'Same rhythm, new notes'),
+        instruction: b('リズムはそのまま、使うコードの音だけを変えよう。', 'Keep the rhythm and change only which chord tones you use.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', rhythmBlocks: [
+          { label: b('1と3', '1 and 3'), hint: b('裏で入って、短く強く締める', 'Enter on the and, close short and strong'), free: ['R', '3'], bars: ['r8 8 8:3 8 8:3/as r8 r4', 'r8 8 8:3 8 8:3/as r8 r4', 'r8 8 8:3 8 8:3/as r8 r4', 'r8 8 8:3 8 8:3/as r8 r4'] },
+          { label: b('3と5', '3 and 5'), hint: b('同じリズムで、3度と5度', 'Same rhythm, 3rd and 5th'), free: ['3', '5'], bars: ['r8 8:3 8:5 8:3 8:5/as r8 r4', 'r8 8:3 8:5 8:3 8:5/as r8 r4', 'r8 8:3 8:5 8:3 8:5/as r8 r4', 'r8 8:3 8:5 8:3 8:5/as r8 r4'] },
+          { label: b('5と7', '5 and 7'), hint: b('同じリズムで、5度と7度', 'Same rhythm, 5th and 7th'), free: ['5', '7'], bars: ['r8 8:5 8:7 8:5 8:7/as r8 r4', 'r8 8:5 8:7 8:5 8:7/as r8 r4', 'r8 8:5 8:7 8:5 8:7/as r8 r4', 'r8 8:5 8:7 8:5 8:7/as r8 r4'] },
+          { label: b('小節ごとに変える', 'Change every bar'), hint: b('上る・下るを小節ごとに', 'Go up or down, bar by bar'), free: ['R', '3', '5', '7'], bars: ['r8 8 8:3 8:5 8:7/as r8 r4', 'r8 8:7 8:5 8:3 8/as r8 r4', 'r8 8:3 8:5 8:7 8:8/as r8 r4', 'r8 8:8 8:7 8:5 8:3/as r8 r4'] },
+        ] },
       },
     ],
-    selfCheck: [
-      b('12小節を迷わず最後まで追えた', 'I followed all 12 bars without getting lost'),
-      b('9-10-11小節が4小節の練習と同じ形だと分かった', 'I saw that bars 9-10-11 match the four-bar exercise'),
-    ],
+    selfCheck: [],
     trivia: {
-      why: b('ブルースの9-10-11小節はDm7-G7-C7、つまりここまで練習してきたii-V-Iそのものです。4小節の練習は、曲の一部を切り出したものでした。', 'Bars 9-10-11 of a blues are Dm7-G7-C7 — the very ii-V-I you have been practising. The four-bar exercise was a slice of a real tune.'),
-      mistakes: [b('12小節が長くて迷う → 4小節ずつ3ブロックに分けて数える', 'Twelve bars feels long — count it as three blocks of four')],
+      why: b('ジャズ奏者はリズムの形を先に決めて、音だけを入れ替えて練習します。リズムが同じなら、音の選び方の違いがはっきり聞こえます。', 'Jazz players often fix a rhythm and swap only the notes. With the rhythm held still, the difference your note choice makes is easy to hear.'),
+      mistakes: [b('音を変えるとリズムが崩れる → 先に1音でリズムだけ演奏してから音を戻す', 'The rhythm falls apart when the notes change — play the rhythm on one note first, then bring the notes back')],
     },
-    estimatedMinutes: 10,
   },
-
-  // ================= 第3章 拍の頭と裏を使い分けて音を置く =================
   {
-    id: 't3-landing',
-    chapterId: 'ch3',
-    title: b('解決するコードの1拍目に音を置く', 'Put a note on beat 1 of the resolution'),
+    id: 'c2-contour',
+    chapterId: 'ch2',
+    part: b('選んで並べる', 'Choose and arrange'),
+    title: b('跳んで、戻る', 'Leap and come back'),
+    outcome: b('コードの音どうしを跳んで、フレーズに上がり下がりを付けよう。', 'Leap between chord tones and give the phrase a rise and fall.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    keyLadder: LADDER_KEY,
+    steps: [
+      {
+        title: b('跳んで、戻る', 'Leap and come back'),
+        instruction: b('コードの音どうしを跳んで、フレーズに上がり下がりを付けよう。', 'Leap between chord tones and give the phrase a rise and fall.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', rhythmBlocks: [
+          { label: b('上へ跳ぶ', 'Leap up'), hint: b('1から5、1オクターブ上の1へ', 'From 1 to 5, up to the high 1'), free: ['R', '5'], bars: ['8 8:5 4:8 r2', '8 8:5 4:8 r2', '8 8:5 4:8 r2', '8 8:5 4:8 r2'] },
+          { label: b('上から降りる', 'Come down from the top'), hint: b('高い1から7、5へ', 'From the high 1 down to 7 and 5'), free: ['R', '3', '5', '7'], bars: ['8:8 8:7 4:5 r2', '8:8 8:7 4:5 r2', '8:8 8:7 4:5 r2', '8:8 8:7 8:5 8:3 2'] },
+          { label: b('いちばん高い音を強く', 'Accent the top'), hint: b('上りきった音にアクセント', 'Accent the note at the top'), free: ['R', '3', '5', '7'], bars: ['8 8:3 8:5 8:8/a 8:5 8:3 4', '8 8:3 8:5 8:8/a 8:5 8:3 4', '8 8:3 8:5 8:8/a 8:5 8:3 4', '8 8:3 8:5 8:8/as r2'] },
+          { label: b('山の形', 'A hill shape'), hint: b('上って、高い所で強く、戻る', 'Climb, hit the top, come back down'), free: ['R', '3', '5', '7'], bars: ['r8 8 8:3 8:5 8:7 8:8/a 4:7', 'r8 8:3 8:5 8:7 8:8/a 8:7 4:5', 'r8 8 8:3 8:5 8:8/a 8:7 8:5 8:3', '2:3 r2'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('音が順番に並ぶだけだと平らに聞こえます。跳んで戻る形と、いちばん高い音のアクセントで、フレーズに山ができます。', 'Notes in plain order sound flat. Leaps that come back, and an accent on the top note, give the phrase a peak.'),
+      mistakes: [b('跳んだ先の音が外れる → 跳ぶ前の音と跳んだ先の音を、ゆっくり交互に鳴らしてから', 'Missing the note you leap to — first alternate the two notes slowly')],
+    },
+  },
+  {
+    id: 'c2-landing',
+    chapterId: 'ch2',
+    part: b('選んで並べる', 'Choose and arrange'),
+    title: b('解決で着地する', 'Land on the resolution'),
     technicalName: b('着地', 'Landing'),
-    outcome: b('解決先の1拍目に音を置いて、「終わった」と聞こえるフレーズを作れる。', 'You can land on beat 1 of the resolving chord so the phrase sounds finished.'),
+    outcome: b('落ち着くコード(Cmaj7)の3度に、狙って着地しよう。', 'Aim for the 3rd of the settling chord (Cmaj7) and land on it.'),
     progressionId: 'ii-V-I',
     defaultBpm: 80,
     clickPattern: 'backbeat',
     keyLadder: LADDER_KEY,
     steps: [
       {
-        title: b('頭に置いて着地させる', 'Land on the downbeat'),
-        instruction: b('3小節目(Cmaj7)の1拍目に音を置いて、{bars}小節を作ろう。', 'Build {bars} bars with a note on beat 1 of bar 3 (Cmaj7).'),
-        rules: [b('3小節目の1拍目に音を置く', 'A note must sound on beat 1 of bar 3')],
-        editable: {
-          material: 'chord-tone', bars: 4, divisions: [1, 2], initial: 'empty',
-          conditions: { minNotes: 5, requireDownbeatOnBar: [3] },
-          requiredAction: 'any-change',
-          task: b('3小節目の1拍目に音を置いて作ろう。', 'Place a note on beat 1 of bar 3.'),
-        },
-      },
-      {
-        title: b('わざと外して聴き比べる', 'Miss it on purpose and compare'),
-        instruction: b('今度は3小節目を裏拍から始めてみよう。着地の感じが消えるのを聴き比べよう。', 'Now start bar 3 on an offbeat. Hear the sense of arrival disappear.'),
-        rules: [b('3小節目は裏拍から始める', 'Bar 3 must start on an offbeat')],
-        editable: {
-          material: 'chord-tone', bars: 4, divisions: [1, 2], initial: 'empty',
-          conditions: { minNotes: 5, requireOffbeatStartOnBar: [3] },
-          requiredAction: 'any-change',
-          task: b('3小節目を裏拍から始めて、さっきと聴き比べよう。', 'Start bar 3 on an offbeat and compare with the last one.'),
-        },
+        title: b('解決で着地する', 'Land on the resolution'),
+        instruction: b('落ち着くコード(Cmaj7)の3度に、狙って着地しよう。', 'Aim for the 3rd of the settling chord (Cmaj7) and land on it.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', rhythmBlocks: [
+          { label: b('1拍目ちょうどに', 'Right on beat 1'), hint: b('Cmaj7の1拍目に3度を置く', 'Put the 3rd on beat 1 of Cmaj7'), free: ['R', '3', '5', '7'], bars: ['r8 8:3 8:5 8:7 r2', 'r8 8:7 8:5 8:3 r2', '2:3/t r2', 'r1'] },
+          { label: b('食って着地', 'Arrive early'), hint: b('G7の最後の裏から、Cmaj7の3度へ', 'From the last and of G7 into the 3rd of Cmaj7'), free: ['R', '3', '5', '7'], bars: ['r8 8:3 8:5 8:7 r2', 'r8 8:7 8:5 8:3 r4 r8 8:3>_', '2 r2', 'r1'] },
+          { label: b('助走から着地', 'Run up and land'), hint: b('G7の後半から1拍目へ向かう', 'From the second half of G7, head for beat 1'), free: ['R', '3', '5', '7'], bars: ['4:3 r4 r2', 'r2 8 8:3 8:5 8:7', '2:3/t r2', 'r1'] },
+          { label: b('3つを合わせる', 'All three together'), hint: b('裏で入り、食って、3度で着地', 'Enter on the and, arrive early, land on the 3rd'), free: ['R', '3', '5', '7'], bars: ['r8 8:3 8:5 8:7 8:8 8:7 r4', 'r8 8:7 8:5 8:3 r4 r8 8:3>_', '2 r8 8:5 8:3 8', '2:3 r2'] },
+        ] },
       },
     ],
-    selfCheck: [
-      b('頭に音があるときだけ「帰ってきた」と聞こえた', 'Only the downbeat version sounded like arriving'),
-      b('着地の音を自分で決められた', 'I chose my own landing note'),
-    ],
+    selfCheck: [],
     trivia: {
-      why: b('Cmaj7は落ち着く場所です。落ち着く場所の1拍目に音があると「着いた」と聞こえます。外すと宙ぶらりんな感じが残ります。', 'Cmaj7 is where things settle. A note on its downbeat reads as arrival; miss it and the phrase stays suspended.'),
-      mistakes: [b('着地の音を短く切ってしまう → 着地は長めに置くと決まりやすい', 'Clipping the landing — hold it a little longer')],
+      why: b('いちばん落ち着かないG7から、落ち着くCmaj7へ。その到着の瞬間に3度があると「帰ってきた」と聞こえます。半拍早めると、前へ進む勢いも付きます。', 'From the most unsettled chord to the most settled one. A 3rd at the moment of arrival sounds like coming home — and arriving half a beat early adds forward motion.'),
+      mistakes: [b('着地の前に音が詰まる → 着地の音を先に決めて、そこから逆算する', 'Crowding the notes before the landing — pick the landing note first and work back from it')],
     },
-    estimatedMinutes: 9,
   },
   {
-    id: 't3-offbeat-start',
-    chapterId: 'ch3',
-    title: b('1小節目を裏拍から始める', 'Start bar 1 on an offbeat'),
-    technicalName: b('オフビート・スタート', 'Offbeat entry'),
-    outcome: b('落ち着かない小節を裏拍から始めて、前へ転がる感じを出せる。', 'Starting an unsettled bar on an offbeat makes the line roll forward.'),
-    progressionId: 'ii-V-I',
-    defaultBpm: 80,
-    clickPattern: 'backbeat',
-    keyLadder: LADDER_KEY,
-    steps: [
-      {
-        title: b('裏拍から始める', 'Enter on the offbeat'),
-        instruction: b('1小節目(Dm7)の最初の音を、1拍裏か2拍裏に置こう。', 'Put the first note of bar 1 (Dm7) on the “and” of beat 1 or 2.'),
-        rules: [b('1小節目は裏拍から始める', 'Bar 1 must start on an offbeat')],
-        editable: {
-          material: 'chord-tone', bars: 4, divisions: [1, 2], initial: 'empty',
-          conditions: { minNotes: 5, requireOffbeatStartOnBar: [1] },
-          requiredAction: 'any-change',
-          task: b('1小節目を裏拍から始めてみよう。', 'Start bar 1 on an offbeat.'),
-        },
-      },
-      {
-        title: b('頭から始めて聴き比べる', 'Start on the beat and compare'),
-        instruction: b('今度は1拍目ちょうどから始めてみよう。硬さの違いを聴き比べよう。', 'Now start squarely on beat 1 and hear how much stiffer it feels.'),
-        rules: [b('1小節目の1拍目に音を置く', 'A note must sound on beat 1 of bar 1')],
-        editable: {
-          material: 'chord-tone', bars: 4, divisions: [1, 2], initial: 'empty',
-          conditions: { minNotes: 5, requireDownbeatOnBar: [1] },
-          requiredAction: 'any-change',
-          task: b('1小節目を1拍目から始めて、さっきと聴き比べよう。', 'Start bar 1 on the downbeat and compare.'),
-        },
-      },
-    ],
-    selfCheck: [
-      b('裏から入ったほうが前へ進む感じがした', 'The offbeat entry pushed forward more'),
-      b('どちらの入り方も自分で選べた', 'I could choose either entry on purpose'),
-    ],
-    trivia: {
-      why: b('Dm7はまだ落ち着いていない場所です。落ち着いていない場所を裏拍から始めると、フレーズが前へ転がり出します。', 'Dm7 has not settled yet. Entering an unsettled bar off the beat sets the line rolling.'),
-      mistakes: [b('裏拍のつもりが表に戻る → 第1章「裏拍から音を出す」に戻って口ずさむ', 'Drifting back onto the beat — revisit Chapter 1 and sing it')],
-    },
-    estimatedMinutes: 9,
-  },
-  {
-    id: 't3-anticipate',
-    chapterId: 'ch3',
-    title: b('小節線をまたいで次の頭へつなげる', 'Carry a note into the next downbeat'),
-    technicalName: b('食い', 'Anticipation'),
-    outcome: b('G7の終わりから音を伸ばして、次の小節へ食い込ませられる。', 'You can carry a note out of G7 and into the next bar.'),
-    progressionId: 'ii-V-I',
-    defaultBpm: 80,
-    clickPattern: 'backbeat',
-    keyLadder: LADDER_KEY,
-    steps: [
-      {
-        title: b('食い込ませる', 'Anticipate the landing'),
-        instruction: b('2小節目の最後の裏拍から4分音符を入力し、3小節目へ音を食い込ませよう。', 'Enter a quarter note on the final offbeat of bar 2 to carry it into bar 3.'),
-        rules: [b('2小節目から3小節目へ食い込む', 'A note must cross from bar 2 into bar 3')],
-        editable: {
-          material: 'chord-tone', bars: 4, divisions: [1, 2], initial: 'empty',
-          conditions: { minNotes: 5, requireCrossBarHoldInto: [3] },
-          requiredAction: 'any-change',
-          task: b('2小節目から3小節目へ音を食い込ませよう。', 'Carry a note from bar 2 into bar 3.'),
-        },
-      },
-    ],
-    selfCheck: [
-      b('解決が一段強く聞こえた', 'The resolution hit harder'),
-      b('食い込んでも拍を見失わなかった', 'I kept my place through the anticipation'),
-    ],
-    trivia: {
-      why: b('一番落ち着かないG7から、落ち着くCmaj7へ。その到着を半拍早めるのが「食い」です。第1章で作った食いが、ここで意味を持ちます。', 'From the most unsettled chord to the most settled one — arriving half a beat early is the anticipation. The Chapter 1 exercise pays off here.'),
-      mistakes: [b('食いのあと拍が分からなくなる → クリックの2・4拍だけを頼りに数える', 'Losing the beat afterwards — count only the 2-and-4 click')],
-    },
-    estimatedMinutes: 8,
-  },
-  {
-    id: 't3-combine',
-    chapterId: 'ch3',
-    title: b('裏拍で始めて食い込んで頭で着地する', 'Enter off, anticipate, land on the beat'),
-    outcome: b('助走・食い・着地を1本のフレーズにまとめられる。', 'You can put entry, anticipation and landing into a single line.'),
-    progressionId: 'ii-V-I',
-    defaultBpm: 80,
-    clickPattern: 'backbeat',
-    keyLadder: LADDER_KEY,
-    steps: [
-      {
-        title: b('3つを同時に使う', 'All three at once'),
-        instruction: b('1小節目は裏拍から、2小節目から食い込み、3小節目の頭で着地する{bars}小節を作ろう。', 'Bar 1 enters off the beat, bar 2 carries over, bar 3 lands on the downbeat.'),
-        rules: [
-          b('1小節目は裏拍から', 'Bar 1 starts offbeat'),
-          b('3小節目へ食い込む', 'Carry into bar 3'),
-          b('3小節目の1拍目に音', 'A note sounds on beat 1 of bar 3'),
-        ],
-        editable: {
-          material: 'chord-tone', bars: 4, divisions: [1, 2], initial: 'empty',
-          conditions: { minNotes: 6, requireOffbeatStartOnBar: [1], requireCrossBarHoldInto: [3], requireDownbeatOnBar: [3] },
-          requiredAction: 'any-change',
-          task: b('裏拍で始めて、食い込んで、頭で着地する{bars}小節を作ろう。', 'Enter off the beat, carry over, and land on the downbeat.'),
-        },
-      },
-      {
-        title: b('表情を役割に合わせる', 'Match the articulation to the role'),
-        instruction: b('助走は短く、着地は長く。表情を付けて役割の違いを出そう。', 'Keep the approach short and the landing long. Use articulation to show the difference.'),
-        rules: [b('表情を1つ以上', 'At least one articulation')],
-        editable: {
-          material: 'chord-tone', bars: 4, divisions: [1, 2], initial: 'empty', allowArticulation: true,
-          conditions: { minNotes: 6, requireOffbeatStartOnBar: [1], requireCrossBarHoldInto: [3], requireDownbeatOnBar: [3], requireArticulation: true },
-          requiredAction: 'any-change',
-          task: b('助走を短く、着地を長くして、表情の違いを付けよう。', 'Shorten the approach, lengthen the landing.'),
-        },
-      },
-    ],
-    selfCheck: [
-      b('全体が1つの流れとしてつながった', 'The whole thing formed one line'),
-      b('どこが助走でどこが着地か自分で言えた', 'I could name the approach and the landing'),
-    ],
-    trivia: {
-      why: b('落ち着かない場所は前へ、落ち着く場所は拍の頭に。この2つを守るだけで、同じ音でもジャズらしく聞こえます。', 'Push forward where the harmony is unsettled; land on the beat where it settles. Two rules, and the same notes start to swing.'),
-      mistakes: [b('3つを同時に意識できない → 1つずつ前のレッスンに戻って作り直す', 'Too much at once — go back a lesson and rebuild one rule at a time')],
-    },
-    estimatedMinutes: 10,
-  },
-  {
-    id: 't3-blues-through',
-    chapterId: 'ch3',
-    title: b('11小節目の1拍目に着地させる', 'Land on beat 1 of bar 11'),
-    outcome: b('12小節の中に「帰ってきた」瞬間を1回作れる。', 'You can create one clear moment of arrival in a whole chorus.'),
+    id: 'c2-blues',
+    chapterId: 'ch2',
+    title: b('ブルースをコードの音で1コーラス', 'A blues chorus on chord tones'),
+    outcome: b('12小節ブルースを、コードの音だけで1コーラス通そう。', 'Take one chorus of 12-bar blues using chord tones only.'),
     progressionId: 'blues',
-    isThrough: true,
     defaultBpm: 80,
     clickPattern: 'backbeat',
     steps: [
       {
-        title: b('着地を1回決める', 'Land once'),
-        instruction: b('11小節目(C7)の1拍目に音を置こう。あとは自由に12小節を作ろう。', 'Put a note on beat 1 of bar 11 (C7). The rest of the 12 bars is up to you.'),
-        rules: [b('11小節目の1拍目に音を置く', 'A note must sound on beat 1 of bar 11'), b('休みを{minRest}拍以上', 'At least {minRest} beats of rest')],
-        editable: {
-          material: 'chord-tone', bars: 12, divisions: [1, 2], initial: 'empty',
-          conditions: { minNotes: 12, minRestBeats: 4, requireDownbeatOnBar: [11] },
-          requiredAction: 'any-change',
-          task: b('11小節目の1拍目に着地させて、12小節を作ろう。', 'Land on beat 1 of bar 11 and build the whole 12 bars.'),
-        },
+        title: b('ブルースをコードの音で1コーラス', 'A blues chorus on chord tones'),
+        instruction: b('12小節ブルースを、コードの音だけで1コーラス通そう。', 'Take one chorus of 12-bar blues using chord tones only.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', rhythmBlocks: [
+          { label: b('3度を中心に', 'Center on the 3rd'), hint: b('C7とF7の3度を聴き分ける', 'Hear the 3rds of C7 and F7'), free: ['R', '3', '5', '7'], bars: ['r8 8:3 8:5 8:3 4 r4', 'r8 8:3 8:5 8:3 4 r4', 'r8 8:3 8:5 8:7 8:8 8:7 4:5', '2:3 r2'] },
+          { label: b('7度も使う', 'Bring in the 7th'), hint: b('F7の♭7を長く', 'Lean on the ♭7 of F7'), free: ['R', '3', '5', '7'], bars: ['4:7/t r8 8:5 8:3 8 r4', 'r8 8:3 8:5 8:7 4:8 r4', '4:7 r8 8:5 8:3 8 r4', 'r2 r8 8:3 8:5 8:7'] },
+          { label: b('ii-Vで着地', 'Land after the ii-V'), hint: b('G7から食って、C7の3度へ', 'From G7, arrive early on the 3rd of C7'), free: ['R', '3', '5', '7'], bars: ['4:8 8:7 8:5 8:3 8 r4', 'r8 8:7 8:5 8:3 r4 r8 8:3>_', '2 r8 8:3 8:5 8:7', '4:3 r4 8:3 8:7 r4'] },
+        ] },
       },
     ],
-    selfCheck: [
-      b('1コーラスの中に着地が1回あった', 'There was one clear arrival in the chorus'),
-      b('11小節目が「帰ってきた」場所だと分かった', 'I felt bar 11 as the homecoming'),
-    ],
+    selfCheck: [],
     trivia: {
-      why: b('ブルースの11小節目は、9-10小節のDm7-G7から解決するC7です。1コーラスで一番「帰ってきた」場所になります。', 'Bar 11 is the C7 that resolves the Dm7-G7 of bars 9-10 — the strongest homecoming in the chorus.'),
-      mistakes: [b('どこが着地か分からなくなる → 9-10-11小節だけ先に作る', 'Losing track of the landing — build bars 9-10-11 first')],
+      why: b('ブルースの9-10-11小節はDm7-G7-C7。このレッスンまでに練習したii-V-Iの着地が、そのまま曲の中に出てきます。', 'Bars 9-10-11 of a blues are Dm7-G7-C7 — the ii-V-I landing you just practised appears right inside the tune.'),
+      mistakes: [b('12小節で迷う → 4小節ずつの3ブロックで数える', 'Getting lost in 12 bars — count it as three blocks of four')],
     },
-    estimatedMinutes: 10,
   },
 
-  // ================= 第4章 コードが変わる小節間を半音で繋げる =================
+  // ================= 第3章(id: ch4) コードが変わる小節間を半音で繋げる =================
   {
     id: 'c4-seven-three',
     chapterId: 'ch4',
@@ -958,7 +800,7 @@ export const LESSONS: Lesson[] = [
     estimatedMinutes: 10,
   },
 
-  // ================= 第5章 同じ形を繰り返して1コーラスにする =================
+  // ================= 第4章(id: ch5) 同じ形を繰り返して1コーラスにする =================
   {
     id: 'm5-motif',
     chapterId: 'ch5',
@@ -1107,7 +949,7 @@ export const LESSONS: Lesson[] = [
     estimatedMinutes: 10,
   },
 
-  // ================= 第6章 ブルースで1コーラスのソロを作る =================
+  // ================= 第5章(id: ch6) ブルースで1コーラスのソロを作る =================
   {
     id: 'b6-bluenote',
     chapterId: 'ch6',

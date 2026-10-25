@@ -452,10 +452,16 @@ export function StaffView({
         // 「1行に何小節」より優先する。行頭の音部記号ぶん(約60px)は音符に使えない
         const byDensity = Math.floor(Math.max(120, logicalW - 60) / maxRequired);
         const cap = Math.max(1, Math.min(measures, hardCap, byDensity));
-        // 最終行だけ1〜2小節になると見づらいので、割り切れる/最終行が長い並べ方を選ぶ
-        // (例: 8小節を 6+2 ではなく 4+4 にする)
         let per = cap;
-        if (cap > 1 && measures > cap) {
+        if (sections && sections.length > 0) {
+          // ブロック見出しは必ず行の頭に来るようにする(音が少ないと1行6小節になり、ブロックが行の途中から始まる)
+          per = 1;
+          for (let x = cap; x >= 1; x--) {
+            if (sections.every((sec) => sec.measure % x === 0)) { per = x; break; }
+          }
+        } else if (cap > 1 && measures > cap) {
+          // 最終行だけ1〜2小節になると見づらいので、割り切れる/最終行が長い並べ方を選ぶ
+          // (例: 8小節を 6+2 ではなく 4+4 にする)
           let best = -1;
           for (let x = 1; x <= cap; x++) {
             const rem = measures % x;

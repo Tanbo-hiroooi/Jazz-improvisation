@@ -256,9 +256,11 @@ function FixedStepBody({
 const BLOCK_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 /** 3周の役割: 1周目=譜例を聴く / 2周目=一緒に演奏 / 3周目=譜例の音なしで自分だけ */
 const PASS_KEYS = ['rhythmPassListen', 'rhythmPassTogether', 'rhythmPassSolo'] as const;
+/** 第2章: 3周目は「自分の音で」(リズムは譜面どおり、音はブロックの free から自分で選ぶ) */
+const PASS_KEYS_OWN = ['rhythmPassListen', 'rhythmPassTogether', 'rhythmPassOwn'] as const;
 
 /**
- * 第1章のリズム譜: 4小節×数ブロックの1枚の譜面を、止めずに通して演奏する。
+ * 第1章・第2章のリズム譜: 4小節×数ブロックの1枚の譜面を、止めずに通して演奏する。
  * 説明は譜面上の見出しと、いま演奏しているブロックの1行だけにする。
  */
 function RhythmStepBody({
@@ -277,8 +279,16 @@ function RhythmStepBody({
     for (const b of blocks) { out.push(m); m += b.bars.length; }
     return out;
   }, [blocks]);
+  // 音符の下の文字(第1章=口ずさみ、第2章=度数)。表示のON/OFFだけ切り替えられる
   const [scat, setScat] = useState(true);
-  const displayedNotes = useMemo(() => rhythmNotes(allBars, prog, keyPc, lang), [allBars, prog, keyPc, lang]);
+  const labelKind = content.rhythmLabel === 'degree' ? 'degree' : 'scat';
+  // ブロックに「使ってよい音」があれば、3周目は「自分の音で」になる
+  const ownNotes = blocks.some((b) => b.free);
+  const passKeys = ownNotes ? PASS_KEYS_OWN : PASS_KEYS;
+  const displayedNotes = useMemo(
+    () => rhythmNotes(allBars, prog, keyPc, lang, labelKind),
+    [allBars, prog, keyPc, lang, labelKind],
+  );
   const chordDisplays = useMemo(() => chordDisplaysFor(prog, keyPc, shift, flats), [prog, keyPc, shift, flats]);
   const sections = useMemo(
     () => blocks.map((b, i) => ({ measure: blockStarts[i], label: `${BLOCK_LETTERS[i]} ${pick(lang, b.label.ja, b.label.en)}` })),
@@ -317,10 +327,16 @@ function RhythmStepBody({
       ))}
     </ol>
   );
+  const free = currentBlock >= 0 ? blocks[currentBlock]?.free : undefined;
   const nowLine = (
     <p className="rhythm-now" aria-live="polite">
-      {pass >= 0 && <span className={`rhythm-pass pass-${pass}`}>{t(PASS_KEYS[pass])}</span>}
+      {pass >= 0 && <span className={`rhythm-pass pass-${pass}`}>{t(passKeys[pass])}</span>}
       {currentBlock >= 0 && blocks[currentBlock] ? pick(lang, blocks[currentBlock].hint.ja, blocks[currentBlock].hint.en) : t('countInBanner')}
+      {free && (
+        <span className={`rhythm-free${pass === 2 ? ' on' : ''}`}>
+          {t('rhythmFreeNotes')} {free.map((d) => (d === 'R' ? '1' : d)).join('・')}
+        </span>
+      )}
     </p>
   );
   const staff = (
@@ -339,7 +355,7 @@ function RhythmStepBody({
         <button className="btn big stop" onClick={() => { stopAll(); setCycling(false); }}>■ Stop</button>
       ) : (
         <>
-          <button className="btn big start" onClick={startCycle}>▶ {t('rhythmCycle')}</button>
+          <button className="btn big start" onClick={startCycle}>▶ {t(ownNotes ? 'rhythmCycleOwn' : 'rhythmCycle')}</button>
           <button className="btn big example" onClick={listen}>♪ {t('rhythmListen')}</button>
         </>
       )}
@@ -361,7 +377,7 @@ function RhythmStepBody({
       <div className="staff-head">
         <h4>{t('staffTitle')}</h4>
         <div className="staff-head-tools">
-          <label className="toggle"><input type="checkbox" checked={scat} onChange={(e) => setScat(e.target.checked)} /> {t('labelScat')}</label>
+          <label className="toggle"><input type="checkbox" checked={scat} onChange={(e) => setScat(e.target.checked)} /> {t(labelKind === 'degree' ? 'labelDegree' : 'labelScat')}</label>
           <button className="btn tiny focus-open-btn" onClick={() => setFocus(true)}>⛶ {t('focusOpen')}</button>
         </div>
       </div>
@@ -369,7 +385,7 @@ function RhythmStepBody({
       {staff}
       {nowLine}
       {transport}
-      <p className="hint-text">{t('rhythmCycleHint')}</p>
+      <p className="hint-text">{t(ownNotes ? 'rhythmCycleHintOwn' : 'rhythmCycleHint')}</p>
       {optionsNode}
     </>
   );
