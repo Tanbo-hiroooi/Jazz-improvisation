@@ -278,6 +278,19 @@ export function chordTonesAsNotes(prog: Progression, keyPc: number, rhythm: Tone
   return tonesAsNotes(prog, keyPc, 'chord', rhythm, arp);
 }
 
+/**
+ * 自由練習のコードトーン: 4つの並び方(上行・下行・跳躍・波)を、並び方ごとに進行を1周ずつ続けた1枚の譜面にする。
+ * 進行は fitProgression(prog, prog.measures * ARP_PATTERNS.length) と同じ並びになる(chordIndex もそれに合わせる)。
+ */
+export function chordTonesAllPatternsAsNotes(prog: Progression, keyPc: number, rhythm: ToneRhythmId = 'basic'): NoteEvent[] {
+  const span = prog.measures * 4;
+  return ARP_PATTERNS.flatMap((p, i) => chordTonesAsNotes(prog, keyPc, rhythm, p.id).map((nt) => ({
+    ...nt,
+    start: nt.start + i * span,
+    chordIndex: nt.chordIndex + i * prog.chords.length,
+  })));
+}
+
 /** ガイドトーン表示用 */
 export function guideTonesAsNotes(prog: Progression, keyPc: number, rhythm: ToneRhythmId = 'basic'): NoteEvent[] {
   return tonesAsNotes(prog, keyPc, 'guide', rhythm);

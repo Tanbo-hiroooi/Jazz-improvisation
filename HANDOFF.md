@@ -148,6 +148,11 @@ courses.ts(データ) → StepPractice(解決・検証) → GridEditor(編集UI)
   - anticipationの重要仕様: 食った音が次の小節の1拍目を**先取り**するので、2小節目以降は頭の音を置かない。最終小節の食いはフォーム内で終える(過去バグ: 重複して譜面崩壊)。
 - 他: chordTonesAsNotes / guideTonesAsNotes / approachPairAsNotes / enclosureAsNotes / landingWithApproachAsNotes / sampleMotifAsNotes(variant: repeat/rhythm/landing/alternate/sequence — 差分が厳密に「リズムだけ」「最後の音だけ」等になるよう設計) / bluesRiffAsNotes / blueNoteDemoAsNotes / scaleAsNotes / tensionsAsNotes。
 - StepContentの`activeMeasures`/`activeOnChordChangesOnly`で「指定小節だけ鳴らす」フィルタ。
+- **自由練習のコードトーンは4つの並び方を1枚に**(2026-11-01、オーナー指示。4小節以下の進行のみ=`ALL_PATTERNS_MAX_BARS`。
+  ブルース12小節・枯葉8小節など長い進行は4周すると譜面が小さくなりすぎるので、従来どおり「並び方」を1つ選ぶ):
+  `chordTonesAllPatternsAsNotes` が上行→下行→跳躍→波の順に進行を1周ずつ並べる(ii-V-I なら16小節)。
+  FreePracticeScreen は `staffProg = fitProgression(progression, measures×4)` を譜面・伴奏・コード表記・いまのコードに使い、
+  StaffView の `sections` で「A 上行(1-3-5-7)」などの見出しを出す。コード進行の表示(ChordProgressionView)は元の進行のままで、再生位置は小節数で割った余り。
 
 ## 8. 音声(audio/engine.ts + usePracticePlayback)
 

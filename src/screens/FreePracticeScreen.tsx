@@ -23,6 +23,7 @@ import {
   ARP_PATTERNS,
   TONE_RHYTHMS,
   approachAsNotes,
+  chordTonesAllPatternsAsNotes,
   chordTonesAsNotes,
   guideTonesAsNotes,
   scaleAsNotes,
@@ -33,7 +34,7 @@ import {
   type ToneRhythmId,
 } from '../theory/phrases';
 import { emptyGrid, type GridMaterial, type GridPhrase } from '../theory/grid';
-import { PROGRESSIONS, chordAt, getProgression, type Progression, type ProgressionId } from '../theory/progressions';
+import { PROGRESSIONS, chordAt, fitProgression, getProgression, type Progression, type ProgressionId } from '../theory/progressions';
 import { SWING_OPTIONS } from '../theory/rhythms';
 import { pick, t as tr, type Lang } from '../i18n';
 
@@ -44,7 +45,6 @@ export interface FreePracticeInit {
   bpm: number;
   tab: StaffTab;
   toneRhythm?: ToneRhythmId;
-  arpPattern?: ArpPatternId;
   scaleView?: 'scale' | 'tension';
 }
 
@@ -60,6 +60,9 @@ interface Props {
   onReturnToLesson?: () => void;
 }
 
+/** これ以下の小節数の進行では、コードトーンの4つの並び方を続けて1枚の譜面にする */
+const ALL_PATTERNS_MAX_BARS = 4;
+
 export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInstrument, onSaveBase, initial, onReturnToLesson }: Props) {
   const { instrumentId, pitchMode } = session;
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
@@ -71,7 +74,8 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
   const [bpm, setBpm] = useState(initial?.bpm ?? 100);
   const [tab, setTab] = useState<StaffTab>(initial?.tab ?? 'chordtones');
   const [toneRhythm, setToneRhythm] = useState<ToneRhythmId>(initial?.toneRhythm ?? 'basic');
-  const [arpPattern, setArpPattern] = useState<ArpPatternId>(initial?.arpPattern ?? 'up');
+  // 並び方(長い進行のコードトーンだけで選ぶ。4小節以下の進行は4つを続けた1枚の譜面になる)
+  const [arpPattern, setArpPattern] = useState<ArpPatternId>('up');
   const [scaleView, setScaleView] = useState<'scale' | 'tension'>(initial?.scaleView ?? 'scale');
   // やること: 譜面をなぞる(false) / フレーズを作る(true)
   const [composeMode, setComposeMode] = useState(false);
@@ -139,26 +143,43 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
   const rhythmNoSwing = (tab === 'chordtones' || tab === 'guidetones') && !!TONE_RHYTHMS.find((r) => r.id === toneRhythm)?.noSwing;
   const effectiveSwing = rhythmNoSwing ? 0 : swingOffset;
 
+  // コードトーンは4つの並び方(上行・下行・跳躍・波)を続けて1枚の譜面にする。
+  // 並び方ごとに進行を1周するので、譜面・伴奏・コード表記はその長さに伸ばした進行(staffProg)を使う。
+  // ただし長い進行(ブルース12小節など)は4周すると譜面が小さくなりすぎるので、従来どおり並び方を1つ選ぶ(オーナー決定)
+  const allPatterns = tab === 'chordtones' && progression.measures <= ALL_PATTERNS_MAX_BARS;
+  const staffProg = useMemo(
+    () => (allPatterns ? fitProgression(progression, progression.measures * ARP_PATTERNS.length) : progression),
+    [allPatterns, progression],
+  );
+  const staffSections = useMemo(
+    () => (allPatterns
+      ? ARP_PATTERNS.map((p, i) => ({ measure: i * progression.measures, label: `${'ABCD'[i]} ${pick(lang, p.label, p.labelEn)}` }))
+      : undefined),
+    [allPatterns, progression.measures, lang],
+  );
+
   const displayedNotes: NoteEvent[] = useMemo(() => {
     if (tab === 'guidetones') return guideTonesAsNotes(progression, effKeyPc, toneRhythm);
     if (tab === 'approach') return approachAsNotes(progression, effKeyPc);
     if (tab === 'target') return targetAsNotes(progression, effKeyPc);
     if (tab === 'scale') return scaleView === 'tension' ? tensionsAsNotes(progression, effKeyPc) : scaleAsNotes(progression, effKeyPc);
-    return chordTonesAsNotes(progression, effKeyPc, toneRhythm, arpPattern);
-  }, [tab, progression, effKeyPc, toneRhythm, arpPattern, scaleView]);
+    return allPatterns
+      ? chordTonesAllPatternsAsNotes(progression, effKeyPc, toneRhythm)
+      : chordTonesAsNotes(progression, effKeyPc, toneRhythm, arpPattern);
+  }, [tab, allPatterns, progression, effKeyPc, toneRhythm, arpPattern, scaleView]);
 
   // 譜面上のコード表記(移調適用)
   const chordDisplays: ChordDisplay[] = useMemo(
     () =>
-      progression.chords.map((c) => {
+      staffProg.chords.map((c) => {
         const rootPc = mod12(effKeyPc + c.rootOffset + shift);
         return { measure: c.measure, beat: c.beat, symbol: chordSymbol(rootPc, c.quality, flats), rootPc, quality: c.quality };
       }),
-    [progression, effKeyPc, shift, flats],
+    [staffProg, effKeyPc, shift, flats],
   );
 
   const { playing, position, currentNoteIndex, startPlayback, stopAll } = usePracticePlayback({
-    progression, effKeyPc, displayedNotes, bpm, countIn, loopEnabled, metronomeOn, clickPattern, compOn,
+    progression: staffProg, effKeyPc, displayedNotes, bpm, countIn, loopEnabled, metronomeOn, clickPattern, compOn,
     swing: effectiveSwing, loopRange, selectedMeasure,
   });
 
@@ -199,7 +220,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
   // ---- 現在のコード(情報パネル用) ----
   const infoMeasure = position && position.measure >= 0 ? position.measure : selectedMeasure;
   const infoBeat = position && position.measure >= 0 ? position.beat : 0;
-  const currentChord = chordAt(progression, infoMeasure, infoBeat);
+  const currentChord = chordAt(staffProg, infoMeasure, infoBeat);
   const currentChordDisplayRoot = mod12(effKeyPc + currentChord.rootOffset + shift);
   const concertChordLabel =
     pitchMode === 'written' && shift % 12 !== 0
@@ -259,7 +280,8 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
     <div className="staff-card">
       <StaffView
         notes={displayedNotes}
-        measures={progression.measures}
+        measures={staffProg.measures}
+        sections={staffSections}
         clef={clef}
         shift={shift}
         flats={flats}
@@ -485,7 +507,18 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
         </div>
         )}
 
-        {!composeMode && tab === 'chordtones' && (
+
+        {!composeMode && tab === 'scale' && (
+          <div className="field">
+            <label>{t('scaleViewLabel')}</label>
+            <div className="seg-group">
+              <button className={`seg${scaleView === 'scale' ? ' on' : ''}`} aria-pressed={scaleView === 'scale'} onClick={() => setScaleView('scale')}>{t('viewScale')}</button>
+              <button className={`seg${scaleView === 'tension' ? ' on' : ''}`} aria-pressed={scaleView === 'tension'} onClick={() => setScaleView('tension')}>{t('viewTension')}</button>
+            </div>
+          </div>
+        )}
+
+        {!composeMode && tab === 'chordtones' && !allPatterns && (
           <div className="field">
             <label>{t('arpLabel')}</label>
             <div className="seg-group wrap">
@@ -494,16 +527,6 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
                   {pick(lang, a.label, a.labelEn)}
                 </button>
               ))}
-            </div>
-          </div>
-        )}
-
-        {!composeMode && tab === 'scale' && (
-          <div className="field">
-            <label>{t('scaleViewLabel')}</label>
-            <div className="seg-group">
-              <button className={`seg${scaleView === 'scale' ? ' on' : ''}`} aria-pressed={scaleView === 'scale'} onClick={() => setScaleView('scale')}>{t('viewScale')}</button>
-              <button className={`seg${scaleView === 'tension' ? ' on' : ''}`} aria-pressed={scaleView === 'tension'} onClick={() => setScaleView('tension')}>{t('viewTension')}</button>
             </div>
           </div>
         )}
@@ -585,7 +608,7 @@ export function FreePracticeScreen({ lang, session, onPatchSession, onChangeInst
             keyPc={effKeyPc}
             shift={shift}
             flats={flats}
-            currentMeasure={position ? position.measure : null}
+            currentMeasure={position && position.measure >= 0 ? position.measure % progression.measures : position ? position.measure : null}
             currentBeat={position?.beat ?? 0}
             selectedMeasure={selectedMeasure}
             onSelectMeasure={setSelectedMeasure}
