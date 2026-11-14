@@ -26,7 +26,7 @@ import {
 } from '../theory/grid';
 import type { GuitarPosition } from '../theory/guitar';
 import type { Clef, NotationMode } from '../theory/instruments';
-import { KEYS, mod12 } from '../theory/notes';
+import { KEYS, mod12, useFlatsForKey as flatsForKey } from '../theory/notes';
 import {
   approachAsNotes,
   approachPairAsNotes,
@@ -45,7 +45,7 @@ import {
   type ToneRhythmId,
 } from '../theory/phrases';
 import { changeMeasures, fitProgression, type Progression } from '../theory/progressions';
-import { rhythmNotes } from '../theory/rhythmScore';
+import { ownMeasures, rhythmNotes } from '../theory/rhythmScore';
 import { pick, t as tr, type Lang } from '../i18n';
 
 /** STEPのcontent設定から、説明と完全に一致する音だけを生成する */
@@ -270,7 +270,26 @@ function RhythmStepBody({
   const t = (key: Parameters<typeof tr>[1]) => tr(lang, key);
   const blocks = content.rhythmBlocks ?? [];
   const allBars = useMemo(() => blocks.flatMap((b) => b.bars), [blocks]);
-  const prog = useMemo(() => fitProgression(progression, allBars.length), [progression, allBars.length]);
+  // 小節ごとの移調(ブロックの keyShift)。キーが途中で変わるフレーズ譜では、進行のコードも同じだけ移す
+  const barShift = useMemo(() => blocks.flatMap((b) => b.bars.map(() => b.keyShift ?? 0)), [blocks]);
+  const hasKeyShift = barShift.some((x) => x !== 0);
+  const prog = useMemo(() => {
+    const fitted = fitProgression(progression, allBars.length);
+    if (!hasKeyShift) return fitted;
+    return { ...fitted, chords: fitted.chords.map((c) => ({ ...c, rootOffset: c.rootOffset + barShift[c.measure] })) };
+  }, [progression, allBars.length, hasKeyShift, barShift]);
+  // 小節ごとの「♭で書くか」。表示上のキー(移調楽器の読み替え後)で決める
+  const barKeys = useMemo(
+    () => (hasKeyShift ? { shift: barShift, flats: barShift.map((x) => flatsForKey(mod12(keyPc + x + shift))) } : undefined),
+    [hasKeyShift, barShift, keyPc, shift],
+  );
+  const own = useMemo(() => ownMeasures(allBars), [allBars]);
+  const ownBars = useMemo(
+    () => (own.length > 0 ? { measures: own, label: tr(lang, 'rhythmOwnBar') } : undefined),
+    [own, lang],
+  );
+  // 覚えるレッスン: 3周目は譜面の音符を隠せる
+  const [hideOnSolo, setHideOnSolo] = useState(false);
   // ブロックの先頭小節(見出しと「いまどこか」の判定に使う)
   const blockStarts = useMemo(() => {
     const out: number[] = [];
@@ -285,10 +304,18 @@ function RhythmStepBody({
   const ownNotes = blocks.some((b) => b.free);
   const passKeys = ownNotes ? PASS_KEYS_OWN : PASS_KEYS;
   const displayedNotes = useMemo(
-    () => rhythmNotes(allBars, prog, keyPc, lang, labelKind),
-    [allBars, prog, keyPc, lang, labelKind],
+    () => rhythmNotes(allBars, prog, keyPc, lang, labelKind, barKeys),
+    [allBars, prog, keyPc, lang, labelKind, barKeys],
   );
-  const chordDisplays = useMemo(() => chordDisplaysFor(prog, keyPc, shift, flats), [prog, keyPc, shift, flats]);
+  const chordDisplays = useMemo(
+    () => (barKeys
+      ? prog.chords.map((c) => {
+          const rootPc = mod12(keyPc + c.rootOffset + shift);
+          return { measure: c.measure, beat: c.beat, symbol: chordSymbol(rootPc, c.quality, barKeys.flats[c.measure]), rootPc, quality: c.quality };
+        })
+      : chordDisplaysFor(prog, keyPc, shift, flats)),
+    [prog, keyPc, shift, flats, barKeys],
+  );
   const sections = useMemo(
     () => blocks.map((b, i) => ({ measure: blockStarts[i], label: `${BLOCK_LETTERS[i]} ${pick(lang, b.label.ja, b.label.en)}` })),
     [blocks, blockStarts, lang],
@@ -339,9 +366,10 @@ function RhythmStepBody({
     </p>
   );
   const staff = (
-    <div className="staff-card">
+    <div className={`staff-card${hideOnSolo && pass === 2 ? ' staff-hide-notes' : ''}`}>
       <StaffView
         notes={displayedNotes} measures={prog.measures} clef={clef} shift={shift} flats={flats}
+        ownBars={ownBars}
         labelMode={scat ? 'scat' : 'none'} chords={chordDisplays} currentIndex={currentNoteIndex}
         notation={notation} guitarPosition={guitarPosition} guitarOpenStrings={guitarOpenStrings}
         sections={sections}
@@ -377,6 +405,9 @@ function RhythmStepBody({
         <h4>{t('staffTitle')}</h4>
         <div className="staff-head-tools">
           <label className="toggle"><input type="checkbox" checked={scat} onChange={(e) => setScat(e.target.checked)} /> {t(labelKind === 'degree' ? 'labelDegree' : 'labelScat')}</label>
+          {content.memorize && (
+            <label className="toggle"><input type="checkbox" checked={hideOnSolo} onChange={(e) => setHideOnSolo(e.target.checked)} /> {t('rhythmHideOnSolo')}</label>
+          )}
           <button className="btn tiny focus-open-btn" onClick={() => setFocus(true)}>⛶ {t('focusOpen')}</button>
         </div>
       </div>

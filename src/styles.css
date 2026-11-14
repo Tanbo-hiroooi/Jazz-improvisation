@@ -342,6 +342,9 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
   fill: #e11d48 !important;
   stroke: #e11d48 !important;
 }
+/* 覚えるレッスンの3周目: 音符だけ隠す(コード記号・見出し・小節線は残す) */
+.staff-hide-notes .vf-stavenote, .staff-hide-notes .vf-tabnote, .staff-hide-notes .vf-beam,
+.staff-hide-notes .vf-tuplet, .staff-hide-notes .vf-stavetie { visibility: hidden; }
 /* 答えの音: ふだんは隠し、その音を弾く瞬間だけ光らせる(記号だけで3度/7度を探す練習) */
 .answer-light { visibility: hidden; }
 .answer-light.vf-current { visibility: visible; }

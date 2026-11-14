@@ -10,12 +10,15 @@
 //   表情 : /a アクセント /s 短く /t 長く /g ゴースト(組み合わせ可: /as = 短く強く)
 //          /n は音符の下の文字(度数)を出さない(和音から自分で3度を見つける練習など)
 //          /h は答えの音: ふだんは隠し、鳴らさず、再生がその音に来た瞬間だけ光って見える(記号だけで3度を探す練習)
+//          :=F5 :=C#4 :=Eb4 は音名の直接指定(キーCで書く。レッスンのキーとブロックの移調で一緒に動く)。
+//          コードの音以外(経過音・半音のアプローチ)を含むフレーズに使う
+//   自分の番: 小節全体を own と書くと、空の小節(4拍)になり「自分で弾く小節」として色が付く
 //   タイ : 末尾に _ を付けると次の音符とつながる(小節をまたいでもよい)
 // 例: "r8 8 8 8:3 8:5/a 8 8 8/as"
 //
 // 各小節は必ず4拍ちょうど(テストで全レッスンを検証する)。
 
-import { QUALITIES, type Quality } from './chords';
+import { QUALITIES, degreeLabel, type Quality } from './chords';
 import { mod12 } from './notes';
 import type { NoteEvent } from './phrases';
 import { chordAt, type Progression } from './progressions';
@@ -25,6 +28,10 @@ export interface RhythmToken {
   rest: boolean;
   /** C = コードの音を縦に積んだ和音 */
   degree: 'R' | '3' | '5' | '7' | '8' | 'C';
+  /** 音名の直接指定(キーCでのMIDI)。sharp は ♯ で書いた音(移調しても ♯ で書く) */
+  abs?: { midi: number; sharp: boolean; flat: boolean };
+  /** 自分で弾く小節(own) */
+  own?: boolean;
   /** 和音(C)のうち答えの音。無ければ和音全体を鳴らす */
   target?: 'R' | '3' | '5' | '7';
   /** 答えの音(隠して、来た瞬間だけ光らせる) */
@@ -45,7 +52,22 @@ const DURATIONS: Record<string, number> = {
 };
 
 /** 1トークンを読む。書式が不正なら例外(データの誤りを早く見つけるため) */
+const LETTER_PC: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+const NO_FLAGS = { next: false, accent: false, staccato: false, tenuto: false, ghost: false, noLabel: false, hidden: false, tie: false };
+
 export function parseToken(src: string): RhythmToken {
+  if (src === 'own') return { ...NO_FLAGS, beats: 4, rest: true, degree: 'R', own: true };
+  // 音名の直接指定
+  const am = /^(t8|t4|2\.|4\.|8\.|1|2|4|8|16):=([A-G])(#|b)?(\d)(?:\/([astg]+))?(_?)$/.exec(src);
+  if (am) {
+    const arts = am[5] ?? '';
+    return {
+      ...NO_FLAGS, beats: DURATIONS[am[1]], rest: false, degree: 'R',
+      abs: { midi: 12 * (Number(am[4]) + 1) + LETTER_PC[am[2]] + (am[3] === '#' ? 1 : am[3] === 'b' ? -1 : 0), sharp: am[3] === '#', flat: am[3] === 'b' },
+      accent: arts.includes('a'), staccato: arts.includes('s'), tenuto: arts.includes('t'), ghost: arts.includes('g'),
+      tie: am[6] === '_',
+    };
+  }
   const m = /^(r?)(t8|t4|2\.|4\.|8\.|1|2|4|8|16)(?::(R|3|5|7|8|C)(R|3|5|7)?(>?))?(?:\/([astgnh]+))?(_?)$/.exec(src);
   if (!m) throw new Error(`rhythm token: ${src}`);
   const arts = m[6] ?? '';
@@ -100,8 +122,22 @@ function degreeText(degree: Exclude<RhythmToken['degree'], 'C'>, quality: Qualit
  * 小節の並び(全小節)を実音の NoteEvent にする。高さはその時点のコードから決める。
  * labels: 音符の下に出す文字。'scat' = 口ずさみ(第1章)、'degree' = 度数(第2章)
  */
+/** 「自分で弾く小節」(own)の小節番号 */
+export function ownMeasures(bars: string[]): number[] {
+  return bars.flatMap((bar, i) => (bar.trim() === 'own' ? [i] : []));
+}
+
+/** 小節ごとの追加情報(キーが途中で変わるフレーズ譜用) */
+export interface BarKeys {
+  /** その小節の移調(半音)。進行のコードも同じだけ移調されていること */
+  shift: number[];
+  /** その小節のキーで、ふつうの音を♭で書くか */
+  flats: boolean[];
+}
+
 export function rhythmNotes(
   bars: string[], progression: Progression, keyPc: number, lang: 'ja' | 'en', labels: 'scat' | 'degree' = 'scat',
+  barKeys?: BarKeys,
 ): NoteEvent[] {
   const notes: NoteEvent[] = [];
   let pos = 0;
@@ -128,6 +164,29 @@ export function rhythmNotes(
       let root = 48 + rootPc;
       while (root < 55) root += 12; // G3〜F#4 あたりに置く
       const tones = QUALITIES[chord.quality].tones;
+      if (t.abs) {
+        // 音名の直接指定: キーCの音を、レッスンのキー+ブロックの移調だけ動かす(-5〜+6半音に収めて音域を保つ)
+        let tr = mod12(keyPc + (barKeys?.shift[measure] ?? 0));
+        if (tr > 6) tr -= 12;
+        const midi = t.abs.midi + tr;
+        const note: NoteEvent = {
+          midi, start, duration: t.beats, velocity: t.ghost ? 0.25 : 0.6, chordIndex: Math.max(0, chordIndex),
+          // ♯で書いた半音のアプローチには度数を付けない(「♭13」などと出ると紛らわしい)
+          label: t.abs.sharp ? '' : labels === 'degree' ? degreeLabel(mod12(midi), rootPc, chord.quality).replace(/(st|nd|rd|th)$/, '').replace(/^Root$|^R$/, '1') : scat(t, start, lang),
+        };
+        // ♯で書いた音(半音下からのアプローチ)は移調しても♯、♭で書いた音は♭。ふつうの音はそのキーの書き方に従う
+        if (t.abs.sharp) note.flats = false;
+        else if (t.abs.flat) note.flats = true;
+        else if (barKeys) note.flats = barKeys.flats[measure];
+        if (t.staccato) note.articulation = 'staccato';
+        else if (t.tenuto) note.articulation = 'tenuto';
+        else if (t.accent) note.articulation = 'accent';
+        if (t.accent && note.articulation !== 'accent') note.accent = true;
+        if (t.ghost) note.ghost = true;
+        notes.push(note);
+        if (t.tie) pending = note;
+        continue;
+      }
       const labelFor = (d: Exclude<RhythmToken['degree'], 'C'>) =>
         t.noLabel ? '' : labels === 'degree' ? degreeText(d, chord.quality) : scat(t, start, lang);
       if (t.degree === 'C') {

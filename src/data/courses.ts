@@ -33,6 +33,8 @@ export interface RhythmBlock {
   hint: Bi;
   /** 3周目「自分の音で」に使ってよいコードの音(第2章)。無ければ3周目は「ひとりで」 */
   free?: ('R' | '3' | '5' | '7')[];
+  /** このブロックだけキーを移す(半音)。覚えたフレーズを別のキーで弾く練習(第3章) */
+  keyShift?: number;
   bars: string[];
 }
 
@@ -47,6 +49,8 @@ export interface StepContent {
   rhythmBlocks?: RhythmBlock[];
   /** source='rhythm' の音符の下の文字。既定は口ずさみ(第1章)、'degree' は度数(第2章) */
   rhythmLabel?: 'degree';
+  /** フレーズを覚えるレッスン: 「3周目は譜面を隠す」の切り替えを出す */
+  memorize?: boolean;
   rhythm?: DegreePathRhythm;
   arpPattern?: ArpPatternId;
   path?: StepDegree[];
@@ -136,7 +140,8 @@ export const COURSES: Course[] = [
       'Start with the jazz feel, not theory. Change only one thing at a time, and close every chapter with a full 12-bar blues chorus.',
     ),
     // 旧第3章(ch3)は2026-10に第2章へ吸収。章IDは変えず、表示の番号だけ詰めている
-    chapterIds: ['ch1', 'ch2', 'ch4', 'ch5', 'ch6'],
+    // 2026-11: 第2章の後に phrases(フレーズを覚えて使う)と improv(その場で作る)を追加
+    chapterIds: ['ch1', 'ch2', 'phrases', 'improv', 'ch4', 'ch5', 'ch6'],
   },
 ];
 
@@ -152,18 +157,28 @@ export const CHAPTERS: Chapter[] = [
     purpose: b('第1章のリズムのまま、コードの中から音を選ぶ。聴いて、一緒に演奏して、最後は自分の音で。', 'Keep the Chapter 1 rhythms and choose notes from the chord. Listen, play along, then play your own notes.'),
   },
   {
+    id: 'phrases',
+    title: b('第3章: フレーズを覚えて使う', 'Ch. 3: Learn phrases and use them'),
+    purpose: b('ii-V-I の短いフレーズを覚えて、別のキーでも演奏する。ソロの材料を増やす。', 'Learn short ii-V-I phrases and play them in other keys — building material for your solos.'),
+  },
+  {
+    id: 'improv',
+    title: b('第4章: その場で作る', 'Ch. 4: Make it up as you go'),
+    purpose: b('覚えたフレーズを足場に、制限を少しずつ外して自分の演奏へ進む。', 'Using the phrases you know as footing, remove the limits one at a time until the playing is yours.'),
+  },
+  {
     id: 'ch4',
-    title: b('第3章: コードが変わる小節間を半音で繋げる', 'Ch. 3: Cross the barline by a half step'),
+    title: b('第5章: コードが変わる小節間を半音で繋げる', 'Ch. 5: Cross the barline by a half step'),
     purpose: b('小節が変わってもフレーズが切れず、半音でつながるようになる。', 'Keep the line going across the changes by moving just a half step.'),
   },
   {
     id: 'ch5',
-    title: b('第4章: 同じ形を繰り返して1コーラスにする', 'Ch. 4: Repeat one shape for a whole chorus'),
+    title: b('第6章: 同じ形を繰り返して1コーラスにする', 'Ch. 6: Repeat one shape for a whole chorus'),
     purpose: b('短い形を繰り返し、少しだけ変えて12小節をまとめる。', 'Repeat a short shape, vary it slightly, and hold a whole 12 bars together.'),
   },
   {
     id: 'ch6',
-    title: b('第5章: ブルースで1コーラスのソロを作る', 'Ch. 5: Write your own blues chorus'),
+    title: b('第7章: ブルースで1コーラスのソロを作る', 'Ch. 7: Write your own blues chorus'),
     purpose: b('12小節のソロを自分で作って、最後まで演奏する。', 'Build a 12-bar solo of your own and play it all the way through.'),
   },
 ];
@@ -689,7 +704,325 @@ export const LESSONS: Lesson[] = [
     },
   },
 
-  // ================= 第3章(id: ch4) コードが変わる小節間を半音で繋げる =================
+  // ================= 第3章(id: phrases) フレーズを覚えて使う =================
+  // ii-V-I の短い定番フレーズを1レッスンに1つ。A そのまま → B・C 別のキー(keyShift) → D 前半だけ書いて後半は自分(own)。
+  // 音は「:=音名」でキーCのまま書く。フレーズは特定の録音の採譜ではなく、よく使われる形。
+  {
+    id: 'p3-1',
+    chapterId: 'phrases',
+    title: b('順に下って3度へ', 'Step down to the 3rd'),
+    outcome: b('ii-V-I のフレーズを1つ覚えて、3つのキーで演奏しよう。', 'Learn one ii-V-I phrase and play it in three keys.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    steps: [
+      {
+        title: b('順に下って3度へ', 'Step down to the 3rd'),
+        instruction: b('ii-V-I のフレーズを1つ覚えて、3つのキーで演奏しよう。', 'Learn one ii-V-I phrase and play it in three keys.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', memorize: true, rhythmBlocks: [
+          { label: b('覚える', 'Learn it'), hint: b('3度から順に下り、次のコードの3度に着地', 'Step down from the 3rd and land on the next chord’s 3rd'), bars: ['r2 8:=F5 8:=E5 8:=D5 8:=C5', '4:=B4 r4 8:=B4 8:=A4 8:=G4 8:=F4', '2:=E4 r2', 'r1'] },
+          { label: b('キーFで', 'In F'), hint: b('同じ形をキーFで', 'The same shape in F'), keyShift: 5, bars: ['r2 8:=F5 8:=E5 8:=D5 8:=C5', '4:=B4 r4 8:=B4 8:=A4 8:=G4 8:=F4', '2:=E4 r2', 'r1'] },
+          { label: b('キーB♭で', 'In B♭'), hint: b('同じ形をキーB♭で', 'The same shape in B♭'), keyShift: 10, bars: ['r2 8:=F5 8:=E5 8:=D5 8:=C5', '4:=B4 r4 8:=B4 8:=A4 8:=G4 8:=F4', '2:=E4 r2', 'r1'] },
+          { label: b('続きを作る', 'Finish it yourself'), hint: b('書いてある出だしに続けて、G7から先は自分で', 'Continue from the written opening; from G7 on it is yours'), bars: ['r2 8:=F5 8:=E5 8:=D5 8:=C5', 'own', 'own', 'r1'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('7度から次のコードの3度へ半音で下りる動きが、ii-V-I の線の芯です。順に下るだけで、その動きが2回続きます。', 'The 7th falling a half step to the next chord’s 3rd is the core of a ii-V-I line. Stepping down gives you that move twice in a row.'),
+      mistakes: [b('別のキーで迷う → 音名ではなく「何度から何度へ」で覚える', 'Lost in another key — remember it as degrees, not note names')],
+    },
+  },
+  {
+    id: 'p3-2',
+    chapterId: 'phrases',
+    title: b('分散和音で上って3度へ', 'Arpeggio up to the 3rd'),
+    outcome: b('ii-V-I のフレーズを1つ覚えて、3つのキーで演奏しよう。', 'Learn one ii-V-I phrase and play it in three keys.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    steps: [
+      {
+        title: b('分散和音で上って3度へ', 'Arpeggio up to the 3rd'),
+        instruction: b('ii-V-I のフレーズを1つ覚えて、3つのキーで演奏しよう。', 'Learn one ii-V-I phrase and play it in three keys.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', memorize: true, rhythmBlocks: [
+          { label: b('覚える', 'Learn it'), hint: b('1-3-5-7と上り、次のコードの3度へ下りる', 'Climb 1-3-5-7, then drop to the next chord’s 3rd'), bars: ['r2 8:=D4 8:=F4 8:=A4 8:=C5', '4:=B4 r4 8:=G4 8:=B4 8:=D5 8:=F5', '2:=E5 r2', 'r1'] },
+          { label: b('キーFで', 'In F'), hint: b('同じ形をキーFで', 'The same shape in F'), keyShift: 5, bars: ['r2 8:=D4 8:=F4 8:=A4 8:=C5', '4:=B4 r4 8:=G4 8:=B4 8:=D5 8:=F5', '2:=E5 r2', 'r1'] },
+          { label: b('キーB♭で', 'In B♭'), hint: b('同じ形をキーB♭で', 'The same shape in B♭'), keyShift: 10, bars: ['r2 8:=D4 8:=F4 8:=A4 8:=C5', '4:=B4 r4 8:=G4 8:=B4 8:=D5 8:=F5', '2:=E5 r2', 'r1'] },
+          { label: b('続きを作る', 'Finish it yourself'), hint: b('書いてある出だしに続けて、G7から先は自分で', 'Continue from the written opening; from G7 on it is yours'), bars: ['r2 8:=D4 8:=F4 8:=A4 8:=C5', 'own', 'own', 'r1'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('第2章で練習した分散和音が、そのままフレーズになります。上りきった7度が、次の3度へ半音で下ります。', 'The arpeggios from Chapter 2 become a phrase as they are. The 7th at the top falls a half step to the next 3rd.'),
+      mistakes: [b('別のキーで迷う → 音名ではなく「何度から何度へ」で覚える', 'Lost in another key — remember it as degrees, not note names')],
+    },
+  },
+  {
+    id: 'p3-3',
+    chapterId: 'phrases',
+    title: b('5度から下って3度へ', 'Down from the 5th'),
+    outcome: b('ii-V-I のフレーズを1つ覚えて、3つのキーで演奏しよう。', 'Learn one ii-V-I phrase and play it in three keys.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    steps: [
+      {
+        title: b('5度から下って3度へ', 'Down from the 5th'),
+        instruction: b('ii-V-I のフレーズを1つ覚えて、3つのキーで演奏しよう。', 'Learn one ii-V-I phrase and play it in three keys.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', memorize: true, rhythmBlocks: [
+          { label: b('覚える', 'Learn it'), hint: b('5度から分散和音で下り、次のコードの3度へ', 'Come down the arpeggio from the 5th to the next chord’s 3rd'), bars: ['r2 8:=A5 8:=F5 8:=D5 8:=C5', '4:=B4 r4 8:=D5 8:=B4 8:=G4 8:=F4', '2:=E4 r2', 'r1'] },
+          { label: b('キーFで', 'In F'), hint: b('同じ形をキーFで', 'The same shape in F'), keyShift: 5, bars: ['r2 8:=A5 8:=F5 8:=D5 8:=C5', '4:=B4 r4 8:=D5 8:=B4 8:=G4 8:=F4', '2:=E4 r2', 'r1'] },
+          { label: b('キーB♭で', 'In B♭'), hint: b('同じ形をキーB♭で', 'The same shape in B♭'), keyShift: 10, bars: ['r2 8:=A5 8:=F5 8:=D5 8:=C5', '4:=B4 r4 8:=D5 8:=B4 8:=G4 8:=F4', '2:=E4 r2', 'r1'] },
+          { label: b('続きを作る', 'Finish it yourself'), hint: b('書いてある出だしに続けて、G7から先は自分で', 'Continue from the written opening; from G7 on it is yours'), bars: ['r2 8:=A5 8:=F5 8:=D5 8:=C5', 'own', 'own', 'r1'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('上から下りてくる形です。1・2と合わせた3つが、ii-V-I をつなぐ基本の骨組みです。', 'A shape that comes down from above. Together with phrases 1 and 2, these are the three basic outlines for connecting a ii-V-I.'),
+      mistakes: [b('別のキーで迷う → 音名ではなく「何度から何度へ」で覚える', 'Lost in another key — remember it as degrees, not note names')],
+    },
+  },
+  {
+    id: 'p3-4',
+    chapterId: 'phrases',
+    title: b('9度まで上る', 'Up to the 9th'),
+    outcome: b('ii-V-I のフレーズを1つ覚えて、3つのキーで演奏しよう。', 'Learn one ii-V-I phrase and play it in three keys.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    steps: [
+      {
+        title: b('9度まで上る', 'Up to the 9th'),
+        instruction: b('ii-V-I のフレーズを1つ覚えて、3つのキーで演奏しよう。', 'Learn one ii-V-I phrase and play it in three keys.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', memorize: true, rhythmBlocks: [
+          { label: b('覚える', 'Learn it'), hint: b('3度から3-5-7-9と上る', 'Climb 3-5-7-9 from the 3rd'), bars: ['r2 8:=F4 8:=A4 8:=C5 8:=E5', '4:=D5 r4 8:=B4 8:=A4 8:=G4 8:=F4', '2:=E4 r2', 'r1'] },
+          { label: b('キーFで', 'In F'), hint: b('同じ形をキーFで', 'The same shape in F'), keyShift: 5, bars: ['r2 8:=F4 8:=A4 8:=C5 8:=E5', '4:=D5 r4 8:=B4 8:=A4 8:=G4 8:=F4', '2:=E4 r2', 'r1'] },
+          { label: b('キーB♭で', 'In B♭'), hint: b('同じ形をキーB♭で', 'The same shape in B♭'), keyShift: 10, bars: ['r2 8:=F4 8:=A4 8:=C5 8:=E5', '4:=D5 r4 8:=B4 8:=A4 8:=G4 8:=F4', '2:=E4 r2', 'r1'] },
+          { label: b('続きを作る', 'Finish it yourself'), hint: b('書いてある出だしに続けて、G7から先は自分で', 'Continue from the written opening; from G7 on it is yours'), bars: ['r2 8:=F4 8:=A4 8:=C5 8:=E5', 'own', 'own', 'r1'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('3度から始めると、分散和音がコードの9度まで届きます。ルートを弾かない分、線が軽く聞こえます。', 'Starting on the 3rd, the arpeggio reaches the 9th. Leaving out the root makes the line sound lighter.'),
+      mistakes: [b('別のキーで迷う → 音名ではなく「何度から何度へ」で覚える', 'Lost in another key — remember it as degrees, not note names')],
+    },
+  },
+  {
+    id: 'p3-5',
+    chapterId: 'phrases',
+    title: b('半音下から入る', 'Slide in from a half step below'),
+    outcome: b('ii-V-I のフレーズを1つ覚えて、3つのキーで演奏しよう。', 'Learn one ii-V-I phrase and play it in three keys.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    steps: [
+      {
+        title: b('半音下から入る', 'Slide in from a half step below'),
+        instruction: b('ii-V-I のフレーズを1つ覚えて、3つのキーで演奏しよう。', 'Learn one ii-V-I phrase and play it in three keys.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', memorize: true, rhythmBlocks: [
+          { label: b('覚える', 'Learn it'), hint: b('狙う音の半音下から入る', 'Enter from a half step below the target'), bars: ['r4 r8 8:=C#4 8:=D4 8:=F4 8:=A4 8:=C5', '4:=B4 r4 8:=G4 8:=F4 8:=D4 8:=D#4', '2:=E4 r2', 'r1'] },
+          { label: b('キーFで', 'In F'), hint: b('同じ形をキーFで', 'The same shape in F'), keyShift: 5, bars: ['r4 r8 8:=C#4 8:=D4 8:=F4 8:=A4 8:=C5', '4:=B4 r4 8:=G4 8:=F4 8:=D4 8:=D#4', '2:=E4 r2', 'r1'] },
+          { label: b('キーB♭で', 'In B♭'), hint: b('同じ形をキーB♭で', 'The same shape in B♭'), keyShift: 10, bars: ['r4 r8 8:=C#4 8:=D4 8:=F4 8:=A4 8:=C5', '4:=B4 r4 8:=G4 8:=F4 8:=D4 8:=D#4', '2:=E4 r2', 'r1'] },
+          { label: b('続きを作る', 'Finish it yourself'), hint: b('書いてある出だしに続けて、G7から先は自分で', 'Continue from the written opening; from G7 on it is yours'), bars: ['r4 r8 8:=C#4 8:=D4 8:=F4 8:=A4 8:=C5', 'own', 'own', 'r1'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('狙う音の半音下を直前に置くと、コードにない音でもジャズらしく聞こえます。弱い拍(裏)に置くのがこつです。', 'A half step below the target, placed just before it, sounds like jazz even though it is outside the chord. Keep it on a weak part of the beat.'),
+      mistakes: [b('別のキーで迷う → 音名ではなく「何度から何度へ」で覚える', 'Lost in another key — remember it as degrees, not note names')],
+    },
+  },
+  {
+    id: 'p3-6',
+    chapterId: 'phrases',
+    title: b('上下から囲んで着地', 'Surround the landing note'),
+    outcome: b('ii-V-I のフレーズを1つ覚えて、3つのキーで演奏しよう。', 'Learn one ii-V-I phrase and play it in three keys.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    steps: [
+      {
+        title: b('上下から囲んで着地', 'Surround the landing note'),
+        instruction: b('ii-V-I のフレーズを1つ覚えて、3つのキーで演奏しよう。', 'Learn one ii-V-I phrase and play it in three keys.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', memorize: true, rhythmBlocks: [
+          { label: b('覚える', 'Learn it'), hint: b('着地の音を上と下から挟む', 'Approach the landing note from above and below'), bars: ['r2 8:=F5 8:=E5 8:=D5 8:=C5', '4:=B4 r4 r8 8:=G4 8:=F4 8:=D#4', '2:=E4 r2', 'r1'] },
+          { label: b('キーFで', 'In F'), hint: b('同じ形をキーFで', 'The same shape in F'), keyShift: 5, bars: ['r2 8:=F5 8:=E5 8:=D5 8:=C5', '4:=B4 r4 r8 8:=G4 8:=F4 8:=D#4', '2:=E4 r2', 'r1'] },
+          { label: b('キーB♭で', 'In B♭'), hint: b('同じ形をキーB♭で', 'The same shape in B♭'), keyShift: 10, bars: ['r2 8:=F5 8:=E5 8:=D5 8:=C5', '4:=B4 r4 r8 8:=G4 8:=F4 8:=D#4', '2:=E4 r2', 'r1'] },
+          { label: b('続きを作る', 'Finish it yourself'), hint: b('書いてある出だしに続けて、G7から先は自分で', 'Continue from the written opening; from G7 on it is yours'), bars: ['r2 8:=F5 8:=E5 8:=D5 8:=C5', 'own', 'own', 'r1'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('着地の音を、1つ上と半音下の2音で挟みます(囲み込み)。着地がはっきり聞こえます。', 'Surround the landing note with the note above and the half step below (an enclosure). It makes the landing unmistakable.'),
+      mistakes: [b('別のキーで迷う → 音名ではなく「何度から何度へ」で覚える', 'Lost in another key — remember it as degrees, not note names')],
+    },
+  },
+  {
+    id: 'p3-7',
+    chapterId: 'phrases',
+    title: b('2小節の長い線', 'A long two-bar line'),
+    outcome: b('ii-V-I のフレーズを1つ覚えて、3つのキーで演奏しよう。', 'Learn one ii-V-I phrase and play it in three keys.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    steps: [
+      {
+        title: b('2小節の長い線', 'A long two-bar line'),
+        instruction: b('ii-V-I のフレーズを1つ覚えて、3つのキーで演奏しよう。', 'Learn one ii-V-I phrase and play it in three keys.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', memorize: true, rhythmBlocks: [
+          { label: b('覚える', 'Learn it'), hint: b('8分を2小節続けて、3度に着地', 'Two bars of 8ths, landing on the 3rd'), bars: ['8:=A4 8:=G4 8:=F4 8:=E4 8:=D4 8:=F4 8:=A4 8:=C5', '8:=B4 8:=D5 8:=F5 8:=A5 8:=G5 8:=F5 8:=D5 8:=D#5', '2:=E5 r2', 'r1'] },
+          { label: b('キーFで', 'In F'), hint: b('同じ形をキーFで', 'The same shape in F'), keyShift: 5, bars: ['8:=A4 8:=G4 8:=F4 8:=E4 8:=D4 8:=F4 8:=A4 8:=C5', '8:=B4 8:=D5 8:=F5 8:=A5 8:=G5 8:=F5 8:=D5 8:=D#5', '2:=E5 r2', 'r1'] },
+          { label: b('キーB♭で', 'In B♭'), hint: b('同じ形をキーB♭で', 'The same shape in B♭'), keyShift: 10, bars: ['8:=A4 8:=G4 8:=F4 8:=E4 8:=D4 8:=F4 8:=A4 8:=C5', '8:=B4 8:=D5 8:=F5 8:=A5 8:=G5 8:=F5 8:=D5 8:=D#5', '2:=E5 r2', 'r1'] },
+          { label: b('続きを作る', 'Finish it yourself'), hint: b('書いてある出だしに続けて、G7から先は自分で', 'Continue from the written opening; from G7 on it is yours'), bars: ['8:=A4 8:=G4 8:=F4 8:=E4 8:=D4 8:=F4 8:=A4 8:=C5', 'own', 'own', 'r1'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('ここまでの形をつなぐと長い線になります。拍の頭にコードの音が来るので、長くても進行が聞こえます。', 'Joining the shapes so far gives a long line. Chord tones fall on the beats, so the changes stay audible.'),
+      mistakes: [b('別のキーで迷う → 音名ではなく「何度から何度へ」で覚える', 'Lost in another key — remember it as degrees, not note names')],
+    },
+  },
+  {
+    id: 'p3-8',
+    chapterId: 'phrases',
+    title: b('3連で駆け上がる', 'Run up in triplets'),
+    outcome: b('ii-V-I のフレーズを1つ覚えて、3つのキーで演奏しよう。', 'Learn one ii-V-I phrase and play it in three keys.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    steps: [
+      {
+        title: b('3連で駆け上がる', 'Run up in triplets'),
+        instruction: b('ii-V-I のフレーズを1つ覚えて、3つのキーで演奏しよう。', 'Learn one ii-V-I phrase and play it in three keys.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', memorize: true, rhythmBlocks: [
+          { label: b('覚える', 'Learn it'), hint: b('3連で分散和音を上り、4分で着地へ', 'Run up the arpeggio in triplets, then walk into the landing'), bars: ['r2 t8:=D4 t8:=F4 t8:=A4 4:=C5', '4:=B4 r4 t8:=G4 t8:=B4 t8:=D5 4:=F5', '2:=E5 r2', 'r1'] },
+          { label: b('キーFで', 'In F'), hint: b('同じ形をキーFで', 'The same shape in F'), keyShift: 5, bars: ['r2 t8:=D4 t8:=F4 t8:=A4 4:=C5', '4:=B4 r4 t8:=G4 t8:=B4 t8:=D5 4:=F5', '2:=E5 r2', 'r1'] },
+          { label: b('キーB♭で', 'In B♭'), hint: b('同じ形をキーB♭で', 'The same shape in B♭'), keyShift: 10, bars: ['r2 t8:=D4 t8:=F4 t8:=A4 4:=C5', '4:=B4 r4 t8:=G4 t8:=B4 t8:=D5 4:=F5', '2:=E5 r2', 'r1'] },
+          { label: b('続きを作る', 'Finish it yourself'), hint: b('書いてある出だしに続けて、G7から先は自分で', 'Continue from the written opening; from G7 on it is yours'), bars: ['r2 t8:=D4 t8:=F4 t8:=A4 4:=C5', 'own', 'own', 'r1'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('第1章の3連を分散和音に使います。8分の流れの中で、ここだけ速く聞こえます。', 'The triplets from Chapter 1, applied to an arpeggio. Against the 8th-note flow, this spot sounds quick.'),
+      mistakes: [b('別のキーで迷う → 音名ではなく「何度から何度へ」で覚える', 'Lost in another key — remember it as degrees, not note names')],
+    },
+  },
+
+  // ================= 第4章(id: improv) その場で作る =================
+  // 制限を一段ずつ外す: リズムだけ自分 → 掛け合い → 着地だけ決める → ブルースで1コーラス。own の小節が自分の番。
+  {
+    id: 'i4-rhythm',
+    chapterId: 'improv',
+    title: b('リズムを変えて使う', 'Same notes, your rhythm'),
+    outcome: b('覚えたフレーズの音はそのまま、リズムだけ変えて演奏しよう。', 'Keep the notes of a phrase you know and change only the rhythm.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    steps: [
+      {
+        title: b('リズムを変えて使う', 'Same notes, your rhythm'),
+        instruction: b('覚えたフレーズの音はそのまま、リズムだけ変えて演奏しよう。', 'Keep the notes of a phrase you know and change only the rhythm.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', rhythmBlocks: [
+          { label: b('そのまま', 'As written'), hint: b('第3章の1つ目のフレーズ', 'The first phrase from Chapter 3'), bars: ['r2 8:=F5 8:=E5 8:=D5 8:=C5', '4:=B4 r4 8:=B4 8:=A4 8:=G4 8:=F4', '2:=E4 r2', 'r1'] },
+          { label: b('最初の音を伸ばす', 'Hold the first note'), hint: b('入りを早めて、最初の音を長く', 'Enter earlier and hold the first note'), bars: ['r4 4.:=F5 8:=E5 8:=D5 8:=C5', '2:=B4 8:=B4 8:=A4 8:=G4 8:=F4', '2:=E4 r2', 'r1'] },
+          { label: b('音を間引く', 'Leave notes out'), hint: b('音を減らして、間を作る', 'Drop some notes and leave space'), bars: ['r2 4:=F5 8:=D5 8:=C5', '4:=B4 r4 r4 8:=G4 8:=F4', '2:=E4 r2', 'r1'] },
+          { label: b('自分のリズムで', 'Your own rhythm'), hint: b('同じ音の順で、リズムは自分で決める', 'Same order of notes, your own rhythm'), bars: ['own', 'own', 'own', 'r1'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('同じ音でも、リズムを変えると別のフレーズに聞こえます。1つのフレーズが何通りにも使えるようになります。', 'The same notes with a new rhythm sound like a new phrase. One phrase becomes many.'),
+      mistakes: [b('リズムを変えると着地がずれる → Cmaj7の1拍目の3度だけは動かさない', 'The landing drifts when the rhythm changes — keep the 3rd on beat 1 of Cmaj7 fixed')],
+    },
+  },
+  {
+    id: 'i4-trade',
+    chapterId: 'improv',
+    title: b('掛け合い', 'Trade fours'),
+    outcome: b('譜面の4小節を聴いて、次の4小節で自分のフレーズを返そう。', 'Hear four written bars, then answer with four bars of your own.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    steps: [
+      {
+        title: b('掛け合い', 'Trade fours'),
+        instruction: b('譜面の4小節を聴いて、次の4小節で自分のフレーズを返そう。', 'Hear four written bars, then answer with four bars of your own.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', rhythmBlocks: [
+          { label: b('譜面の番', 'The score plays'), hint: b('よく聴く(一緒に弾いてもよい)', 'Listen closely (or play along)'), bars: ['r2 8:=D4 8:=F4 8:=A4 8:=C5', '4:=B4 r4 8:=G4 8:=B4 8:=D5 8:=F5', '2:=E5 r2', 'r1'] },
+          { label: b('自分の番', 'Your answer'), hint: b('似た形でも、違う形でもよい。4小節で返す', 'Similar or different — answer in four bars'), bars: ['own', 'own', 'own', 'own'] },
+          { label: b('譜面の番', 'The score plays'), hint: b('よく聴く(一緒に弾いてもよい)', 'Listen closely (or play along)'), bars: ['r2 8:=F5 8:=E5 8:=D5 8:=C5', '4:=B4 r4 r8 8:=G4 8:=F4 8:=D#4', '2:=E4 r2', 'r1'] },
+          { label: b('自分の番', 'Your answer'), hint: b('最後はCmaj7の3度に着地してみる', 'Try landing on the 3rd of Cmaj7'), bars: ['own', 'own', 'own', 'own'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('ジャズでは奏者どうしが4小節ずつ交代で演奏します。聴いた直後に返すと、聴いたリズムや形が自然に自分の音に入ってきます。', 'Jazz players trade four bars back and forth. Answering right after you listen pulls the rhythm and shape you heard into your own playing.'),
+      mistakes: [b('何を弾くか迷って止まる → 聴いたフレーズの最初の2音だけまねて始める', 'Freezing — start by copying just the first two notes you heard')],
+    },
+  },
+  {
+    id: 'i4-landing',
+    chapterId: 'improv',
+    title: b('着地だけ決めて弾く', 'Fix only the landing'),
+    outcome: b('着地の音だけ決めて、そこへ向かう線は自分で作ろう。', 'Decide only the landing note and make your own line toward it.'),
+    progressionId: 'ii-V-I',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    steps: [
+      {
+        title: b('着地だけ決めて弾く', 'Fix only the landing'),
+        instruction: b('着地の音だけ決めて、そこへ向かう線は自分で作ろう。', 'Decide only the landing note and make your own line toward it.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', rhythmBlocks: [
+          { label: b('3度に着地', 'Land on the 3rd'), hint: b('Dm7とG7は自由に。Cmaj7の1拍目で3度へ', 'Dm7 and G7 are free. Reach the 3rd on beat 1 of Cmaj7'), bars: ['own', 'own', '2:3 r2', 'r1'] },
+          { label: b('5度に着地', 'Land on the 5th'), hint: b('今度は5度へ', 'Now aim for the 5th'), bars: ['own', 'own', '2:5 r2', 'r1'] },
+          { label: b('ルートに着地', 'Land on the root'), hint: b('ルートに着地すると、はっきり終わる', 'Landing on the root sounds final'), bars: ['own', 'own', '2 r2', 'r1'] },
+          { label: b('着地も自分で', 'Choose the landing too'), hint: b('どの音に着地するかも自分で決める', 'Pick the landing note yourself'), bars: ['own', 'own', 'own', 'r1'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('即興は「次にどこへ行くか」を先に決めると楽になります。着地が決まっていれば、途中の音は多少外れても線としてまとまります。', 'Improvising gets easier when you decide where you are going first. With the landing fixed, the notes on the way hold together as a line.'),
+      mistakes: [b('着地に間に合わない → G7の3〜4拍から弾き始めるだけでもよい', 'Not arriving in time — it is fine to start only on beats 3-4 of G7')],
+    },
+  },
+  {
+    id: 'i4-blues',
+    chapterId: 'improv',
+    title: b('ブルースで1コーラス', 'A blues chorus, more and more yours'),
+    outcome: b('12小節ブルースで、書いてあるフレーズから少しずつ自分の演奏へ移ろう。', 'Over a 12-bar blues, move step by step from written phrases to your own playing.'),
+    progressionId: 'blues',
+    defaultBpm: 80,
+    clickPattern: 'backbeat',
+    steps: [
+      {
+        title: b('ブルースで1コーラス', 'A blues chorus, more and more yours'),
+        instruction: b('12小節ブルースで、書いてあるフレーズから少しずつ自分の演奏へ移ろう。', 'Over a 12-bar blues, move step by step from written phrases to your own playing.'),
+        content: { source: 'rhythm', rhythmLabel: 'degree', rhythmBlocks: [
+          { label: b('書いてあるフレーズ', 'Written phrase'), hint: b('まず書いてあるとおりに', 'First, play it as written'), bars: ['r8 8:3 8:5 8:3 4 r4', 'r8 8:3 8:5 8:3 4 r4', 'r8 8:3 8:5 8:7 8:8 8:7 4:5', '2:3 r2'] },
+          { label: b('後半は自分で', 'Second half is yours'), hint: b('前の2小節に答えるつもりで', 'Answer the two bars before'), bars: ['4:7/t r8 8:5 8:3 8 r4', 'r8 8:3 8:5 8:7 4:8 r4', 'own', 'own'] },
+          { label: b('全部自分で', 'All yours'), hint: b('G7からC7の3度へ着地してみる', 'Try landing on the 3rd of C7 after G7'), bars: ['own', 'own', 'own', 'own'] },
+        ] },
+      },
+    ],
+    selfCheck: [],
+    trivia: {
+      why: b('1コーラスの中で、まねる・答える・自分で作る、を順に行います。実際のソロもこの3つの組み合わせです。', 'Within one chorus you copy, answer, and create. Real solos are made of the same three things.'),
+      mistakes: [b('最後の4小節で迷う → 9・10小節目はii-V。第3章のフレーズがそのまま使える', 'Lost in the last four bars — bars 9-10 are a ii-V, so the Chapter 3 phrases fit as they are')],
+    },
+  },
+
+  // ================= 第5章(id: ch4) コードが変わる小節間を半音で繋げる =================
   {
     id: 'c4-seven-three',
     chapterId: 'ch4',
@@ -841,7 +1174,7 @@ export const LESSONS: Lesson[] = [
     estimatedMinutes: 10,
   },
 
-  // ================= 第4章(id: ch5) 同じ形を繰り返して1コーラスにする =================
+  // ================= 第6章(id: ch5) 同じ形を繰り返して1コーラスにする =================
   {
     id: 'm5-motif',
     chapterId: 'ch5',
@@ -989,7 +1322,7 @@ export const LESSONS: Lesson[] = [
     estimatedMinutes: 10,
   },
 
-  // ================= 第5章(id: ch6) ブルースで1コーラスのソロを作る =================
+  // ================= 第7章(id: ch6) ブルースで1コーラスのソロを作る =================
   {
     id: 'b6-bluenote',
     chapterId: 'ch6',

@@ -59,6 +59,8 @@ interface Props {
   chords: ChordDisplay[];
   /** 小節の頭に出す見出し(第1章のリズム譜のブロック「A 裏拍だけ」など)。囲み文字で描く */
   sections?: { measure: number; label: string }[];
+  /** 「自分で弾く小節」。薄い色を付けて、小節の下に label を出す */
+  ownBars?: { measures: number[]; label: string };
   /** 再生中のノートインデックス(-1: なし) */
   currentIndex: number;
   /** 編集で選択中のノートインデックス(-1: なし)。編集中どの音を触っているか示す */
@@ -222,7 +224,7 @@ const ARTIC_CODE: Record<string, string> = { accent: 'a>', staccato: 'a.', tenut
 
 export function StaffView({
   notes, measures, clef, shift, flats, labelMode, chords, currentIndex, selectedIndex = -1,
-  zoom = 1, fitHeight, fitMaxZoom, sections,
+  zoom = 1, fitHeight, fitMaxZoom, sections, ownBars,
   selectedMeasure = -1, onSelectMeasure, onSelectNote, noteSelectLabel, onDragNote, onNudgeNote,
   entryDivisions, entryCursor, entryFocusMeasure, onSelectRest, restSelectLabel,
   notation = 'staff', guitarPosition = 'auto', guitarOpenStrings = true,
@@ -435,8 +437,8 @@ export function StaffView({
           if (labelMode === 'scat') return n.label ?? '';
           return '';
         };
-        const keyOf = (midi: number) => {
-          const p = midiToParts(midi, flats);
+        const keyOf = (midi: number, noteFlats?: boolean) => {
+          const p = midiToParts(midi, noteFlats ?? flats);
           return { key: `${p.letter.toLowerCase()}${p.accidental}/${p.octave}`, acc: p.accidental };
         };
         for (let si = 0; si < inMeasure.length; si++) {
@@ -456,13 +458,13 @@ export function StaffView({
             ghost: s.segIdx === 0 && !!n.ghost,
           };
           if (group.length > 1) {
-            const ks = group.map((g) => keyOf(displayNotes[g.gi].displayMidi));
+            const ks = group.map((g) => keyOf(displayNotes[g.gi].displayMidi, displayNotes[g.gi].flats));
             items.push({
               ...base, keys: ks.map((k) => k.key), acc: '', globalIndex: group[0].gi, label: '',
               stack: { gis: group.map((g) => g.gi), accs: ks.map((k) => k.acc), labels: group.map((g) => labelOf(g.gi, g.segIdx)) },
             });
           } else {
-            const k = keyOf(n.displayMidi);
+            const k = keyOf(n.displayMidi, n.flats);
             items.push({ ...base, keys: [k.key], acc: k.acc, globalIndex: s.gi, label: labelOf(s.gi, s.segIdx), hidden: !!n.hidden });
           }
           t = s.start + s.dur;
@@ -818,6 +820,23 @@ export function StaffView({
       for (const cd of chordDraws) ctx.fillText(cd.symbol, cd.x, chordBaseline(cd.line, cd.staveY));
       ctx.restore();
 
+      // 自分で弾く小節: 薄い色の帯と、小節の下の一言
+      if (ownBars) {
+        ctx.save();
+        ctx.setFont('Helvetica', 12, 'bold');
+        for (const m of ownBars.measures) {
+          const box = measureBoxes[m];
+          if (!box) continue;
+          (ctx as unknown as { rect: (x: number, y: number, w: number, h: number, a: Record<string, string | number>) => void })
+            .rect(box.x + 1, box.y + 16, box.w - 1, box.h - 22, { fill: '#34d399', 'fill-opacity': 0.16, stroke: 'none', class: 'own-bar' });
+          ctx.setFillStyle('#047857');
+          const tw = ctx.measureText(ownBars.label).width;
+          // 五線のすぐ下(音符の下の文字と同じ高さ)に置く。五線の中だと全休符と重なる
+          ctx.fillText(ownBars.label, box.x + (box.w - tw) / 2, box.y + 16 + 99);
+        }
+        ctx.restore();
+      }
+
       // ブロックの見出し(囲み文字)。コードネームの上に置く
       if (sections && sections.length > 0) {
         ctx.save();
@@ -1017,7 +1036,7 @@ export function StaffView({
       window.removeEventListener('resize', render);
       window.visualViewport?.removeEventListener('resize', render);
     };
-  }, [displayNotes, measures, clef, flats, labelMode, chords, notation, guitarPosition, guitarOpenStrings, zoom, fitHeight, fitMaxZoom, entryDivisions, entryCursor, entryFocusMeasure, sections]);
+  }, [displayNotes, measures, clef, flats, labelMode, chords, notation, guitarPosition, guitarOpenStrings, zoom, fitHeight, fitMaxZoom, entryDivisions, entryCursor, entryFocusMeasure, sections, ownBars]);
 
   // 選択中の小節(再描画せずクラス切替)
   useEffect(() => {

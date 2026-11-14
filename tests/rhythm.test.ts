@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { LESSONS } from '../src/data/courses';
-import { barBeats, parseBar, parseToken, rhythmNotes } from '../src/theory/rhythmScore';
+import { barBeats, ownMeasures, parseBar, parseToken, rhythmNotes } from '../src/theory/rhythmScore';
 import { QUALITIES } from '../src/theory/chords';
 import { chordAt, fitProgression, getProgression } from '../src/theory/progressions';
 let n = 0;
@@ -56,6 +56,8 @@ for (const l of LESSONS) for (const st of l.steps) {
   for (const lang of ['ja', 'en'] as const) {
     const notes = rhythmNotes(all, prog, 0, lang, labels);
     ok(notes.length > 0, `${l.id}: notes`);
+    // 音名で書くフレーズ(第3・4章)はコードの音以外も使うので、下の「コードの音」の検査は対象外
+    const freePitch = l.chapterId === 'phrases' || l.chapterId === 'improv';
     notes.forEach((x, i) => {
       // 和音(同じ時刻の音)どうしは重なってよい。それ以外は前の音と重ならない
       if (i > 0 && Math.abs(notes[i - 1].start - x.start) > 1e-6) ok(notes[i - 1].start + notes[i - 1].duration <= x.start + 1e-6, `${l.id}: no overlap at ${x.start}`);
@@ -66,8 +68,8 @@ for (const l of LESSONS) for (const st of l.steps) {
       ok(x.start === Math.round(x.start * 12) / 12, `${l.id}: start on the 1/12-beat grid at ${x.start}`);
       // 鳴る音は、その音に付けたコード(chordIndex)の構成音。> の先取りは次の小節のコードになる
       const chord = prog.chords[x.chordIndex];
-      ok(QUALITIES[chord.quality].tones.includes(((x.midi % 12) - (chord.rootOffset % 12) + 24) % 12), `${l.id}: chord tone at ${x.start}`);
-      if (labels === 'degree' && x.label) ok(/^(1|♭?3|♭?5|♭{0,2}7|6|4)$/.test(x.label), `${l.id}: degree label ${x.label}`);
+      if (!freePitch) ok(QUALITIES[chord.quality].tones.includes(((x.midi % 12) - (chord.rootOffset % 12) + 24) % 12), `${l.id}: chord tone at ${x.start}`);
+      if (labels === 'degree' && x.label && !freePitch) ok(/^(1|♭?3|♭?5|♭{0,2}7|6|4)$/.test(x.label), `${l.id}: degree label ${x.label}`);
       if (labels === 'scat') ok(!!x.label, `${l.id}: scat label`);
     });
   }
@@ -86,6 +88,37 @@ for (const l of LESSONS) for (const st of l.steps) {
   }
 }
 ok(perChapter.ch1 === 10, `chapter 1 has 10 rhythm lessons: 3 basics, 6 real-solo, 1 closing (got ${perChapter.ch1})`);
+ok(perChapter.phrases === 8 && perChapter.improv === 4, `chapters 3 and 4 have 8 phrase lessons and 4 improvising lessons (got ${perChapter.phrases}, ${perChapter.improv})`);
+// 音名の直接指定と「自分の番」
+ok(parseToken('8:=C#4').abs!.midi === 61 && parseToken('8:=C#4').abs!.sharp && parseToken('4:=Eb4').abs!.midi === 63, 'absolute pitch tokens');
+ok(parseToken('own').own === true && barBeats('own') === 4 && ownMeasures(['r1', 'own', 'own']).join() === '1,2', 'own bars');
+// 第3章のフレーズ: A(キーC)は Cmaj7 の1拍目で3度(E)に着地。B・C は同じ形を F・B♭ へ移したもの。D は出だしだけ書いて続きは自分
+for (const l of LESSONS.filter((x) => x.chapterId === 'phrases')) {
+  const blocks = l.steps[0].content!.rhythmBlocks!;
+  ok(blocks.length === 4 && blocks[1].keyShift === 5 && blocks[2].keyShift === 10 && !blocks[0].keyShift, `${l.id}: C, F, B♭, then your own`);
+  ok(blocks[1].bars.join('|') === blocks[0].bars.join('|') && blocks[2].bars.join('|') === blocks[0].bars.join('|'), `${l.id}: same phrase in every key`);
+  ok(blocks[3].bars[0] === blocks[0].bars[0] && blocks[3].bars[1] === 'own' && blocks[3].bars[2] === 'own', `${l.id}: block D keeps the opening and leaves the rest to the player`);
+  const all = blocks.flatMap((b) => b.bars);
+  const shift = blocks.flatMap((b) => b.bars.map(() => b.keyShift ?? 0));
+  const base = fitProgression(getProgression(l.progressionId), all.length);
+  const prog = { ...base, chords: base.chords.map((c) => ({ ...c, rootOffset: c.rootOffset + shift[c.measure] })) };
+  const ns = rhythmNotes(all, prog, 0, 'ja', 'degree', { shift, flats: shift.map((x) => x !== 0) });
+  const inBlock = (i: number) => ns.filter((x) => x.start >= i * 16 && x.start < (i + 1) * 16);
+  const [a, f, bb] = [inBlock(0), inBlock(1), inBlock(2)];
+  ok(a.length === f.length && a.length === bb.length, `${l.id}: same number of notes in every key`);
+  a.forEach((x, i) => {
+    ok(f[i].midi - x.midi === 5 && bb[i].midi - x.midi === -2, `${l.id}: note ${i + 1} is transposed to F (+5) and B♭ (−2)`);
+    ok(Math.abs(f[i].start - x.start - 16) < 1e-6 && Math.abs(f[i].duration - x.duration) < 1e-6, `${l.id}: note ${i + 1} keeps its rhythm`);
+  });
+  // 着地: 3小節目(Cmaj7)の1拍目が3度
+  const land = a.find((x) => Math.abs(x.start - 8) < 1e-6)!;
+  ok(!!land && land.midi % 12 === 4 && land.label === '3', `${l.id}: lands on the 3rd of Cmaj7 on beat 1 (got ${land?.midi}, ${land?.label})`);
+  // G7の1拍目はコードの音(3度か5度)
+  const g7 = a.find((x) => Math.abs(x.start - 4) < 1e-6)!;
+  ok(!!g7 && ['3', '5'].includes(g7.label!), `${l.id}: G7 starts on a chord tone (got ${g7?.label})`);
+  // 拍の頭(オモテ)に来る音はコードの音か9度(半音のアプローチは裏に置く)
+  for (const x of a) if (Math.abs(x.start - Math.round(x.start)) < 1e-6) ok(/^(1|♭?3|5|♭?7|9)$/.test(x.label!), `${l.id}: on-beat note at ${x.start} is ${x.label}`);
+}
 ok(perChapter.ch2 === 9, `chapter 2 has 9 rhythm lessons: 5 basics, 3 choose-and-arrange, 1 blues (got ${perChapter.ch2})`);
 // 「コードから3度/7度を探す」: リズムは使わず、1小節に1つ。
 // 和音は4音のうち答えの音だけを鳴らして光らせ、記号だけの小節は答えを隠して鳴らさない
