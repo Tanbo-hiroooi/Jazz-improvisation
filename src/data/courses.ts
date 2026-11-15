@@ -1034,15 +1034,15 @@ export const LESSONS: Lesson[] = [
         title: b('ブルースで1コーラス', 'A blues chorus, more and more yours'),
         instruction: b('12小節ブルースで、書いてあるフレーズから少しずつ自分の演奏へ移ろう。', 'Over a 12-bar blues, move step by step from written phrases to your own playing.'),
         content: { source: 'rhythm', rhythmLabel: 'degree', rhythmBlocks: [
-          { label: b('リフと返事', 'Riff and reply'), hint: b('短いリフを置いて、間を空けて短く返す。同じ形を2回', 'State a short riff, leave space, reply briefly — the same shape twice'), bars: ['8:=C5 8:=C5 r8 8:=Bb4 8:=G4 8:=Bb4 4:=C5', 'r2 r4 8:=Eb5 8:=C5/as', '8:=C5 8:=C5 r8 8:=Bb4 8:=G4 8:=Bb4 4:=C5', 'r2 r4 8:=E5 8:=C5/as'] },
-          { label: b('返事は自分で', 'Your reply'), hint: b('リフはF7でも同じ。7・8小節目の返事を自分で', 'The riff stays the same on F7. Play the reply in bars 7-8 yourself'), bars: ['8:=C5 8:=C5 r8 8:=Bb4 8:=G4 8:=Bb4 4:=C5', 'r2 r4 8:=Eb5 8:=C5/as', 'own', 'own'] },
+          { label: b('同じ出だしを2回', 'The same opening, twice'), hint: b('同じ出だしを2回。2回目は下へ伸ばして、短い形で締める', 'The same opening twice — the second time run down, then close with a short shape'), bars: ['8:=C5 8:=Eb5 8:=C5 8:=F5 8:=Gb5 4.:=Eb5', '8:=C5 4.:=Eb5 t8:=F5 t8:=Eb5 t8:=Bb4 t8:=Ab4 t8:=G4 t8:=Eb4', 'r4 8:=C4 8:=Eb4 t8:=F#4 t8:=G4 t8:=Eb4 4:=C4', 'r1'] },
+          { label: b('リフのあとは自分で', 'After the riff, yours'), hint: b('2つの音を行き来するリフ。7・8小節目は自分で', 'A riff rocking between two notes. Bars 7-8 are yours'), bars: ['8:=F4 8:=Eb4 8:=F4 8:=Eb4 8:=Gb4 4.:=F4', 'r4 8:=C4 8:=Eb4 4:=F4 r4', 'own', 'own'] },
           { label: b('全部自分で', 'All yours'), hint: b('G7からC7の3度へ着地してみる', 'Try landing on the 3rd of C7 after G7'), bars: ['own', 'own', 'own', 'own'] },
         ] },
       },
     ],
     selfCheck: [],
     trivia: {
-      why: b('ブルースの有名な曲の多くは、短いリフを繰り返して、あいだに間を空ける作りです。音階を上り下りするより、短い形と間のほうがブルースらしく聞こえます。', 'Many well-known blues heads repeat one short riff with space in between. A short shape and silence sound more like the blues than running up and down a scale.'),
+      why: b('ブルースのソロは、同じ出だしを繰り返して2回目だけ変える、♭5で止まる、短い形で締める、といった癖でできています。音階を上り下りするより、この癖をまねるほうがブルースらしく聞こえます。', 'Blues solos are made of habits: repeat an opening and change it the second time, stop on the ♭5, close with a short shape. Copying those habits sounds more like the blues than running a scale.'),
       mistakes: [b('最後の4小節で迷う → 9・10小節目はii-V。第4章のフレーズがそのまま使える', 'Lost in the last four bars — bars 9-10 are a ii-V, so the Chapter 4 phrases fit as they are')],
     },
   },
@@ -1173,7 +1173,7 @@ export const LESSONS: Lesson[] = [
         instruction: b('♭3と♭5を混ぜて、ブルースらしい響きを出そう。', 'Mix in the ♭3 and ♭5 for the sound of the blues.'),
         content: { source: 'rhythm', rhythmLabel: 'degree', rhythmBlocks: [
           { label: b('半音下から3度へ', 'Slide up into the 3rd'), hint: b('♭3から3度へ半音で上がる', 'Slide from the ♭3 up to the 3rd'), bars: ['r8 8:=D#4 8:=E4 8:=G4 4:=C5 r4', 'r8 8:=Eb4 8:=F4 8:=A4 4:=C5 r4', 'r8 8:=D#4 8:=E4 8:=G4 4:=C5 r4', '4:=G4 8:=Eb4 8:=C4 r2'] },
-          { label: b('♭5を通って下りる', 'Down through the ♭5'), hint: b('5度から♭5を通って下りる', 'Come down from the 5th through the ♭5'), bars: ['r8 8:=C5 8:=Bb4 8:=G4 8:=Gb4 8:=F4 4:=Eb4', 'r1', 'r8 8:=G4 8:=Gb4 8:=F4 8:=Eb4 8:=C4 r4', 'r1'] },
+          { label: b('♭5で止まって下りる', 'Stop on the ♭5, then run down'), hint: b('半音で上って♭5で止まり、一気に下りる', 'Climb by half steps, stop on the ♭5, then run down'), bars: ['r4 t8:=D#5 t8:=E5 t8:=F5 8:=Gb5 8:=Eb5 t8:=Bb4 t8:=A4 t8:=Ab4', '8:=Gb4 8:=Eb4 8:=C4 8:=F4 r2', 'r8 8:=G4 8:=Gb4 8:=F4 8:=Eb4 8:=C4 r4', 'r1'] },
           { label: b('ii-Vで着地', 'Land after the ii-V'), hint: b('最後は第4章の形で3度へ', 'Finish with a Chapter 4 shape into the 3rd'), bars: ['r2 8:=D4 8:=F4 8:=A4 8:=C5', '4:=B4 r4 8:=G4 8:=F4 8:=D4 8:=D#4', '2:=E4 r2', 'r1'] },
         ] },
       },
@@ -1249,7 +1249,7 @@ export const LESSONS: Lesson[] = [
         instruction: b('書いてあるフレーズから始めて、2コーラスを自分のソロにしよう。', 'Start from a written phrase and make two choruses your own solo.'),
         content: { source: 'rhythm', rhythmLabel: 'degree', rhythmBlocks: [
           { label: b('書いてあるフレーズ', 'Written phrase'), hint: b('まず書いてあるとおりに', 'First, as written'), bars: ['r8 8:=D#4 8:=E4 8:=G4 4:=C5 r4', 'r8 8:=Eb4 8:=F4 8:=A4 4:=C5 r4', 'r8 8:=D#4 8:=E4 8:=G4 4:=C5 r4', '4:=G4 8:=Eb4 8:=C4 r2'] },
-          { label: b('後半は自分で', 'Second half is yours'), hint: b('前の2小節に答える', 'Answer the two bars before'), bars: ['r8 8:=C5 8:=Bb4 8:=G4 8:=Gb4 8:=F4 4:=Eb4', 'r1', 'own', 'own'] },
+          { label: b('後半は自分で', 'Second half is yours'), hint: b('前の2小節に答える', 'Answer the two bars before'), bars: ['r4 t8:=D#5 t8:=E5 t8:=F5 8:=Gb5 8:=Eb5 t8:=Bb4 t8:=A4 t8:=Ab4', '8:=Gb4 8:=Eb4 8:=C4 8:=F4 r2', 'own', 'own'] },
           { label: b('全部自分で', 'All yours'), hint: b('ii-Vから3度へ着地する', 'Land on the 3rd after the ii-V'), bars: ['own', 'own', 'own', 'own'] },
           { label: b('少なく始める', 'Start sparse'), hint: b('2コーラス目。音を少なく', 'Second chorus. Few notes'), bars: ['own', 'own', 'own', 'own'] },
           { label: b('増やして山を作る', 'Build to a peak'), hint: b('音を増やして、いちばん高い音へ', 'Add notes and reach your highest note'), bars: ['own', 'own', 'own', 'own'] },
