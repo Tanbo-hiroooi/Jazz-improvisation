@@ -199,8 +199,11 @@ function restSegments(gapStart: number, gapEnd: number): { start: number; dur: s
       out.push({ start: pos, dur: '8', dots: 0, triplet: true });
       pos += 1 / 3;
     } else {
+      // 休符は拍の区切りにそろえる: 拍の途中からなら、まず次の拍までの短い休符を書く
+      // (裏拍のあとの「8分休符→4分休符」を「4分休符→8分休符」と書かない)。2分・全休符は2拍・4拍の頭からだけ
       const units = [4, 2, 1, 0.5, 0.25];
-      const u = units.find((x) => x <= rem + 0.01) ?? 0.25;
+      const aligned = (x: number) => near((pos / x) - Math.round(pos / x), 0);
+      const u = units.find((x) => x <= rem + 0.01 && aligned(x)) ?? 0.25;
       const d = nearestDur(u);
       out.push({ start: pos, dur: d.dur, dots: d.dots, triplet: false });
       pos += u;

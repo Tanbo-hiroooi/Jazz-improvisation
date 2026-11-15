@@ -1034,15 +1034,15 @@ export const LESSONS: Lesson[] = [
         title: b('ブルースで1コーラス', 'A blues chorus, more and more yours'),
         instruction: b('12小節ブルースで、書いてあるフレーズから少しずつ自分の演奏へ移ろう。', 'Over a 12-bar blues, move step by step from written phrases to your own playing.'),
         content: { source: 'rhythm', rhythmLabel: 'degree', rhythmBlocks: [
-          { label: b('書いてあるフレーズ', 'Written phrase'), hint: b('まず書いてあるとおりに。同じ形を2回、最後は下りて次へ', 'First, as written: the same shape twice, then a run down into the next chord'), bars: ['r4 8:=G4 8:=Bb4 8:=C5 8:=D#5 4:=E5', 'r4 8:=Eb5 8:=C5 8:=A4 8:=F4 4:=G4', 'r4 8:=G4 8:=Bb4 8:=C5 8:=D#5 4:=E5', '4:=G5 8:=Gb5 8:=F5 8:=Eb5 8:=C5 4:=Bb4'] },
-          { label: b('後半は自分で', 'Second half is yours'), hint: b('前の2小節に答えるつもりで', 'Answer the two bars before'), bars: ['r8 8:=C5 8:=Eb5 8:=F5 8:=Gb5 8:=F5 4:=Eb5', '8:=C5 8:=A4 4:=F4 r2', 'own', 'own'] },
+          { label: b('リフと返事', 'Riff and reply'), hint: b('短いリフを置いて、間を空けて短く返す。同じ形を2回', 'State a short riff, leave space, reply briefly — the same shape twice'), bars: ['8:=C5 8:=C5 r8 8:=Bb4 8:=G4 8:=Bb4 4:=C5', 'r2 r4 8:=Eb5 8:=C5/as', '8:=C5 8:=C5 r8 8:=Bb4 8:=G4 8:=Bb4 4:=C5', 'r2 r4 8:=E5 8:=C5/as'] },
+          { label: b('返事は自分で', 'Your reply'), hint: b('リフはF7でも同じ。7・8小節目の返事を自分で', 'The riff stays the same on F7. Play the reply in bars 7-8 yourself'), bars: ['8:=C5 8:=C5 r8 8:=Bb4 8:=G4 8:=Bb4 4:=C5', 'r2 r4 8:=Eb5 8:=C5/as', 'own', 'own'] },
           { label: b('全部自分で', 'All yours'), hint: b('G7からC7の3度へ着地してみる', 'Try landing on the 3rd of C7 after G7'), bars: ['own', 'own', 'own', 'own'] },
         ] },
       },
     ],
     selfCheck: [],
     trivia: {
-      why: b('1コーラスの中で、まねる・答える・自分で作る、を順に行います。実際のソロもこの3つの組み合わせです。', 'Within one chorus you copy, answer, and create. Real solos are made of the same three things.'),
+      why: b('ブルースの有名な曲の多くは、短いリフを繰り返して、あいだに間を空ける作りです。音階を上り下りするより、短い形と間のほうがブルースらしく聞こえます。', 'Many well-known blues heads repeat one short riff with space in between. A short shape and silence sound more like the blues than running up and down a scale.'),
       mistakes: [b('最後の4小節で迷う → 9・10小節目はii-V。第4章のフレーズがそのまま使える', 'Lost in the last four bars — bars 9-10 are a ii-V, so the Chapter 4 phrases fit as they are')],
     },
   },
