@@ -65,6 +65,10 @@ for (const l of LESSONS) for (const st of l.steps) {
       if (i > 0 && Math.abs(notes[i - 1].start - x.start) <= 1e-6) ok(Math.abs(notes[i - 1].duration - x.duration) < 1e-6, `${l.id}: chord tones share a length at ${x.start}`);
       ok(x.start + x.duration <= all.length * 4 + 1e-6, `${l.id}: within the form`);
       ok(typeof x.label === 'string', `${l.id}: label`);
+      // 3連の位置から始まる音は、その拍の中で終わる(拍をまたいで伸ばすと、譜面が16分音符に化けて4拍を超えて見える)
+      const frac = Math.round(x.start * 12) % 12;
+      // (4分3連=2/3拍の音は2拍単位なので対象外)
+      if ((frac === 4 || frac === 8) && Math.abs(x.duration - 2 / 3) > 1e-6) ok(x.start + x.duration <= Math.floor(x.start + 1e-6) + 1 + 1e-6, `${l.id}: a note on a triplet position must end inside its beat (at ${x.start})`);
       // 開始位置は1/12拍の格子ちょうど(3連の加算誤差を残さない)
       ok(x.start === Math.round(x.start * 12) / 12, `${l.id}: start on the 1/12-beat grid at ${x.start}`);
       // 鳴る音は、その音に付けたコード(chordIndex)の構成音。> の先取りは次の小節のコードになる

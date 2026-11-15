@@ -401,8 +401,7 @@ function RhythmStepBody({
   }
   return (
     <>
-      <div className="staff-head">
-        <h4>{t('staffTitle')}</h4>
+      <div className="staff-head staff-head-end">
         <div className="staff-head-tools">
           <label className="toggle"><input type="checkbox" checked={scat} onChange={(e) => setScat(e.target.checked)} /> {t(labelKind === 'degree' ? 'labelDegree' : 'labelScat')}</label>
           {content.memorize && (

@@ -323,6 +323,8 @@ textarea { resize: vertical; font-size: 14px; line-height: 1.5; }
 /* ---- 五線譜 ---- */
 .staff-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .staff-head h2 { margin: 0; }
+/* 見出しを出さないとき(レッスンの譜面)は、操作を右に寄せる */
+.staff-head-end { justify-content: flex-end; }
 .staff-card {
   background: var(--paper);
   border-radius: 10px;
