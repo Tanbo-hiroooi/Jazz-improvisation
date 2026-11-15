@@ -198,6 +198,7 @@ export function rhythmNotes(
             chordIndex: Math.max(0, chordIndex), label: labelFor(d),
           };
           if (t.target && t.target !== d) tone.silent = true;
+          if (barKeys) tone.flats = barKeys.flats[measure];
           notes.push(tone);
         });
         continue;
@@ -214,6 +215,8 @@ export function rhythmNotes(
         label: t.hidden ? '' : labelFor(t.degree),
       };
       if (t.hidden) note.hidden = true;
+      // キーが途中で変わる譜面では、その小節のキーの書き方に合わせる(キーFで B♭ を A♯ と書かない)
+      if (barKeys) note.flats = barKeys.flats[measure];
       if (t.staccato) note.articulation = 'staccato';
       else if (t.tenuto) note.articulation = 'tenuto';
       else if (t.accent) note.articulation = 'accent';

@@ -781,10 +781,7 @@ export function StepPractice({
             ))}
           </select>
         </div>
-        <div className="field">
-          <label htmlFor="step-bpm">{t('tempoLabel')}: <strong>{bpm} BPM</strong></label>
-          <input id="step-bpm" type="range" min={40} max={220} value={bpm} onChange={(e) => setBpm(Number(e.target.value))} />
-        </div>
+        {/* テンポは再生設定(譜面の下・拡大画面の中)の1か所だけに置く */}
         {step.editable?.bars === BAR_CHOICES[0] && (
           <div className="field">
             <label>{t('practiceBarsLabel')}</label>

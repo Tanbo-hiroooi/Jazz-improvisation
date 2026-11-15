@@ -26,7 +26,8 @@ for (const l of LESSONS) for (const st of l.steps) {
   // 第2章: 譜面に書いた音は、そのブロックの「3周目の音」の中だけ(説明と譜面を一致させる)
   if (l.chapterId === 'ch2') {
     ok(st.content.rhythmLabel === 'degree', `${l.id}: degree labels`);
-    for (const b of blocks) {
+    // 音名で書くレッスン(音階でつなぐ)は「3周目の音」を持たない
+    for (const b of blocks.filter(() => !blocks.some((x) => x.bars.some((bar) => bar.includes(':='))))) {
       ok(!!b.free && b.free.length > 0, `${l.id} ${b.label.ja}: pass-3 notes`);
       for (const bar of b.bars) for (const t of parseBar(bar)) {
         // 縦に積んだ和音は「見るための」音なので対象外
@@ -56,8 +57,8 @@ for (const l of LESSONS) for (const st of l.steps) {
   for (const lang of ['ja', 'en'] as const) {
     const notes = rhythmNotes(all, prog, 0, lang, labels);
     ok(notes.length > 0, `${l.id}: notes`);
-    // 音名で書くフレーズ(第3・4章)はコードの音以外も使うので、下の「コードの音」の検査は対象外
-    const freePitch = l.chapterId === 'phrases' || l.chapterId === 'improv';
+    // 音名で書く譜面はコードの音以外も使い、キーを移すブロックは進行も移すので、下の「コードの音」の検査は対象外
+    const freePitch = all.some((bar) => bar.includes(':=')) || blocks.some((b) => b.keyShift);
     notes.forEach((x, i) => {
       // 和音(同じ時刻の音)どうしは重なってよい。それ以外は前の音と重ならない
       if (i > 0 && Math.abs(notes[i - 1].start - x.start) > 1e-6) ok(notes[i - 1].start + notes[i - 1].duration <= x.start + 1e-6, `${l.id}: no overlap at ${x.start}`);
@@ -87,7 +88,22 @@ for (const l of LESSONS) for (const st of l.steps) {
     pos2 = Math.round((pos2 + t.beats) * 12) / 12;
   }
 }
-ok(perChapter.ch1 === 10, `chapter 1 has 10 rhythm lessons: 3 basics, 6 real-solo, 1 closing (got ${perChapter.ch1})`);
+ok(perChapter.ch1 === 3 && perChapter.rhythm2 === 7, `rhythm: 3 basics in chapter 1, 7 real-solo lessons in chapter 3 (got ${perChapter.ch1}, ${perChapter.rhythm2})`);
+ok(perChapter.ch5 === 4 && perChapter.ch6 === 4 && perChapter.tune === 3, `chapters 6-8 have 4, 4 and 3 lessons (got ${perChapter.ch5}, ${perChapter.ch6}, ${perChapter.tune})`);
+ok(LESSONS.every((l) => l.steps.length === 1 && l.steps[0].content?.source === 'rhythm'), 'every lesson is one rhythm score');
+// 枯葉: 長調・短調とも、7度から次の3度へ半音(か全音)で下りて着地する
+for (const id of ['t8-phrase', 't8-chorus']) {
+  const l = LESSONS.find((x) => x.id === id)!;
+  const bars2 = l.steps[0].content!.rhythmBlocks!.flatMap((b) => b.bars);
+  const prog = fitProgression(getProgression(l.progressionId), bars2.length);
+  const ns = rhythmNotes(bars2, prog, 0, 'ja', 'degree');
+  for (const beat of [4, 8, 20, 24]) {
+    const i = ns.findIndex((x) => Math.abs(x.start - beat) < 1e-6);
+    const c = prog.chords[ns[i].chordIndex];
+    const is3rd = ((ns[i].midi - c.rootOffset) % 12 + 12) % 12 === QUALITIES[c.quality].tones[1];
+    ok(i > 0 && is3rd && ns[i - 1].midi - ns[i].midi >= 1 && ns[i - 1].midi - ns[i].midi <= 2, `${id}: steps down into a 3rd at beat ${beat}`);
+  }
+}
 ok(perChapter.phrases === 8 && perChapter.improv === 4, `chapters 3 and 4 have 8 phrase lessons and 4 improvising lessons (got ${perChapter.phrases}, ${perChapter.improv})`);
 // 音名の直接指定と「自分の番」
 ok(parseToken('8:=C#4').abs!.midi === 61 && parseToken('8:=C#4').abs!.sharp && parseToken('4:=Eb4').abs!.midi === 63, 'absolute pitch tokens');
@@ -119,7 +135,7 @@ for (const l of LESSONS.filter((x) => x.chapterId === 'phrases')) {
   // 拍の頭(オモテ)に来る音はコードの音か9度(半音のアプローチは裏に置く)
   for (const x of a) if (Math.abs(x.start - Math.round(x.start)) < 1e-6) ok(/^(1|♭?3|5|♭?7|9)$/.test(x.label!), `${l.id}: on-beat note at ${x.start} is ${x.label}`);
 }
-ok(perChapter.ch2 === 9, `chapter 2 has 9 rhythm lessons: 5 basics, 3 choose-and-arrange, 1 blues (got ${perChapter.ch2})`);
+ok(perChapter.ch2 === 10, `chapter 2 has 10 rhythm lessons: 5 basics, 4 choose-and-arrange, 1 blues (got ${perChapter.ch2})`);
 // 「コードから3度/7度を探す」: リズムは使わず、1小節に1つ。
 // 和音は4音のうち答えの音だけを鳴らして光らせ、記号だけの小節は答えを隠して鳴らさない
 for (const [id, deg] of [['c2-find-third', 1], ['c2-find-seventh', 3]] as const) {
